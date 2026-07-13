@@ -1,0 +1,104 @@
+enum Currency {
+  EUR
+  USD
+  AED
+}
+
+enum AccountType {
+  BANK
+  BROKER
+  CASH
+  CREDIT_CARD
+}
+
+enum AssetType {
+  ETF
+  STOCK
+  BOND
+  MONEY_MARKET
+  PROPERTY
+  GOLD
+  CRYPTO
+  PENSION
+  BUSINESS
+  CASH
+  OTHER
+}generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Household {
+  id        String   @id @default(cuid())
+  name      String
+  currency  String   @default("EUR")
+  timezone  String   @default("Europe/Madrid")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model Account {
+  id          String   @id @default(cuid())
+  name        String
+  institution String
+  type        String
+  currency    String
+  balance     Float
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+model Asset {
+  id          String   @id @default(cuid())
+
+  symbol      String
+  isin        String?
+  description String
+
+  assetClass  String
+
+  quantity    Float
+  price       Float
+
+  currency    String
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+model RealEstate {
+  id          String   @id @default(cuid())
+
+  name        String
+  country     String
+  city        String
+
+  marketValue Float
+  purchaseCost Float
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+model Liability {
+  id          String   @id @default(cuid())
+
+  name        String
+  balance     Float
+
+  currency    String
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+model Goal {
+  id          String   @id @default(cuid())
+
+  name        String
+  targetValue Float
+  targetDate  DateTime?
+
+  createdAt   DateTime @default(now())
+}
