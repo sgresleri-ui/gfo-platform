@@ -1,0 +1,8 @@
+-- CreateTable
+CREATE TABLE "Household" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "name" TEXT NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'EUR',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);
