@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  url      = "file:./gfo.db"
 }
 
 model Household {
@@ -16,10 +16,11 @@ model Household {
 }
 
 model Institution {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  country   String
-  type      String
+  id      Int    @id @default(autoincrement())
+  name    String @unique
+  country String
+  type    String
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
