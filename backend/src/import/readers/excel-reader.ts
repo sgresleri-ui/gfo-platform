@@ -1,21 +1,14 @@
-import * as XLSX from "xlsx";
+import * as ExcelJS from 'exceljs';
 
 export class ExcelReader {
-  private workbook: XLSX.WorkBook;
 
-  constructor(filePath: string) {
-    this.workbook = XLSX.readFile(filePath);
-  }
+    async readWorkbook(path: string) {
 
-  public getValue(sheetName: string, cell: string): any {
-    const sheet = this.workbook.Sheets[sheetName];
+        const workbook = new ExcelJS.Workbook();
 
-    if (!sheet) {
-      throw new Error(`Sheet "${sheetName}" non trovato.`);
+        await workbook.xlsx.readFile(path);
+
+        return workbook;
     }
 
-    const value = sheet[cell];
-
-    return value ? value.v : null;
-  }
 }

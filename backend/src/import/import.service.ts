@@ -1,75 +1,56 @@
 import { Injectable } from '@nestjs/common';
+import { ExcelReader } from './readers/excel.reader';
+import * as fs from 'fs';
 import * as path from 'path';
-
-import { PrismaService } from '../prisma/prisma.service';
-
-import { ExcelReader } from './readers/excel-reader';
-import { ACCOUNT_MAPPING } from './config/account-mapping';
 
 @Injectable()
 export class ImportService {
-  constructor(private readonly prisma: PrismaService) {}
 
-  async getAccounts() {
-    const filePath = path.join(
-      process.cwd(),
-      '..',
-      'data',
-      'Gresleri2026.xlsm',
-    );
+    async importWorkbook() {
 
-    const reader = new ExcelReader(filePath);
+        const workbookPath = path.join(
+            process.cwd(),
+            '..',
+            'data',
+            'Gresleri2026.xlsm'
+        );
 
-    return ACCOUNT_MAPPING.map((account) => ({
-      ...account,
-      balance: Number(
-        Number(reader.getValue(account.sheet, account.cell)).toFixed(2),
-      ),
-    }));
-  }
+        if (!fs.existsSync(workbookPath)) {
 
-  async importAccounts() {
-    const accounts = await this.getAccounts();
+            return {
 
-    let institutionsCreated = 0;
-    let accountsImported = 0;
+                success: false,
 
-    for (const account of accounts) {
-      let institution = await this.prisma.institution.findUnique({
-        where: {
-          name: account.institution,
-        },
-      });
+                message: 'Workbook non trovato',
 
-      if (!institution) {
-        institution = await this.prisma.institution.create({
-          data: {
-            name: account.institution,
-            country: account.country,
-            type: account.type,
-          },
-        });
+                path: workbookPath
 
-        institutionsCreated++;
-      }
+            };
 
-      await this.prisma.account.create({
-        data: {
-          code: account.code,
-          name: account.name,
-          currency: account.currency,
-          balance: account.balance,
-          institutionId: institution.id,
-        },
-      });
+        }
 
-      accountsImported++;
+        const reader = new ExcelReader();
+
+        const workbook = await reader.readWorkbook(workbookPath);
+
+        return {
+
+            success: true,
+
+            workbook: path.basename(workbookPath),
+
+            worksheets: workbook.worksheets.map(ws => ({
+
+                name: ws.name,
+
+                rows: ws.rowCount,
+
+                columns: ws.columnCount
+
+            }))
+
+        };
+
     }
 
-    return {
-      success: true,
-      institutionsCreated,
-      accountsImported,
-    };
-  }
 }
