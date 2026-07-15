@@ -16,26 +16,23 @@ model Household {
 }
 
 model Institution {
-  id      Int    @id @default(autoincrement())
-  name    String @unique
-  country String
-  type    String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  accounts Account[]
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  country   String
+  type      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  accounts  Account[]
 }
 
 model Account {
-  id       Int    @id @default(autoincrement())
-  name     String
-  currency String
-  balance  Float  @default(0)
-
+  id            Int         @id @default(autoincrement())
+  name          String
+  code          String      @unique
+  currency      String
+  balance       Float       @default(0)
   institutionId Int
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   institution   Institution @relation(fields: [institutionId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
