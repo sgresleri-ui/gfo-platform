@@ -3,6 +3,7 @@ import MainLayout from "./components/layout/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import DataCatalog from "./pages/DataCatalog";
 import PlaceholderPage from "./pages/PlaceholderPage";
+import Wealth from "./pages/Wealth";
 
 function App() {
   return (
@@ -12,15 +13,7 @@ function App() {
 
         <Route path="dashboard" element={<Dashboard />} />
 
-        <Route
-          path="wealth"
-          element={
-            <PlaceholderPage
-              title="Patrimonio"
-              description="Registro patrimoniale consolidato della famiglia."
-            />
-          }
-        />
+        <Route path="wealth" element={<Wealth />} />
 
         <Route
           path="investments"
