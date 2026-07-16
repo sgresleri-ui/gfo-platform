@@ -6,6 +6,7 @@ import { ImportModule } from './import/import.module';
 import { InvestmentsModule } from './investments/investments.module';
 import { LiquidityModule } from './liquidity/liquidity.module';
 import { PropertiesModule } from './properties/properties.module';
+import { BudgetModule } from './budget/budget.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { WealthModule } from './wealth/wealth.module';
 
@@ -18,6 +19,7 @@ import { WealthModule } from './wealth/wealth.module';
     InvestmentsModule,
     LiquidityModule,
     PropertiesModule,
+    BudgetModule,
   ],
   controllers: [AppController],
   providers: [AppService],
