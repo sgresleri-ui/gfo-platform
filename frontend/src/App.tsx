@@ -5,6 +5,7 @@ import DataCatalog from "./pages/DataCatalog";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import Wealth from "./pages/Wealth";
 import Investments from "./pages/Investments";
+import Liquidity from "./pages/Liquidity";
 
 function App() {
   return (
@@ -23,12 +24,7 @@ function App() {
 
         <Route
           path="liquidity"
-          element={
-            <PlaceholderPage
-              title="Liquidità"
-              description="Conti finanziari, riserve operative e disponibilità."
-            />
-          }
+          element={<Liquidity />}
         />
 
         <Route

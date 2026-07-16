@@ -138,3 +138,69 @@ export async function getInvestmentPortfolio(): Promise<InvestmentPortfolioRespo
     "Unable to load investment portfolio",
   );
 }
+
+export type LiquidityAccount = {
+  id: number;
+  code: string;
+  name: string;
+  institution: string;
+  accountType: string;
+  country: string | null;
+  currency: string;
+  nativeAmount: number | null;
+  fxRateToBase: number | null;
+  valueBase: number;
+  baseCurrency: string;
+  weight: number;
+  valuationDate: string;
+  source: string;
+  notes: string | null;
+};
+
+export type LiquidityAllocationGroup = {
+  name: string;
+  value: number;
+  accountCount: number;
+  weight: number;
+};
+
+export type LiquidityOverviewResponse = {
+  household: {
+    id: number;
+    name: string;
+    currency: string;
+  };
+
+  summary: {
+    totalLiquidity: number;
+    accountCount: number;
+    institutionCount: number;
+    largestAccountValue: number;
+    largestAccountWeight: number;
+    topThreeValue: number;
+    topThreeConcentration: number;
+    foreignCurrencyValue: number;
+    foreignCurrencyWeight: number;
+  };
+
+  asOfDate: string | null;
+  institutions: LiquidityAllocationGroup[];
+  currencies: LiquidityAllocationGroup[];
+  countries: LiquidityAllocationGroup[];
+  accounts: LiquidityAccount[];
+
+  dataQuality: {
+    missingNativeValueCount: number;
+    missingNativeValues: string[];
+    warnings: string[];
+  };
+};
+
+export async function getLiquidityOverview(): Promise<LiquidityOverviewResponse> {
+  const response = await fetch(`${API_URL}/liquidity`);
+
+  return readJson<LiquidityOverviewResponse>(
+    response,
+    "Unable to load liquidity overview",
+  );
+}
