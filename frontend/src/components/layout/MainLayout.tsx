@@ -45,6 +45,12 @@ const navigation = [
     icon: <AccountBalanceWalletRoundedIcon />,
   },
   {
+    label: "Storico Patrimoniale",
+    path: "/wealth-history",
+    icon: <TimelineRoundedIcon />,
+  },
+
+  {
     label: "Investimenti",
     path: "/investments",
     icon: <ShowChartRoundedIcon />,

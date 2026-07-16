@@ -13,7 +13,9 @@ model Household {
   currency        String           @default("EUR")
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
-  wealthPositions WealthPosition[]
+  wealthPositions   WealthPosition[]
+  wealthTransactions WealthTransaction[]
+  netWorthSnapshots  NetWorthSnapshot[]
 }
 
 model Institution {
@@ -58,7 +60,9 @@ model WealthPosition {
   notes         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  household     Household @relation(fields: [householdId], references: [id])
+  household     Household           @relation(fields: [householdId], references: [id])
+  transactions  WealthTransaction[]
+  valuations    PositionValuation[]
 
   @@index([householdId, category])
   @@index([valuationDate])
@@ -140,5 +144,85 @@ model WealthSnapshot {
 
   @@index([sourceRunId])
   @@index([createdAt])
+}
+
+model WealthTransaction {
+  id                     String          @id @default(cuid())
+  householdId            Int
+  positionId             Int?
+  transactionDate        DateTime
+  transactionType        String
+  direction              String
+  quantity               Decimal?
+  unitPrice              Decimal?
+  grossAmount            Decimal
+  fees                   Decimal         @default(0)
+  taxes                  Decimal         @default(0)
+  netAmount              Decimal
+  currency               String          @default("EUR")
+  fxRateToBase           Decimal?
+  baseAmount             Decimal
+  baseCurrency           String          @default("EUR")
+  sourceAccountCode      String?
+  destinationAccountCode String?
+  source                 String          @default("MANUAL")
+  status                 String          @default("POSTED")
+  externalReference      String?
+  notes                  String?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  household              Household       @relation(fields: [householdId], references: [id])
+  position               WealthPosition? @relation(fields: [positionId], references: [id])
+
+  @@index([householdId, transactionDate])
+  @@index([positionId, transactionDate])
+  @@index([transactionType])
+  @@index([externalReference])
+}
+
+model NetWorthSnapshot {
+  id               String              @id @default(cuid())
+  householdId      Int
+  snapshotDate     DateTime
+  source           String
+  importRunId      String?
+  dataHash         String              @unique
+  positionCount    Int
+  grossAssets      Decimal
+  liabilities      Decimal
+  netWorth         Decimal
+  liquidity        Decimal
+  investments      Decimal
+  realEstate       Decimal
+  otherAssets      Decimal
+  createdAt        DateTime            @default(now())
+  household        Household           @relation(fields: [householdId], references: [id])
+  valuations       PositionValuation[]
+
+  @@index([householdId, snapshotDate])
+  @@index([snapshotDate])
+  @@index([importRunId])
+}
+
+model PositionValuation {
+  id                  String           @id @default(cuid())
+  positionId          Int
+  snapshotId          String
+  valuationDate       DateTime
+  sourceValuationDate DateTime?
+  nativeAmount        Decimal?
+  currency            String
+  fxRateToBase        Decimal?
+  valueBase           Decimal
+  baseCurrency        String           @default("EUR")
+  source              String
+  createdAt           DateTime         @default(now())
+  position            WealthPosition   @relation(fields: [positionId], references: [id])
+  snapshot            NetWorthSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([positionId, snapshotId])
+  @@index([positionId, valuationDate])
+  @@index([snapshotId])
+  @@index([valuationDate])
 }
 

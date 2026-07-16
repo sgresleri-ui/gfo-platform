@@ -1,3 +1,4 @@
+import WealthHistory from "./pages/WealthHistory";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import MainLayout from "./components/layout/MainLayout";
@@ -24,6 +25,11 @@ function App() {
         <Route path="dashboard" element={<Dashboard />} />
 
         <Route path="wealth" element={<Wealth />} />
+
+        <Route
+          path="wealth-history"
+          element={<WealthHistory />}
+        />
 
         <Route
           path="investments"

@@ -826,3 +826,85 @@ export async function getWealthSnapshots(): Promise<WealthSnapshotsResponse> {
   );
 }
 
+export type LedgerNetWorthSnapshot = {
+  id: string;
+  snapshotDate: string;
+  source: string;
+  importRunId: string | null;
+  dataHash: string;
+  positionCount: number;
+  grossAssets: number;
+  liabilities: number;
+  netWorth: number;
+  liquidity: number;
+  investments: number;
+  realEstate: number;
+  otherAssets: number;
+  createdAt: string;
+};
+
+export type LedgerHistoryResponse = {
+  count: number;
+  snapshots: LedgerNetWorthSnapshot[];
+};
+
+export type LedgerSummaryResponse = {
+  transactions: number;
+  snapshots: number;
+  valuations: number;
+  latestSnapshot: LedgerNetWorthSnapshot | null;
+};
+
+export type LedgerCaptureResponse = {
+  created: boolean;
+  reason?: string;
+  valuationsCreated?: number;
+  snapshot: LedgerNetWorthSnapshot;
+};
+
+export async function getLedgerSummary(): Promise<LedgerSummaryResponse> {
+  const response = await fetch(
+    `${API_URL}/ledger/summary`,
+  );
+
+  return readJson<LedgerSummaryResponse>(
+    response,
+    "Unable to load ledger summary",
+  );
+}
+
+export async function getLedgerNetWorthHistory(
+  limit = 1000,
+): Promise<LedgerHistoryResponse> {
+  const response = await fetch(
+    `${API_URL}/ledger/net-worth?limit=${limit}`,
+  );
+
+  return readJson<LedgerHistoryResponse>(
+    response,
+    "Unable to load net worth history",
+  );
+}
+
+export async function captureLedgerCurrentState(): Promise<LedgerCaptureResponse> {
+  const response = await fetch(
+    `${API_URL}/ledger/capture`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({
+        confirm: true,
+      }),
+    },
+  );
+
+  return readJson<LedgerCaptureResponse>(
+    response,
+    "Unable to capture current wealth state",
+  );
+}
+

@@ -1,3 +1,4 @@
+import { LedgerModule } from './ledger/ledger.module';
 import { ImportsModule } from './imports/imports.module';
 import { DataCatalogModule } from './data-catalog/data-catalog.module';
 import { DecisionsModule } from './decisions/decisions.module';
@@ -16,6 +17,7 @@ import { WealthModule } from './wealth/wealth.module';
 
 @Module({
   imports: [
+    LedgerModule,
     ImportsModule,
     DataCatalogModule,
     DecisionsModule,
