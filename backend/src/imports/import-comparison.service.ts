@@ -11,7 +11,7 @@ import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
-type WorkbookPosition = {
+export type WorkbookPosition = {
   code: string;
   name: string;
   category: string;
@@ -36,7 +36,7 @@ type FieldDifference = {
   workbookValue: string | number | null;
 };
 
-type ComparisonItem = {
+export type ComparisonItem = {
   code: string;
   name: string;
   category: string;
@@ -46,6 +46,7 @@ type ComparisonItem = {
   difference: number | null;
   source: string;
   origin: string | null;
+  workbookData: WorkbookPosition | null;
   differences: FieldDifference[];
 };
 
@@ -953,6 +954,8 @@ export class ImportComparisonService {
             workbookPosition.source,
           origin:
             workbookPosition.origin,
+          workbookData:
+            workbookPosition,
           differences: [],
         });
 
@@ -996,6 +999,9 @@ export class ImportComparisonService {
 
         origin:
           workbookPosition.origin,
+
+        workbookData:
+          workbookPosition,
 
         differences,
       });
@@ -1047,6 +1053,7 @@ export class ImportComparisonService {
           databasePosition.source,
 
         origin: null,
+        workbookData: null,
         differences: [],
       });
     }

@@ -126,3 +126,19 @@ model ImportRun {
   @@index([createdAt])
 }
 
+model WealthSnapshot {
+  id                 String    @id @default(cuid())
+  snapshotType       String
+  reason             String
+  sourceRunId        String?
+  positionsJson      String
+  activePositions    Int
+  archivedPositions  Int
+  netValue           Float
+  createdAt          DateTime  @default(now())
+  restoredAt         DateTime?
+
+  @@index([sourceRunId])
+  @@index([createdAt])
+}
+
