@@ -4,6 +4,7 @@ import MainLayout from "./components/layout/MainLayout";
 
 import Dashboard from "./pages/Dashboard";
 import DataCatalog from "./pages/DataCatalog";
+import Budget from "./pages/Budget";
 import Investments from "./pages/Investments";
 import Liquidity from "./pages/Liquidity";
 import Properties from "./pages/Properties";
@@ -37,12 +38,7 @@ function App() {
 
         <Route
           path="budget"
-          element={
-            <PlaceholderPage
-              title="Budget"
-              description="Budget annuale e piano pluriennale 2027–2066."
-            />
-          }
+          element={<Budget />}
         />
 
         <Route

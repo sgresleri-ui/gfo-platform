@@ -267,3 +267,51 @@ export async function getPropertiesOverview(): Promise<PropertiesOverviewRespons
   );
 }
 
+export type AnnualBudgetComparison = {
+  year: number;
+  scenario: "BUDGET" | "FORECAST";
+  ordinaryExpenses: number;
+  extraordinaryExpenses: number;
+  totalExpenses: number;
+  revenues: number;
+  netCashFlow: number;
+};
+
+export type LongTermBudgetYear = {
+  year: number;
+  capitalStart: number | null;
+  totalCosts: number;
+  totalRevenues: number;
+  netCashFlow: number;
+  capitalEnd: number | null;
+};
+
+export type BudgetOverviewResponse = {
+  workbook: string;
+  asOfDate: string;
+
+  annualComparison: AnnualBudgetComparison[];
+
+  longTerm: {
+    startYear: number | null;
+    endYear: number | null;
+    yearCount: number;
+    averageNetCashFlow: number;
+    minimumCapital: number | null;
+    minimumCapitalYear: number | null;
+    firstNegativeCapitalYear: number | null;
+    years: LongTermBudgetYear[];
+  };
+
+  warnings: string[];
+};
+
+export async function getBudgetOverview(): Promise<BudgetOverviewResponse> {
+  const response = await fetch(`${API_URL}/budget`);
+
+  return readJson<BudgetOverviewResponse>(
+    response,
+    "Unable to load budget overview",
+  );
+}
+
