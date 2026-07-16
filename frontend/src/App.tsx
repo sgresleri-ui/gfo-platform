@@ -7,6 +7,7 @@ import DataCatalog from "./pages/DataCatalog";
 import Budget from "./pages/Budget";
 import Planning from "./pages/Planning";
 import Reports from "./pages/Reports";
+import Decisions from "./pages/Decisions";
 import Investments from "./pages/Investments";
 import Liquidity from "./pages/Liquidity";
 import Properties from "./pages/Properties";
@@ -60,12 +61,7 @@ function App() {
 
         <Route
           path="decisions"
-          element={
-            <PlaceholderPage
-              title="Decisioni"
-              description="Registro delle decisioni strategiche del Family Office."
-            />
-          }
+          element={<Decisions />}
         />
 
         <Route
