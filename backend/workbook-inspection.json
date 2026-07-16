@@ -1,0 +1,1805 @@
+{
+  "generatedAt": "2026-07-16T13:03:05.255Z",
+  "workbookPath": "/Users/sgresleri/Documents/gfo-platform/data/Gresleri2026.xlsm",
+  "workbook": "Gresleri2026.xlsm",
+  "sheets": [
+    {
+      "index": 1,
+      "name": "Conto Economico",
+      "rows": 290,
+      "columns": 18
+    },
+    {
+      "index": 2,
+      "name": "Forecast",
+      "rows": 152,
+      "columns": 28
+    },
+    {
+      "index": 3,
+      "name": "Budget 27",
+      "rows": 149,
+      "columns": 11
+    },
+    {
+      "index": 4,
+      "name": "Budget 27-66",
+      "rows": 179,
+      "columns": 42
+    },
+    {
+      "index": 5,
+      "name": "Riepilogo",
+      "rows": 98,
+      "columns": 6
+    },
+    {
+      "index": 6,
+      "name": "Investimenti",
+      "rows": 22,
+      "columns": 17
+    },
+    {
+      "index": 7,
+      "name": "El Toro",
+      "rows": 89,
+      "columns": 8
+    },
+    {
+      "index": 8,
+      "name": "Portafoglio",
+      "rows": 61,
+      "columns": 19
+    },
+    {
+      "index": 9,
+      "name": "Dubai",
+      "rows": 33,
+      "columns": 14
+    },
+    {
+      "index": 10,
+      "name": "Immobili",
+      "rows": 3,
+      "columns": 4
+    },
+    {
+      "index": 11,
+      "name": "Parametri",
+      "rows": 6,
+      "columns": 3
+    },
+    {
+      "index": 12,
+      "name": "Mutuo Riccione",
+      "rows": 366,
+      "columns": 14
+    },
+    {
+      "index": 13,
+      "name": "Contanti",
+      "rows": 141,
+      "columns": 53
+    },
+    {
+      "index": 14,
+      "name": "Amex",
+      "rows": 418,
+      "columns": 8
+    },
+    {
+      "index": 15,
+      "name": "IBKR",
+      "rows": 7,
+      "columns": 10
+    },
+    {
+      "index": 16,
+      "name": "RakBank EUR",
+      "rows": 12,
+      "columns": 9
+    },
+    {
+      "index": 17,
+      "name": "RakBank AED",
+      "rows": 22,
+      "columns": 12
+    },
+    {
+      "index": 18,
+      "name": "Revolut",
+      "rows": 28,
+      "columns": 9
+    },
+    {
+      "index": 19,
+      "name": "BBVA",
+      "rows": 278,
+      "columns": 14
+    },
+    {
+      "index": 20,
+      "name": "Fineco Sa",
+      "rows": 82,
+      "columns": 10
+    },
+    {
+      "index": 21,
+      "name": "Fineco St",
+      "rows": 62,
+      "columns": 10
+    },
+    {
+      "index": 22,
+      "name": "Pivot IBKR",
+      "rows": 42,
+      "columns": 7
+    },
+    {
+      "index": 23,
+      "name": "Pivot RakBank EUR",
+      "rows": 42,
+      "columns": 7
+    },
+    {
+      "index": 24,
+      "name": "Pivot RakBank AED",
+      "rows": 42,
+      "columns": 25
+    },
+    {
+      "index": 25,
+      "name": "Pivot Amex",
+      "rows": 42,
+      "columns": 87
+    },
+    {
+      "index": 26,
+      "name": "Pivot Revolut",
+      "rows": 42,
+      "columns": 29
+    },
+    {
+      "index": 27,
+      "name": "Pivot PP Visa",
+      "rows": 596,
+      "columns": 9
+    },
+    {
+      "index": 28,
+      "name": "Pivot BBVA",
+      "rows": 39,
+      "columns": 79
+    },
+    {
+      "index": 29,
+      "name": "Pivot Fineco Sa",
+      "rows": 25,
+      "columns": 19
+    },
+    {
+      "index": 30,
+      "name": "Pivot Fineco St",
+      "rows": 18,
+      "columns": 99
+    },
+    {
+      "index": 31,
+      "name": "Dati",
+      "rows": 105,
+      "columns": 7
+    }
+  ],
+  "identifiedSheets": {
+    "contoEconomico": "Conto Economico",
+    "portafoglio": "Portafoglio",
+    "riccione": "Mutuo Riccione",
+    "dubai": "Dubai",
+    "immobili": "Immobili"
+  },
+  "directCells": {
+    "contoEconomico": {
+      "sheet": "Conto Economico",
+      "insuranceProduct": {
+        "address": "O17",
+        "type": 2,
+        "text": "72783.22",
+        "value": 72783.22,
+        "formula": null,
+        "formulaResult": null
+      },
+      "accounts": {
+        "IBKR": {
+          "address": "P23",
+          "type": 6,
+          "text": "1955.239999999998",
+          "value": 1955.239999999998,
+          "formula": "G6+O21-O22",
+          "formulaResult": 1955.239999999998
+        },
+        "RAKBANK_EUR": {
+          "address": "P28",
+          "type": 6,
+          "text": "159962.62",
+          "value": 159962.62,
+          "formula": "H6+O26-O27",
+          "formulaResult": 159962.62
+        },
+        "RAKBANK_AED": {
+          "address": "P33",
+          "type": 6,
+          "text": "30909.82305600001",
+          "value": 30909.82305600001,
+          "formula": "(I6+O31-O32)*_FV(O8,\"Prezzo\")",
+          "formulaResult": 30909.82305600001
+        },
+        "FINECO_ST": {
+          "address": "P38",
+          "type": 6,
+          "text": "27555.670000000013",
+          "value": 27555.670000000013,
+          "formula": "J6+O36-O37",
+          "formulaResult": 27555.670000000013
+        },
+        "FINECO_SA": {
+          "address": "P43",
+          "type": 6,
+          "text": "3044.7900000000955",
+          "value": 3044.7900000000955,
+          "formula": "K6+O41-O42",
+          "formulaResult": 3044.7900000000955
+        },
+        "BBVA": {
+          "address": "P48",
+          "type": 6,
+          "text": "2899.1199999999944",
+          "value": 2899.1199999999944,
+          "formula": "L6+O46-O47+O58+O59",
+          "formulaResult": 2899.1199999999944
+        },
+        "REVOLUT": {
+          "address": "P53",
+          "type": 6,
+          "text": "136.3900000000001",
+          "value": 136.3900000000001,
+          "formula": "M6+O51-O52",
+          "formulaResult": 136.3900000000001
+        }
+      }
+    },
+    "riccione": {
+      "sheet": "Mutuo Riccione",
+      "residualDebt": {
+        "address": "F4",
+        "type": 6,
+        "text": "50536.24999999999",
+        "value": 50536.24999999999,
+        "formula": "SUMIF(C6:C365, \"Da pagare\", F6:F365)",
+        "formulaResult": 50536.24999999999
+      }
+    },
+    "dubai": {
+      "sheet": "Dubai",
+      "residualDebt": {
+        "address": "B8",
+        "type": 6,
+        "text": "213223.7643048335",
+        "value": 213223.7643048335,
+        "formula": "SUM(B6:B7)",
+        "formulaResult": 213223.7643048335
+      }
+    }
+  },
+  "portfolioTable": {
+    "sheet": "Portafoglio",
+    "rowCount": 61,
+    "columnCount": 19,
+    "header": {
+      "row": 6,
+      "score": 9,
+      "columns": {
+        "portfolio": 3,
+        "title": 4,
+        "isin": 5,
+        "market": 7,
+        "instrument": 8,
+        "currency": 9,
+        "quantity": 10,
+        "marketPrice": 13,
+        "marketValue": 14
+      }
+    },
+    "records": [
+      {
+        "sourceRow": 7,
+        "portfolio": "Advice",
+        "title": "ARC OBB EUR ESG LEAD",
+        "isin": "IT0001248324",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 625.492,
+        "marketPrice": 13.634,
+        "marketValue": 8527.957928
+      },
+      {
+        "sourceRow": 8,
+        "portfolio": "Advice",
+        "title": "MFS EU RESEARCH CLA1",
+        "isin": "LU0094557526",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 288.518,
+        "marketPrice": 61.31,
+        "marketValue": 17689.03858
+      },
+      {
+        "sourceRow": 9,
+        "portfolio": "Advice",
+        "title": "MORGAN ST GL OPP A",
+        "isin": "LU0552385295",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 86.207,
+        "marketPrice": 147.74,
+        "marketValue": 12736.22218
+      },
+      {
+        "sourceRow": 10,
+        "portfolio": "Advice",
+        "title": "INV GLOBAL INC FD A",
+        "isin": "LU1097688714",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 316.926,
+        "marketPrice": 17.514,
+        "marketValue": 5550.6419639999995
+      },
+      {
+        "sourceRow": 11,
+        "portfolio": "Advice",
+        "title": "FF GLB DIVID FUND A",
+        "isin": "LU1261431768",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 191.83,
+        "marketPrice": 23.07,
+        "marketValue": 4425.5181
+      },
+      {
+        "sourceRow": 12,
+        "portfolio": "Advice",
+        "title": "CAN EQ L EM MRK C AC",
+        "isin": "LU0056052961",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 3.107,
+        "marketPrice": 1550.67,
+        "marketValue": 4817.93169
+      },
+      {
+        "sourceRow": 13,
+        "portfolio": "Advice",
+        "title": "ROB BP GL PREM EQ D",
+        "isin": "LU0203975437",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 8.4033,
+        "marketPrice": 602.25,
+        "marketValue": 5060.887425
+      },
+      {
+        "sourceRow": 14,
+        "portfolio": "Advice",
+        "title": "M&G (LUX) EUR STR VA",
+        "isin": "LU1670707527",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 359.03,
+        "marketPrice": 22.784,
+        "marketValue": 8180.139519999999
+      },
+      {
+        "sourceRow": 15,
+        "portfolio": "Advice",
+        "title": "SCHRODER EUR CORP BN",
+        "isin": "LU0113257694",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 413.25,
+        "marketPrice": 24.811,
+        "marketValue": 10253.14575
+      },
+      {
+        "sourceRow": 16,
+        "portfolio": "Advice",
+        "title": "SCHRODER AS OPP A AC",
+        "isin": "LU0248184466",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 337.05,
+        "marketPrice": 32.844,
+        "marketValue": 11070.0702
+      },
+      {
+        "sourceRow": 17,
+        "portfolio": "Advice",
+        "title": "RAIF BIL SOS V ACC",
+        "isin": "AT0000785381",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 61.633,
+        "marketPrice": 163.15,
+        "marketValue": 10055.42395
+      },
+      {
+        "sourceRow": 18,
+        "portfolio": "Advice",
+        "title": "INV GL CON TR E EUR",
+        "isin": "LU0115139569",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 100.15,
+        "marketPrice": 71.71,
+        "marketValue": 7181.7564999999995
+      },
+      {
+        "sourceRow": 19,
+        "portfolio": "Advice",
+        "title": "UNIFAVORITE:AKTIEN",
+        "isin": "DE0008477076",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 41.158,
+        "marketPrice": 328.4,
+        "marketValue": 13516.287199999999
+      },
+      {
+        "sourceRow": 20,
+        "portfolio": "Advice",
+        "title": "GOLDMAN EUROP COR -E",
+        "isin": "LU0133265339",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 711.205,
+        "marketPrice": 44.15,
+        "marketValue": 31399.70075
+      },
+      {
+        "sourceRow": 21,
+        "portfolio": "Advice",
+        "title": "MORGAN GL BRANDS A",
+        "isin": "LU0119620416",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 83.009,
+        "marketPrice": 173.71,
+        "marketValue": 14419.493390000001
+      },
+      {
+        "sourceRow": 22,
+        "portfolio": "Advice",
+        "title": "BGF WOR TEC EUR E2",
+        "isin": "LU0171310955",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 326.8,
+        "marketPrice": 116.91,
+        "marketValue": 38206.188
+      },
+      {
+        "sourceRow": 23,
+        "portfolio": "Advice",
+        "title": "JH BAL FD A (ACC) EU",
+        "isin": "IE0009514989",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 185.048,
+        "marketPrice": 44.84,
+        "marketValue": 8297.55232
+      },
+      {
+        "sourceRow": 24,
+        "portfolio": "Advice",
+        "title": "FID CH CONS F. A ACC",
+        "isin": "LU0594300096",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 524.13,
+        "marketPrice": 17.68,
+        "marketValue": 9266.6184
+      },
+      {
+        "sourceRow": 25,
+        "portfolio": "Advice",
+        "title": "ALL BES ST GL EQ AT",
+        "isin": "LU2696130686",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 172.53,
+        "marketPrice": 161.5,
+        "marketValue": 27863.595
+      },
+      {
+        "sourceRow": 26,
+        "portfolio": "Advice+",
+        "title": "EU ST EQ FAM F L ACC",
+        "isin": "IE000RN6A2P4",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 359.564,
+        "marketPrice": 148.763,
+        "marketValue": 53489.81933200001
+      },
+      {
+        "sourceRow": 27,
+        "portfolio": "Advice+",
+        "title": "Invesco CoinShares Global Blockchain UCITS ETF",
+        "isin": "IE00BGBN6P67",
+        "market": "AFF",
+        "instrument": "ETF",
+        "currency": "EUR",
+        "quantity": 559,
+        "marketPrice": 158.98,
+        "marketValue": 88869.81999999999
+      },
+      {
+        "sourceRow": 28,
+        "portfolio": "Advice+",
+        "title": "iShares Nasdaq 100 UCITS ETF USD (Acc)",
+        "isin": "IE00B53SZB19",
+        "market": "XETRA",
+        "instrument": "ETF",
+        "currency": "EUR",
+        "quantity": 37,
+        "marketPrice": 1493.8,
+        "marketValue": 55270.6
+      },
+      {
+        "sourceRow": 29,
+        "portfolio": "Advice+",
+        "title": "iShares Automation & Robotics UCITS ETF USD (Acc)",
+        "isin": "IE00BYZK4552",
+        "market": "AFF",
+        "instrument": "ETF",
+        "currency": "EUR",
+        "quantity": 5105,
+        "marketPrice": 18.27,
+        "marketValue": 93268.34999999999
+      },
+      {
+        "sourceRow": 30,
+        "portfolio": "Advice+",
+        "title": "CORE FAM SUST E EU A",
+        "isin": "LU1545601657",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 1258.993,
+        "marketPrice": 9.894,
+        "marketValue": 12456.476741999999
+      },
+      {
+        "sourceRow": 31,
+        "portfolio": "Advice+",
+        "title": "iShares Core S&P 500 UCITS ETF USD (Acc)",
+        "isin": "IE00B5BMR087",
+        "market": "AFF",
+        "instrument": "ETF",
+        "currency": "EUR",
+        "quantity": 95,
+        "marketPrice": 711.67,
+        "marketValue": 67608.65
+      },
+      {
+        "sourceRow": 32,
+        "portfolio": "Advice+",
+        "title": "FINECO AM ADVISORY 9",
+        "isin": "IE00BJCX8166",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 136.58,
+        "marketPrice": 178.086,
+        "marketValue": 24322.985880000004
+      },
+      {
+        "sourceRow": 33,
+        "portfolio": "Advice+",
+        "title": "iShares MSCI World Small Cap UCITS ETF USD (Acc)",
+        "isin": "IE00BF4RFH31",
+        "market": "XETRA",
+        "instrument": "ETF",
+        "currency": "EUR",
+        "quantity": 5890,
+        "marketPrice": 9.11,
+        "marketValue": 53657.899999999994
+      },
+      {
+        "sourceRow": 34,
+        "portfolio": "Advice+",
+        "title": "iShares MSCI China A UCITS ETF USD (Acc)",
+        "isin": "IE00BQT3WG13",
+        "market": "XETRA",
+        "instrument": "ETF",
+        "currency": "EUR",
+        "quantity": 10774,
+        "marketPrice": 5.408,
+        "marketValue": 58265.792
+      },
+      {
+        "sourceRow": 35,
+        "portfolio": "Advice+",
+        "title": "FINECO AM ADVISORY 7",
+        "isin": "IE00BFM13062",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 164.103,
+        "marketPrice": 145.288,
+        "marketValue": 23842.196664000003
+      },
+      {
+        "sourceRow": 36,
+        "portfolio": "Advice+",
+        "title": "FID FOCUS EQ FAM L A",
+        "isin": "IE00BFXY6614",
+        "market": "FONDI",
+        "instrument": "Fondo PAC",
+        "currency": "EUR",
+        "quantity": 73.496,
+        "marketPrice": 194.375,
+        "marketValue": 14285.785
+      },
+      {
+        "sourceRow": 37,
+        "portfolio": "Advice+",
+        "title": "ALL GL ARTIF INTELLI",
+        "isin": "LU1548497772",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 223.145,
+        "marketPrice": 342.91,
+        "marketValue": 76518.65195000001
+      },
+      {
+        "sourceRow": 38,
+        "portfolio": "Advice+",
+        "title": "FINECO AM PASS UND 8",
+        "isin": "IE000DWG3DP6",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 357.344,
+        "marketPrice": 158.395,
+        "marketValue": 56601.50288
+      },
+      {
+        "sourceRow": 39,
+        "portfolio": "Advice+",
+        "title": "L&G Clean Water UCITS ETF",
+        "isin": "IE00BK5BC891",
+        "market": "AFF",
+        "instrument": "ETF",
+        "currency": "EUR",
+        "quantity": 3205,
+        "marketPrice": 18.532,
+        "marketValue": 59395.06
+      },
+      {
+        "sourceRow": 40,
+        "portfolio": "Advice+",
+        "title": "Xtrackers MSCI USA UCITS ETF 1C",
+        "isin": "IE00BJ0KDR00",
+        "market": "AFF",
+        "instrument": "ETF",
+        "currency": "EUR",
+        "quantity": 205,
+        "marketPrice": 195,
+        "marketValue": 39975
+      },
+      {
+        "sourceRow": 41,
+        "portfolio": "Advice+",
+        "title": "iShares MSCI Europe SRI UCITS ETF EUR (Acc)",
+        "isin": "IE00B52VJ196",
+        "market": "AFF",
+        "instrument": "ETF",
+        "currency": "EUR",
+        "quantity": 246,
+        "marketPrice": 77.68,
+        "marketValue": 19109.280000000002
+      },
+      {
+        "sourceRow": 42,
+        "portfolio": "Advice+",
+        "title": "FAM MEGATRENDS L ACC",
+        "isin": "IE00BJCX8943",
+        "market": "FONDI",
+        "instrument": "Fondo",
+        "currency": "EUR",
+        "quantity": 161.678,
+        "marketPrice": 157.138,
+        "marketValue": 25405.757564
+      },
+      {
+        "sourceRow": 43,
+        "portfolio": "Advice+",
+        "title": "iShares Core MSCI Europe UCITS ETF EUR (Acc)",
+        "isin": "IE00B4K48X80",
+        "market": "AFF",
+        "instrument": "ETF",
+        "currency": "EUR",
+        "quantity": 365,
+        "marketPrice": 104.04,
+        "marketValue": 37974.600000000006
+      },
+      {
+        "sourceRow": 44,
+        "portfolio": "IBKR",
+        "title": "AM CR EUR STX 50 ETF EUR ACC",
+        "isin": "LU1681047236",
+        "market": null,
+        "instrument": "ETF",
+        "currency": "EUR",
+        "quantity": 186,
+        "marketPrice": 168.22,
+        "marketValue": 31288.92
+      },
+      {
+        "sourceRow": 45,
+        "portfolio": "IBKR",
+        "title": "ISHARES EDGE MSCI WORLD VALUE",
+        "isin": "IE00BP3QZB59",
+        "market": null,
+        "instrument": "ETF",
+        "currency": "EUR",
+        "quantity": 430,
+        "marketPrice": 69.08,
+        "marketValue": 29704.399999999998
+      },
+      {
+        "sourceRow": 47,
+        "portfolio": null,
+        "title": "Totale",
+        "isin": null,
+        "market": null,
+        "instrument": null,
+        "currency": null,
+        "quantity": null,
+        "marketPrice": null,
+        "marketValue": "Valore di mercato"
+      },
+      {
+        "sourceRow": 48,
+        "portfolio": null,
+        "title": null,
+        "isin": null,
+        "market": null,
+        "instrument": null,
+        "currency": null,
+        "quantity": null,
+        "marketPrice": null,
+        "marketValue": 1169829.7168590003
+      },
+      {
+        "sourceRow": 58,
+        "portfolio": "40% SP500 for long term growth",
+        "title": null,
+        "isin": null,
+        "market": null,
+        "instrument": null,
+        "currency": null,
+        "quantity": null,
+        "marketPrice": null,
+        "marketValue": null
+      },
+      {
+        "sourceRow": 59,
+        "portfolio": "30% dividend growth fund for rising income ",
+        "title": null,
+        "isin": null,
+        "market": null,
+        "instrument": null,
+        "currency": null,
+        "quantity": null,
+        "marketPrice": null,
+        "marketValue": null
+      },
+      {
+        "sourceRow": 60,
+        "portfolio": "20% short term treasury bond for stability",
+        "title": null,
+        "isin": null,
+        "market": null,
+        "instrument": null,
+        "currency": null,
+        "quantity": null,
+        "marketPrice": null,
+        "marketValue": null
+      },
+      {
+        "sourceRow": 61,
+        "portfolio": "10% international dividend fund for diversification",
+        "title": null,
+        "isin": null,
+        "market": null,
+        "instrument": null,
+        "currency": null,
+        "quantity": null,
+        "marketPrice": null,
+        "marketValue": null
+      }
+    ]
+  },
+  "propertyPreviews": {
+    "immobili": [
+      {
+        "row": 1,
+        "cells": [
+          {
+            "address": "A1",
+            "text": "Immobile"
+          },
+          {
+            "address": "B1",
+            "text": "Valore"
+          },
+          {
+            "address": "C1",
+            "text": "Mutuo residuo"
+          },
+          {
+            "address": "D1",
+            "text": "Note"
+          }
+        ]
+      },
+      {
+        "row": 2,
+        "cells": [
+          {
+            "address": "A2",
+            "text": "Riccione"
+          },
+          {
+            "address": "B2",
+            "text": "275000"
+          },
+          {
+            "address": "C2",
+            "text": "50536.24999999999"
+          },
+          {
+            "address": "D2",
+            "text": "Italia"
+          }
+        ]
+      },
+      {
+        "row": 3,
+        "cells": [
+          {
+            "address": "A3",
+            "text": "Dubai"
+          },
+          {
+            "address": "B3",
+            "text": "510000"
+          },
+          {
+            "address": "C3",
+            "text": "213223.7643048335"
+          },
+          {
+            "address": "D3",
+            "text": "UAE"
+          }
+        ]
+      }
+    ],
+    "riccione": [
+      {
+        "row": 1,
+        "cells": [
+          {
+            "address": "A1",
+            "text": "Oggetto: piano di ammortamento aggiornato\nDi seguito sono riportati i dati aggiornati del piano di ammortamento del finanziamento\nRiepilogo finanziamento\nIntestato a:                                                                                                              GRESLERI STEFANO\nNumero finanziamento:                                                                                         52824006\nModalità di addebito:                                                                                           Mandato SDD IT89X0301503200000003846956\nImporto erogato:                                                                                                    € 75.000,00\nImporto finanziato:                                                                                                 € 75.000,00\nCapitale residuo:                                                                                                   € 42.990,76\nDebito residuo:                                                                                                       € 55.793,48\nData erogazione:                                                                                                   25.03.2010\nDurata totale:                                                                                                         30 anni\nDurata residua:                                                                                                       15 anni\nScadenza prima rata:                                                                                            01.06.2010\nScadenza ultima rata:                                                                                           01.05.2040\nNumero rate totali:                                                                                                 360\nPeriodicità rate:                                                                                                      Mensile\nScadenza rata:                                                                                                       Il giorno 1 del mese\nNumero rate pagate:                                                                                            180\nDettaglio piano di ammortamento"
+          },
+          {
+            "address": "B1",
+            "text": "[object Object]"
+          },
+          {
+            "address": "C1",
+            "text": "[object Object]"
+          },
+          {
+            "address": "D1",
+            "text": "[object Object]"
+          },
+          {
+            "address": "E1",
+            "text": "[object Object]"
+          },
+          {
+            "address": "F1",
+            "text": "[object Object]"
+          },
+          {
+            "address": "G1",
+            "text": "[object Object]"
+          },
+          {
+            "address": "H1",
+            "text": "[object Object]"
+          },
+          {
+            "address": "I1",
+            "text": "[object Object]"
+          },
+          {
+            "address": "J1",
+            "text": "[object Object]"
+          }
+        ]
+      },
+      {
+        "row": 2,
+        "cells": [
+          {
+            "address": "A2",
+            "text": "Imposta Sostitutiva"
+          },
+          {
+            "address": "F2",
+            "text": "187.5"
+          }
+        ]
+      },
+      {
+        "row": 3,
+        "cells": [
+          {
+            "address": "A3",
+            "text": "Spese di istruttoria"
+          },
+          {
+            "address": "F3",
+            "text": "200"
+          }
+        ]
+      },
+      {
+        "row": 4,
+        "cells": [
+          {
+            "address": "A4",
+            "text": "Residuo da pagare"
+          },
+          {
+            "address": "F4",
+            "text": "50536.24999999999"
+          }
+        ]
+      },
+      {
+        "row": 5,
+        "cells": [
+          {
+            "address": "A5",
+            "text": "Nr"
+          },
+          {
+            "address": "B5",
+            "text": "Scadenza"
+          },
+          {
+            "address": "C5",
+            "text": "Stato"
+          },
+          {
+            "address": "D5",
+            "text": "Quota capitale"
+          },
+          {
+            "address": "E5",
+            "text": "Quota interessi"
+          },
+          {
+            "address": "F5",
+            "text": "Importo rata"
+          },
+          {
+            "address": "G5",
+            "text": "Capitale residuo"
+          }
+        ]
+      },
+      {
+        "row": 6,
+        "cells": [
+          {
+            "address": "A6",
+            "text": "1"
+          },
+          {
+            "address": "B6",
+            "text": "Wed Jan 06 2010 01:00:00 GMT+0100 (Central European Standard Time)"
+          },
+          {
+            "address": "C6",
+            "text": "Pagata"
+          },
+          {
+            "address": "D6",
+            "text": "153.02"
+          },
+          {
+            "address": "E6",
+            "text": "357.9"
+          },
+          {
+            "address": "F6",
+            "text": "511.4"
+          },
+          {
+            "address": "G6",
+            "text": "74846.98"
+          }
+        ]
+      },
+      {
+        "row": 7,
+        "cells": [
+          {
+            "address": "A7",
+            "text": "2"
+          },
+          {
+            "address": "B7",
+            "text": "Thu Jan 07 2010 01:00:00 GMT+0100 (Central European Standard Time)"
+          },
+          {
+            "address": "C7",
+            "text": "Pagata"
+          },
+          {
+            "address": "D7",
+            "text": "153.27"
+          },
+          {
+            "address": "E7",
+            "text": "123.37"
+          },
+          {
+            "address": "F7",
+            "text": "276.64"
+          },
+          {
+            "address": "G7",
+            "text": "74693.71"
+          }
+        ]
+      },
+      {
+        "row": 8,
+        "cells": [
+          {
+            "address": "A8",
+            "text": "3"
+          },
+          {
+            "address": "B8",
+            "text": "Fri Jan 08 2010 01:00:00 GMT+0100 (Central European Standard Time)"
+          },
+          {
+            "address": "C8",
+            "text": "Pagata"
+          },
+          {
+            "address": "D8",
+            "text": "153.52"
+          },
+          {
+            "address": "E8",
+            "text": "130.5"
+          },
+          {
+            "address": "F8",
+            "text": "284.02"
+          },
+          {
+            "address": "G8",
+            "text": "74540.19"
+          }
+        ]
+      },
+      {
+        "row": 9,
+        "cells": [
+          {
+            "address": "A9",
+            "text": "4"
+          },
+          {
+            "address": "B9",
+            "text": "Sat Jan 09 2010 01:00:00 GMT+0100 (Central European Standard Time)"
+          },
+          {
+            "address": "C9",
+            "text": "Pagata"
+          },
+          {
+            "address": "D9",
+            "text": "153.77"
+          },
+          {
+            "address": "E9",
+            "text": "140.76"
+          },
+          {
+            "address": "F9",
+            "text": "294.53"
+          },
+          {
+            "address": "G9",
+            "text": "74386.42"
+          }
+        ]
+      },
+      {
+        "row": 10,
+        "cells": [
+          {
+            "address": "A10",
+            "text": "5"
+          },
+          {
+            "address": "B10",
+            "text": "Sun Jan 10 2010 01:00:00 GMT+0100 (Central European Standard Time)"
+          },
+          {
+            "address": "C10",
+            "text": "Pagata"
+          },
+          {
+            "address": "D10",
+            "text": "154.02"
+          },
+          {
+            "address": "E10",
+            "text": "134.76"
+          },
+          {
+            "address": "F10",
+            "text": "288.78"
+          },
+          {
+            "address": "G10",
+            "text": "74232.4"
+          }
+        ]
+      },
+      {
+        "row": 11,
+        "cells": [
+          {
+            "address": "A11",
+            "text": "6"
+          },
+          {
+            "address": "B11",
+            "text": "Mon Jan 11 2010 01:00:00 GMT+0100 (Central European Standard Time)"
+          },
+          {
+            "address": "C11",
+            "text": "Pagata"
+          },
+          {
+            "address": "D11",
+            "text": "154.27"
+          },
+          {
+            "address": "E11",
+            "text": "138.78"
+          },
+          {
+            "address": "F11",
+            "text": "293.05"
+          },
+          {
+            "address": "G11",
+            "text": "74078.13"
+          }
+        ]
+      },
+      {
+        "row": 12,
+        "cells": [
+          {
+            "address": "A12",
+            "text": "7"
+          },
+          {
+            "address": "B12",
+            "text": "Tue Jan 12 2010 01:00:00 GMT+0100 (Central European Standard Time)"
+          },
+          {
+            "address": "C12",
+            "text": "Pagata"
+          },
+          {
+            "address": "D12",
+            "text": "154.53"
+          },
+          {
+            "address": "E12",
+            "text": "147.97"
+          },
+          {
+            "address": "F12",
+            "text": "302.5"
+          },
+          {
+            "address": "G12",
+            "text": "73923.6"
+          }
+        ]
+      },
+      {
+        "row": 13,
+        "cells": [
+          {
+            "address": "A13",
+            "text": "8"
+          },
+          {
+            "address": "B13",
+            "text": "Sat Jan 01 2011 01:00:00 GMT+0100 (Central European Standard Time)"
+          },
+          {
+            "address": "C13",
+            "text": "Pagata"
+          },
+          {
+            "address": "D13",
+            "text": "154.78"
+          },
+          {
+            "address": "E13",
+            "text": "150.1"
+          },
+          {
+            "address": "F13",
+            "text": "304.88"
+          },
+          {
+            "address": "G13",
+            "text": "73768.82"
+          }
+        ]
+      },
+      {
+        "row": 14,
+        "cells": [
+          {
+            "address": "A14",
+            "text": "9"
+          },
+          {
+            "address": "B14",
+            "text": "Sun Jan 02 2011 01:00:00 GMT+0100 (Central European Standard Time)"
+          },
+          {
+            "address": "C14",
+            "text": "Pagata"
+          },
+          {
+            "address": "D14",
+            "text": "155.04"
+          },
+          {
+            "address": "E14",
+            "text": "148.64"
+          },
+          {
+            "address": "F14",
+            "text": "303.68"
+          },
+          {
+            "address": "G14",
+            "text": "73613.78"
+          }
+        ]
+      },
+      {
+        "row": 15,
+        "cells": [
+          {
+            "address": "A15",
+            "text": "10"
+          },
+          {
+            "address": "B15",
+            "text": "Mon Jan 03 2011 01:00:00 GMT+0100 (Central European Standard Time)"
+          },
+          {
+            "address": "C15",
+            "text": "Pagata"
+          },
+          {
+            "address": "D15",
+            "text": "155.29"
+          },
+          {
+            "address": "E15",
+            "text": "138.96"
+          },
+          {
+            "address": "F15",
+            "text": "294.25"
+          },
+          {
+            "address": "G15",
+            "text": "73458.49"
+          }
+        ]
+      },
+      {
+        "row": 16,
+        "cells": [
+          {
+            "address": "A16",
+            "text": "11"
+          },
+          {
+            "address": "B16",
+            "text": "Tue Jan 04 2011 01:00:00 GMT+0100 (Central European Standard Time)"
+          },
+          {
+            "address": "C16",
+            "text": "Pagata"
+          },
+          {
+            "address": "D16",
+            "text": "155.54"
+          },
+          {
+            "address": "E16",
+            "text": "152.89"
+          },
+          {
+            "address": "F16",
+            "text": "308.43"
+          },
+          {
+            "address": "G16",
+            "text": "73302.95"
+          }
+        ]
+      },
+      {
+        "row": 17,
+        "cells": [
+          {
+            "address": "A17",
+            "text": "12"
+          },
+          {
+            "address": "B17",
+            "text": "Wed Jan 05 2011 01:00:00 GMT+0100 (Central European Standard Time)"
+          },
+          {
+            "address": "C17",
+            "text": "Pagata"
+          },
+          {
+            "address": "D17",
+            "text": "155.8"
+          },
+          {
+            "address": "E17",
+            "text": "153.33"
+          },
+          {
+            "address": "F17",
+            "text": "309.13"
+          },
+          {
+            "address": "G17",
+            "text": "73147.15"
+          }
+        ]
+      },
+      {
+        "row": 18,
+        "cells": [
+          {
+            "address": "A18",
+            "text": "13"
+          },
+          {
+            "address": "B18",
+            "text": "Thu Jan 06 2011 01:00:00 GMT+0100 (Central European Standard Time)"
+          },
+          {
+            "address": "C18",
+            "text": "Pagata"
+          },
+          {
+            "address": "D18",
+            "text": "156.05"
+          },
+          {
+            "address": "E18",
+            "text": "174.92"
+          },
+          {
+            "address": "F18",
+            "text": "330.97"
+          },
+          {
+            "address": "G18",
+            "text": "72991.1"
+          }
+        ]
+      },
+      {
+        "row": 19,
+        "cells": [
+          {
+            "address": "A19",
+            "text": "14"
+          },
+          {
+            "address": "B19",
+            "text": "Fri Jan 07 2011 01:00:00 GMT+0100 (Central European Standard Time)"
+          },
+          {
+            "address": "C19",
+            "text": "Pagata"
+          },
+          {
+            "address": "D19",
+            "text": "156.31"
+          },
+          {
+            "address": "E19",
+            "text": "169.1"
+          },
+          {
+            "address": "F19",
+            "text": "325.41"
+          },
+          {
+            "address": "G19",
+            "text": "72834.79"
+          }
+        ]
+      },
+      {
+        "row": 20,
+        "cells": [
+          {
+            "address": "A20",
+            "text": "15"
+          },
+          {
+            "address": "B20",
+            "text": "Sat Jan 08 2011 01:00:00 GMT+0100 (Central European Standard Time)"
+          },
+          {
+            "address": "C20",
+            "text": "Pagata"
+          },
+          {
+            "address": "D20",
+            "text": "156.57"
+          },
+          {
+            "address": "E20",
+            "text": "179.94"
+          },
+          {
+            "address": "F20",
+            "text": "336.51"
+          },
+          {
+            "address": "G20",
+            "text": "72678.22"
+          }
+        ]
+      }
+    ],
+    "dubai": [
+      {
+        "row": 1,
+        "cells": [
+          {
+            "address": "A1",
+            "text": "Investimento Aquarise Dubai"
+          }
+        ]
+      },
+      {
+        "row": 2,
+        "cells": [
+          {
+            "address": "G2",
+            "text": "Tassi di cambio"
+          },
+          {
+            "address": "H2",
+            "text": "Tassi di cambio"
+          },
+          {
+            "address": "I2",
+            "text": "Tassi di cambio"
+          }
+        ]
+      },
+      {
+        "row": 3,
+        "cells": [
+          {
+            "address": "A3",
+            "text": "Voci di spesa previste/consuntivate"
+          },
+          {
+            "address": "G3",
+            "text": "Tasso di cambio al 27/05"
+          },
+          {
+            "address": "H3",
+            "text": "1.1352"
+          },
+          {
+            "address": "I3",
+            "text": "Euro/USD"
+          }
+        ]
+      },
+      {
+        "row": 4,
+        "cells": [
+          {
+            "address": "A4",
+            "text": "Anno"
+          },
+          {
+            "address": "B4",
+            "text": "Forecast (AED)"
+          },
+          {
+            "address": "C4",
+            "text": "Consuntivi (EUR)"
+          },
+          {
+            "address": "D4",
+            "text": "Totale (EUR)"
+          },
+          {
+            "address": "G4",
+            "text": "Tasso di cambio al 27/05"
+          },
+          {
+            "address": "H4",
+            "text": "3.67298"
+          },
+          {
+            "address": "I4",
+            "text": "USD/AED"
+          }
+        ]
+      },
+      {
+        "row": 5,
+        "cells": [
+          {
+            "address": "A5",
+            "text": "2025"
+          },
+          {
+            "address": "C5",
+            "text": "218149.30000000002"
+          },
+          {
+            "address": "D5",
+            "text": "218149.30000000002"
+          },
+          {
+            "address": "G5",
+            "text": "#VALUE!"
+          },
+          {
+            "address": "H5",
+            "text": "0.2326"
+          }
+        ]
+      },
+      {
+        "row": 6,
+        "cells": [
+          {
+            "address": "A6",
+            "text": "2026"
+          },
+          {
+            "address": "B6",
+            "text": "48891.156304833465"
+          },
+          {
+            "address": "C6",
+            "text": "71060.82007880001"
+          },
+          {
+            "address": "D6",
+            "text": "119951.97638363348"
+          }
+        ]
+      },
+      {
+        "row": 7,
+        "cells": [
+          {
+            "address": "A7",
+            "text": "2027"
+          },
+          {
+            "address": "B7",
+            "text": "164332.608"
+          },
+          {
+            "address": "D7",
+            "text": "164332.608"
+          }
+        ]
+      },
+      {
+        "row": 8,
+        "cells": [
+          {
+            "address": "B8",
+            "text": "213223.7643048335"
+          },
+          {
+            "address": "C8",
+            "text": "289210.1200788"
+          },
+          {
+            "address": "D8",
+            "text": "502433.8843836335"
+          },
+          {
+            "address": "E8",
+            "text": "Gran Totale"
+          }
+        ]
+      },
+      {
+        "row": 13,
+        "cells": [
+          {
+            "address": "A13",
+            "text": "Vendita Immobile El Toro"
+          },
+          {
+            "address": "B13",
+            "text": "Vendita Immobile El Toro"
+          },
+          {
+            "address": "C13",
+            "text": "Vendita Immobile El Toro"
+          }
+        ]
+      },
+      {
+        "row": 14,
+        "cells": [
+          {
+            "address": "A14",
+            "text": "Parametro"
+          },
+          {
+            "address": "B14",
+            "text": "Valore"
+          },
+          {
+            "address": "C14",
+            "text": "Note"
+          }
+        ]
+      },
+      {
+        "row": 15,
+        "cells": [
+          {
+            "address": "A15",
+            "text": "Costo terreno (EUR)"
+          },
+          {
+            "address": "B15",
+            "text": "274802.15"
+          }
+        ]
+      },
+      {
+        "row": 16,
+        "cells": [
+          {
+            "address": "A16",
+            "text": "Costo casa (EUR)"
+          },
+          {
+            "address": "B16",
+            "text": "889191.96"
+          }
+        ]
+      },
+      {
+        "row": 17,
+        "cells": [
+          {
+            "address": "A17",
+            "text": "Costo totale (EUR)"
+          },
+          {
+            "address": "B17",
+            "text": "1163994.1099999999"
+          }
+        ]
+      },
+      {
+        "row": 18,
+        "cells": [
+          {
+            "address": "A18",
+            "text": "Aliquota IVA su agenzia"
+          },
+          {
+            "address": "B18",
+            "text": "0.21"
+          }
+        ]
+      },
+      {
+        "row": 19,
+        "cells": [
+          {
+            "address": "A19",
+            "text": "Plusvalía municipal IIVTNU"
+          },
+          {
+            "address": "B19",
+            "text": "3898"
+          },
+          {
+            "address": "C19",
+            "text": "Stima (Calvià)"
+          }
+        ]
+      }
+    ]
+  }
+}

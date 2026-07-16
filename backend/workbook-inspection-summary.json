@@ -1,0 +1,426 @@
+{
+  "identifiedSheets": {
+    "contoEconomico": "Conto Economico",
+    "portafoglio": "Portafoglio",
+    "riccione": "Mutuo Riccione",
+    "dubai": "Dubai",
+    "immobili": "Immobili"
+  },
+  "directCells": {
+    "contoEconomico": {
+      "sheet": "Conto Economico",
+      "insuranceProduct": {
+        "address": "O17",
+        "type": 2,
+        "text": "72783.22",
+        "value": 72783.22,
+        "formula": null,
+        "formulaResult": null
+      },
+      "accounts": {
+        "IBKR": {
+          "address": "P23",
+          "type": 6,
+          "text": "1955.239999999998",
+          "value": 1955.239999999998,
+          "formula": "G6+O21-O22",
+          "formulaResult": 1955.239999999998
+        },
+        "RAKBANK_EUR": {
+          "address": "P28",
+          "type": 6,
+          "text": "159962.62",
+          "value": 159962.62,
+          "formula": "H6+O26-O27",
+          "formulaResult": 159962.62
+        },
+        "RAKBANK_AED": {
+          "address": "P33",
+          "type": 6,
+          "text": "30909.82305600001",
+          "value": 30909.82305600001,
+          "formula": "(I6+O31-O32)*_FV(O8,\"Prezzo\")",
+          "formulaResult": 30909.82305600001
+        },
+        "FINECO_ST": {
+          "address": "P38",
+          "type": 6,
+          "text": "27555.670000000013",
+          "value": 27555.670000000013,
+          "formula": "J6+O36-O37",
+          "formulaResult": 27555.670000000013
+        },
+        "FINECO_SA": {
+          "address": "P43",
+          "type": 6,
+          "text": "3044.7900000000955",
+          "value": 3044.7900000000955,
+          "formula": "K6+O41-O42",
+          "formulaResult": 3044.7900000000955
+        },
+        "BBVA": {
+          "address": "P48",
+          "type": 6,
+          "text": "2899.1199999999944",
+          "value": 2899.1199999999944,
+          "formula": "L6+O46-O47+O58+O59",
+          "formulaResult": 2899.1199999999944
+        },
+        "REVOLUT": {
+          "address": "P53",
+          "type": 6,
+          "text": "136.3900000000001",
+          "value": 136.3900000000001,
+          "formula": "M6+O51-O52",
+          "formulaResult": 136.3900000000001
+        }
+      }
+    },
+    "riccione": {
+      "sheet": "Mutuo Riccione",
+      "residualDebt": {
+        "address": "F4",
+        "type": 6,
+        "text": "50536.24999999999",
+        "value": 50536.24999999999,
+        "formula": "SUMIF(C6:C365, \"Da pagare\", F6:F365)",
+        "formulaResult": 50536.24999999999
+      }
+    },
+    "dubai": {
+      "sheet": "Dubai",
+      "residualDebt": {
+        "address": "B8",
+        "type": 6,
+        "text": "213223.7643048335",
+        "value": 213223.7643048335,
+        "formula": "SUM(B6:B7)",
+        "formulaResult": 213223.7643048335
+      }
+    }
+  },
+  "portfolioHeader": {
+    "row": 6,
+    "score": 9,
+    "columns": {
+      "portfolio": 3,
+      "title": 4,
+      "isin": 5,
+      "market": 7,
+      "instrument": 8,
+      "currency": 9,
+      "quantity": 10,
+      "marketPrice": 13,
+      "marketValue": 14
+    }
+  },
+  "firstPortfolioRows": [
+    {
+      "sourceRow": 7,
+      "portfolio": "Advice",
+      "title": "ARC OBB EUR ESG LEAD",
+      "isin": "IT0001248324",
+      "market": "FONDI",
+      "instrument": "Fondo",
+      "currency": "EUR",
+      "quantity": 625.492,
+      "marketPrice": 13.634,
+      "marketValue": 8527.957928
+    },
+    {
+      "sourceRow": 8,
+      "portfolio": "Advice",
+      "title": "MFS EU RESEARCH CLA1",
+      "isin": "LU0094557526",
+      "market": "FONDI",
+      "instrument": "Fondo",
+      "currency": "EUR",
+      "quantity": 288.518,
+      "marketPrice": 61.31,
+      "marketValue": 17689.03858
+    },
+    {
+      "sourceRow": 9,
+      "portfolio": "Advice",
+      "title": "MORGAN ST GL OPP A",
+      "isin": "LU0552385295",
+      "market": "FONDI",
+      "instrument": "Fondo",
+      "currency": "EUR",
+      "quantity": 86.207,
+      "marketPrice": 147.74,
+      "marketValue": 12736.22218
+    },
+    {
+      "sourceRow": 10,
+      "portfolio": "Advice",
+      "title": "INV GLOBAL INC FD A",
+      "isin": "LU1097688714",
+      "market": "FONDI",
+      "instrument": "Fondo",
+      "currency": "EUR",
+      "quantity": 316.926,
+      "marketPrice": 17.514,
+      "marketValue": 5550.6419639999995
+    },
+    {
+      "sourceRow": 11,
+      "portfolio": "Advice",
+      "title": "FF GLB DIVID FUND A",
+      "isin": "LU1261431768",
+      "market": "FONDI",
+      "instrument": "Fondo",
+      "currency": "EUR",
+      "quantity": 191.83,
+      "marketPrice": 23.07,
+      "marketValue": 4425.5181
+    },
+    {
+      "sourceRow": 12,
+      "portfolio": "Advice",
+      "title": "CAN EQ L EM MRK C AC",
+      "isin": "LU0056052961",
+      "market": "FONDI",
+      "instrument": "Fondo",
+      "currency": "EUR",
+      "quantity": 3.107,
+      "marketPrice": 1550.67,
+      "marketValue": 4817.93169
+    },
+    {
+      "sourceRow": 13,
+      "portfolio": "Advice",
+      "title": "ROB BP GL PREM EQ D",
+      "isin": "LU0203975437",
+      "market": "FONDI",
+      "instrument": "Fondo",
+      "currency": "EUR",
+      "quantity": 8.4033,
+      "marketPrice": 602.25,
+      "marketValue": 5060.887425
+    },
+    {
+      "sourceRow": 14,
+      "portfolio": "Advice",
+      "title": "M&G (LUX) EUR STR VA",
+      "isin": "LU1670707527",
+      "market": "FONDI",
+      "instrument": "Fondo",
+      "currency": "EUR",
+      "quantity": 359.03,
+      "marketPrice": 22.784,
+      "marketValue": 8180.139519999999
+    },
+    {
+      "sourceRow": 15,
+      "portfolio": "Advice",
+      "title": "SCHRODER EUR CORP BN",
+      "isin": "LU0113257694",
+      "market": "FONDI",
+      "instrument": "Fondo",
+      "currency": "EUR",
+      "quantity": 413.25,
+      "marketPrice": 24.811,
+      "marketValue": 10253.14575
+    },
+    {
+      "sourceRow": 16,
+      "portfolio": "Advice",
+      "title": "SCHRODER AS OPP A AC",
+      "isin": "LU0248184466",
+      "market": "FONDI",
+      "instrument": "Fondo",
+      "currency": "EUR",
+      "quantity": 337.05,
+      "marketPrice": 32.844,
+      "marketValue": 11070.0702
+    },
+    {
+      "sourceRow": 17,
+      "portfolio": "Advice",
+      "title": "RAIF BIL SOS V ACC",
+      "isin": "AT0000785381",
+      "market": "FONDI",
+      "instrument": "Fondo",
+      "currency": "EUR",
+      "quantity": 61.633,
+      "marketPrice": 163.15,
+      "marketValue": 10055.42395
+    },
+    {
+      "sourceRow": 18,
+      "portfolio": "Advice",
+      "title": "INV GL CON TR E EUR",
+      "isin": "LU0115139569",
+      "market": "FONDI",
+      "instrument": "Fondo",
+      "currency": "EUR",
+      "quantity": 100.15,
+      "marketPrice": 71.71,
+      "marketValue": 7181.7564999999995
+    },
+    {
+      "sourceRow": 19,
+      "portfolio": "Advice",
+      "title": "UNIFAVORITE:AKTIEN",
+      "isin": "DE0008477076",
+      "market": "FONDI",
+      "instrument": "Fondo",
+      "currency": "EUR",
+      "quantity": 41.158,
+      "marketPrice": 328.4,
+      "marketValue": 13516.287199999999
+    },
+    {
+      "sourceRow": 20,
+      "portfolio": "Advice",
+      "title": "GOLDMAN EUROP COR -E",
+      "isin": "LU0133265339",
+      "market": "FONDI",
+      "instrument": "Fondo",
+      "currency": "EUR",
+      "quantity": 711.205,
+      "marketPrice": 44.15,
+      "marketValue": 31399.70075
+    },
+    {
+      "sourceRow": 21,
+      "portfolio": "Advice",
+      "title": "MORGAN GL BRANDS A",
+      "isin": "LU0119620416",
+      "market": "FONDI",
+      "instrument": "Fondo",
+      "currency": "EUR",
+      "quantity": 83.009,
+      "marketPrice": 173.71,
+      "marketValue": 14419.493390000001
+    }
+  ],
+  "lastPortfolioRows": [
+    {
+      "sourceRow": 48,
+      "portfolio": null,
+      "title": null,
+      "isin": null,
+      "market": null,
+      "instrument": null,
+      "currency": null,
+      "quantity": null,
+      "marketPrice": null,
+      "marketValue": 1169829.7168590003
+    },
+    {
+      "sourceRow": 58,
+      "portfolio": "40% SP500 for long term growth",
+      "title": null,
+      "isin": null,
+      "market": null,
+      "instrument": null,
+      "currency": null,
+      "quantity": null,
+      "marketPrice": null,
+      "marketValue": null
+    },
+    {
+      "sourceRow": 59,
+      "portfolio": "30% dividend growth fund for rising income ",
+      "title": null,
+      "isin": null,
+      "market": null,
+      "instrument": null,
+      "currency": null,
+      "quantity": null,
+      "marketPrice": null,
+      "marketValue": null
+    },
+    {
+      "sourceRow": 60,
+      "portfolio": "20% short term treasury bond for stability",
+      "title": null,
+      "isin": null,
+      "market": null,
+      "instrument": null,
+      "currency": null,
+      "quantity": null,
+      "marketPrice": null,
+      "marketValue": null
+    },
+    {
+      "sourceRow": 61,
+      "portfolio": "10% international dividend fund for diversification",
+      "title": null,
+      "isin": null,
+      "market": null,
+      "instrument": null,
+      "currency": null,
+      "quantity": null,
+      "marketPrice": null,
+      "marketValue": null
+    }
+  ],
+  "realEstate": [
+    {
+      "row": 1,
+      "cells": [
+        {
+          "address": "A1",
+          "text": "Immobile"
+        },
+        {
+          "address": "B1",
+          "text": "Valore"
+        },
+        {
+          "address": "C1",
+          "text": "Mutuo residuo"
+        },
+        {
+          "address": "D1",
+          "text": "Note"
+        }
+      ]
+    },
+    {
+      "row": 2,
+      "cells": [
+        {
+          "address": "A2",
+          "text": "Riccione"
+        },
+        {
+          "address": "B2",
+          "text": "275000"
+        },
+        {
+          "address": "C2",
+          "text": "50536.24999999999"
+        },
+        {
+          "address": "D2",
+          "text": "Italia"
+        }
+      ]
+    },
+    {
+      "row": 3,
+      "cells": [
+        {
+          "address": "A3",
+          "text": "Dubai"
+        },
+        {
+          "address": "B3",
+          "text": "510000"
+        },
+        {
+          "address": "C3",
+          "text": "213223.7643048335"
+        },
+        {
+          "address": "D3",
+          "text": "UAE"
+        }
+      ]
+    }
+  ]
+}

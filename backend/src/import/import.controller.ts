@@ -3,10 +3,22 @@ import { ImportService } from './import.service';
 
 @Controller('import')
 export class ImportController {
-  constructor(private readonly importService: ImportService) {}
+  constructor(
+    private readonly importService: ImportService,
+  ) {}
 
   @Post()
-  async importWorkbook() {
+  importWorkbook() {
     return this.importService.importWorkbook();
+  }
+
+  @Post('wealth/preview')
+  previewWealthImport() {
+    return this.importService.previewWealthImport();
+  }
+
+  @Post('wealth')
+  importWealth() {
+    return this.importService.importWealth();
   }
 }
