@@ -63,3 +63,21 @@ model WealthPosition {
   @@index([householdId, category])
   @@index([valuationDate])
 }
+
+model PlatformSetting {
+  id                       Int      @id @default(1)
+  householdName            String   @default("Family Office – Stefano Gresleri")
+  ownerName                String   @default("Stefano Gresleri")
+  baseCurrency             String   @default("EUR")
+  timezone                 String   @default("Europe/Madrid")
+  fiscalResidence          String   @default("Spain")
+  plannedFiscalResidence   String   @default("United Arab Emirates")
+  sourceWorkbook           String   @default("Gresleri2026.xlsm")
+  dataFolder               String   @default("/data")
+  automaticRefresh         Boolean  @default(true)
+  showArchivedPositions    Boolean  @default(false)
+  requireDecisionNotes     Boolean  @default(true)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+}
+

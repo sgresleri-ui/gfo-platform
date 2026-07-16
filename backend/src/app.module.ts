@@ -1,3 +1,4 @@
+import { SettingsModule } from './settings/settings.module';
 import { Module } from '@nestjs/common';
 import { AccountsModule } from './accounts/accounts.module';
 import { AppController } from './app.controller';
@@ -12,6 +13,7 @@ import { WealthModule } from './wealth/wealth.module';
 
 @Module({
   imports: [
+    SettingsModule,
     PrismaModule,
     AccountsModule,
     ImportModule,

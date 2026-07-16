@@ -315,3 +315,70 @@ export async function getBudgetOverview(): Promise<BudgetOverviewResponse> {
   );
 }
 
+export type PlatformSettingsInput = {
+  householdName: string;
+  ownerName: string;
+  baseCurrency: string;
+  timezone: string;
+  fiscalResidence: string;
+  plannedFiscalResidence: string;
+  sourceWorkbook: string;
+  dataFolder: string;
+  automaticRefresh: boolean;
+  showArchivedPositions: boolean;
+  requireDecisionNotes: boolean;
+};
+
+export type PlatformSettingsResponse =
+  PlatformSettingsInput & {
+    id: number;
+    createdAt: string;
+    updatedAt: string;
+  };
+
+export async function getPlatformSettings(): Promise<PlatformSettingsResponse> {
+  const response = await fetch(`${API_URL}/settings`);
+
+  return readJson<PlatformSettingsResponse>(
+    response,
+    "Unable to load platform settings",
+  );
+}
+
+export async function updatePlatformSettings(
+  settings: PlatformSettingsInput,
+): Promise<PlatformSettingsResponse> {
+  const response = await fetch(
+    `${API_URL}/settings`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(settings),
+    },
+  );
+
+  return readJson<PlatformSettingsResponse>(
+    response,
+    "Unable to update platform settings",
+  );
+}
+
+export async function resetPlatformSettings(): Promise<PlatformSettingsResponse> {
+  const response = await fetch(
+    `${API_URL}/settings/reset`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  return readJson<PlatformSettingsResponse>(
+    response,
+    "Unable to reset platform settings",
+  );
+}
+
