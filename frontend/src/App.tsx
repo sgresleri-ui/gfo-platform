@@ -5,6 +5,7 @@ import MainLayout from "./components/layout/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import DataCatalog from "./pages/DataCatalog";
 import Budget from "./pages/Budget";
+import Planning from "./pages/Planning";
 import Investments from "./pages/Investments";
 import Liquidity from "./pages/Liquidity";
 import Properties from "./pages/Properties";
@@ -43,12 +44,7 @@ function App() {
 
         <Route
           path="planning"
-          element={
-            <PlaceholderPage
-              title="Planning"
-              description="Timeline patrimoniale, scenari e sostenibilità futura."
-            />
-          }
+          element={<Planning />}
         />
 
         <Route
