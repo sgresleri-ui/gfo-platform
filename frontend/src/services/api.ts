@@ -382,3 +382,102 @@ export async function resetPlatformSettings(): Promise<PlatformSettingsResponse>
   );
 }
 
+export type DecisionStatus =
+  | "APPROVED"
+  | "IN_PROGRESS"
+  | "MONITORING";
+
+export type DecisionPriority =
+  | "HIGH"
+  | "MEDIUM"
+  | "LOW";
+
+export type DecisionCategory =
+  | "POLICY"
+  | "PROPERTY"
+  | "PLANNING"
+  | "PLATFORM"
+  | "INVESTMENT"
+  | "LIQUIDITY"
+  | "TAX";
+
+export type DecisionEntry = {
+  id: string;
+  date: string;
+  decisionDate: string;
+  title: string;
+  category: DecisionCategory;
+  status: DecisionStatus;
+  priority: DecisionPriority;
+  motivation: string;
+  analysis: string;
+  alternatives: string[];
+  finalDecision: string;
+  impact: string;
+  amount: number | null;
+  result: string;
+  lessons: string;
+  source: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DecisionsOverviewResponse = {
+  summary: {
+    total: number;
+    approved: number;
+    inProgress: number;
+    monitoring: number;
+    highPriority: number;
+  };
+
+  decisions: DecisionEntry[];
+};
+
+export type CreateDecisionRequest = {
+  date: string;
+  title: string;
+  category: DecisionCategory;
+  status: DecisionStatus;
+  priority: DecisionPriority;
+  motivation: string;
+  analysis: string;
+  alternatives: string[];
+  finalDecision: string;
+  impact: string;
+  amount: number | null;
+  result: string;
+  lessons: string;
+};
+
+export async function getDecisionsOverview(): Promise<DecisionsOverviewResponse> {
+  const response = await fetch(
+    `${API_URL}/decisions`,
+  );
+
+  return readJson<DecisionsOverviewResponse>(
+    response,
+    "Unable to load decisions",
+  );
+}
+
+export async function createDecision(
+  input: CreateDecisionRequest,
+): Promise<DecisionEntry> {
+  const response = await fetch(
+    `${API_URL}/decisions`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+
+  return readJson<DecisionEntry>(
+    response,
+    "Unable to create decision",
+  );
+}
+

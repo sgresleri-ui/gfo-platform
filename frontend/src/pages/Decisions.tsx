@@ -1,12 +1,26 @@
 import {
+  useEffect,
+  useState,
+} from "react";
+
+import {
   Alert,
   Box,
+  Button,
   Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
+  MenuItem,
   Paper,
+  TextField,
   Typography,
 } from "@mui/material";
 
+import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import GavelRoundedIcon from "@mui/icons-material/GavelRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import PendingActionsRoundedIcon from "@mui/icons-material/PendingActionsRounded";
@@ -15,27 +29,25 @@ import PolicyRoundedIcon from "@mui/icons-material/PolicyRounded";
 import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded";
 import AccountBalanceRoundedIcon from "@mui/icons-material/AccountBalanceRounded";
 import ComputerRoundedIcon from "@mui/icons-material/ComputerRounded";
+import ShowChartRoundedIcon from "@mui/icons-material/ShowChartRounded";
+import SavingsRoundedIcon from "@mui/icons-material/SavingsRounded";
+import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
+import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 
 import KpiCard from "../components/KpiCard";
 
-type DecisionStatus =
-  | "APPROVED"
-  | "IN_PROGRESS"
-  | "MONITORING";
+import {
+  createDecision,
+  getDecisionsOverview,
+  type CreateDecisionRequest,
+  type DecisionCategory,
+  type DecisionEntry,
+  type DecisionPriority,
+  type DecisionsOverviewResponse,
+  type DecisionStatus,
+} from "../services/api";
 
-type DecisionPriority =
-  | "HIGH"
-  | "MEDIUM"
-  | "LOW";
-
-type DecisionCategory =
-  | "POLICY"
-  | "PROPERTY"
-  | "PLANNING"
-  | "PLATFORM";
-
-type DecisionEntry = {
-  id: string;
+type DecisionForm = {
   date: string;
   title: string;
   category: DecisionCategory;
@@ -43,134 +55,37 @@ type DecisionEntry = {
   priority: DecisionPriority;
   motivation: string;
   analysis: string;
-  alternatives: string[];
+  alternativesText: string;
   finalDecision: string;
   impact: string;
-  amount: number | null;
+  amountText: string;
   result: string;
   lessons: string;
 };
 
-const DECISIONS: DecisionEntry[] = [
-  {
-    id: "ips-approval",
-    date: "10/07/2026",
-    title:
-      "Adozione dell’Investment Policy Statement",
-    category: "POLICY",
-    status: "APPROVED",
-    priority: "HIGH",
-    motivation:
-      "Creare una disciplina permanente per la conservazione e la crescita del patrimonio familiare nel lungo periodo.",
-    analysis:
-      "Sono stati definiti obiettivi, orizzonte temporale, profilo di rischio, asset allocation strategica, criteri ETF, regole di ribilanciamento e gestione della liquidità.",
-    alternatives: [
-      "Gestione degli investimenti senza una politica formalizzata",
-      "Delega completa agli intermediari finanziari",
-      "Portafoglio basato prevalentemente su singoli titoli",
-    ],
-    finalDecision:
-      "Utilizzare l’IPS come documento guida vincolante per tutte le future decisioni patrimoniali e finanziarie.",
-    impact:
-      "Maggiore diversificazione, controllo del rischio, contenimento dei costi e coerenza delle operazioni nel tempo.",
-    amount: null,
-    result:
-      "IPS approvato e utilizzato come riferimento strategico del Family Office.",
-    lessons:
-      "Le singole operazioni devono essere valutate nel contesto del patrimonio complessivo e non isolatamente.",
-  },
-  {
-    id: "gfo-platform",
-    date: "13/07/2026",
-    title:
-      "Sviluppo della GFO Platform",
-    category: "PLATFORM",
-    status: "IN_PROGRESS",
-    priority: "HIGH",
-    motivation:
-      "Superare progressivamente i limiti operativi del file Gresleri2026.xlsm e creare un sistema centrale per la gestione del patrimonio.",
-    analysis:
-      "È stata scelta un’architettura con backend NestJS, database Prisma e frontend React, mantenendo inizialmente Excel come sorgente dati.",
-    alternatives: [
-      "Continuare a utilizzare esclusivamente Excel",
-      "Acquistare un software Family Office commerciale",
-      "Utilizzare applicazioni separate per ogni area patrimoniale",
-    ],
-    finalDecision:
-      "Sviluppare internamente una piattaforma modulare che sostituisca progressivamente Excel senza interrompere l’operatività corrente.",
-    impact:
-      "Centralizzazione dei dati, maggiore controllo, tracciabilità delle decisioni e possibilità di simulazioni patrimoniali.",
-    amount: null,
-    result:
-      "Operativi i moduli Dashboard, Patrimonio, Investimenti, Liquidità, Immobili, Budget, Planning e Report.",
-    lessons:
-      "Lo sviluppo deve procedere per moduli piccoli, verificabili e collegati a dati reali.",
-  },
-  {
-    id: "el-toro-sale",
-    date: "16/07/2026",
-    title:
-      "Classificazione e vendita dell’immobile El Toro",
-    category: "PROPERTY",
-    status: "IN_PROGRESS",
-    priority: "HIGH",
-    motivation:
-      "Preparare correttamente la trasformazione dell’immobile in liquidità disponibile alla data del rogito.",
-    analysis:
-      "Sono stati verificati prezzo di vendita, costo storico, data prevista del rogito e trattamento patrimoniale fino al perfezionamento della vendita.",
-    alternatives: [
-      "Eliminare immediatamente l’immobile dal patrimonio",
-      "Registrare subito il ricavato come liquidità",
-      "Mantenere l’immobile senza evidenziare lo stato di vendita",
-    ],
-    finalDecision:
-      "Mantenere El Toro nel patrimonio immobiliare, classificato come destinato alla vendita, fino al rogito previsto il 31 luglio 2026.",
-    impact:
-      "Valore immobiliare lordo di €2.150.000 che sarà successivamente trasformato in liquidità, al netto di costi e fiscalità.",
-    amount: 2150000,
-    result:
-      "Immobile registrato correttamente nella piattaforma come PROPERTY_HELD_FOR_SALE.",
-    lessons:
-      "Gli eventi non perfezionati devono essere rappresentati distintamente dagli incassi già realizzati.",
-  },
-  {
-    id: "budget-long-term",
-    date: "16/07/2026",
-    title:
-      "Validazione del piano patrimoniale 2027–2066",
+function createEmptyForm(): DecisionForm {
+  return {
+    date: new Date()
+      .toISOString()
+      .slice(0, 10),
+    title: "",
     category: "PLANNING",
-    status: "MONITORING",
-    priority: "HIGH",
-    motivation:
-      "Verificare la sostenibilità delle spese familiari, degli investimenti immobiliari e dei futuri flussi pensionistici.",
-    analysis:
-      "Il piano considera 40 anni, il forte assorbimento finanziario del 2027, le pensioni future e l’evoluzione annuale del capitale.",
-    alternatives: [
-      "Analisi limitata al solo budget annuale",
-      "Proiezione senza eventi immobiliari straordinari",
-      "Pianificazione senza considerare le pensioni",
-    ],
-    finalDecision:
-      "Utilizzare il piano 2027–2066 come scenario base, aggiornandolo quando cambiano investimenti, immobili, inflazione o flussi familiari.",
-    impact:
-      "Disavanzo previsto nel 2027 di €1.194.270,57; capitale minimo di €1.325.163,80 nel 2039; capitale sempre positivo fino al 2066.",
-    amount: -1194270.57,
-    result:
-      "Scenario base giudicato sostenibile, pur con una significativa riduzione del capitale nella prima fase.",
-    lessons:
-      "Il principale rischio non è l’esaurimento del patrimonio, ma la concentrazione degli esborsi tra il 2027 e il 2039.",
-  },
-];
+    status: "IN_PROGRESS",
+    priority: "MEDIUM",
+    motivation: "",
+    analysis: "",
+    alternativesText: "",
+    finalDecision: "",
+    impact: "",
+    amountText: "",
+    result: "",
+    lessons: "",
+  };
+}
 
-const euro = (value: number) =>
-  value.toLocaleString("it-IT", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-
-function statusLabel(status: DecisionStatus) {
+function statusLabel(
+  status: DecisionStatus,
+) {
   if (status === "APPROVED") {
     return "Approvata";
   }
@@ -210,22 +125,37 @@ function priorityLabel(
   return "Bassa";
 }
 
+function priorityColor(
+  priority: DecisionPriority,
+): "error" | "warning" | "success" {
+  if (priority === "HIGH") {
+    return "error";
+  }
+
+  if (priority === "MEDIUM") {
+    return "warning";
+  }
+
+  return "success";
+}
+
 function categoryLabel(
   category: DecisionCategory,
 ) {
-  if (category === "POLICY") {
-    return "Politica patrimoniale";
-  }
+  const labels: Record<
+    DecisionCategory,
+    string
+  > = {
+    POLICY: "Politica patrimoniale",
+    PROPERTY: "Immobili",
+    PLANNING: "Pianificazione",
+    PLATFORM: "Piattaforma",
+    INVESTMENT: "Investimenti",
+    LIQUIDITY: "Liquidità",
+    TAX: "Fiscalità",
+  };
 
-  if (category === "PROPERTY") {
-    return "Immobili";
-  }
-
-  if (category === "PLANNING") {
-    return "Pianificazione";
-  }
-
-  return "Piattaforma";
+  return labels[category] ?? category;
 }
 
 function categoryIcon(
@@ -243,491 +173,1105 @@ function categoryIcon(
     return <AccountBalanceRoundedIcon />;
   }
 
-  return <ComputerRoundedIcon />;
+  if (category === "PLATFORM") {
+    return <ComputerRoundedIcon />;
+  }
+
+  if (category === "INVESTMENT") {
+    return <ShowChartRoundedIcon />;
+  }
+
+  if (category === "LIQUIDITY") {
+    return <SavingsRoundedIcon />;
+  }
+
+  if (category === "TAX") {
+    return <ReceiptLongRoundedIcon />;
+  }
+
+  return <GavelRoundedIcon />;
+}
+
+function euro(
+  value: number | null,
+) {
+  if (value === null) {
+    return "—";
+  }
+
+  return value.toLocaleString("it-IT", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export default function Decisions() {
-  const approvedCount = DECISIONS.filter(
-    (decision) =>
-      decision.status === "APPROVED",
-  ).length;
+  const [data, setData] =
+    useState<DecisionsOverviewResponse | null>(
+      null,
+    );
 
-  const inProgressCount = DECISIONS.filter(
-    (decision) =>
-      decision.status === "IN_PROGRESS",
-  ).length;
+  const [loading, setLoading] =
+    useState(true);
 
-  const highPriorityCount = DECISIONS.filter(
-    (decision) =>
-      decision.priority === "HIGH",
-  ).length;
+  const [error, setError] =
+    useState("");
+
+  const [success, setSuccess] =
+    useState("");
+
+  const [dialogOpen, setDialogOpen] =
+    useState(false);
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [form, setForm] =
+    useState<DecisionForm>(
+      createEmptyForm,
+    );
+
+  async function loadDecisions() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const result =
+        await getDecisionsOverview();
+
+      setData(result);
+    } catch (requestError) {
+      console.error(requestError);
+
+      setError(
+        "Impossibile caricare il registro decisioni.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadDecisions();
+  }, []);
+
+  function updateForm<
+    Key extends keyof DecisionForm,
+  >(
+    key: Key,
+    value: DecisionForm[Key],
+  ) {
+    setForm((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  }
+
+  function openCreateDialog() {
+    setForm(createEmptyForm());
+    setError("");
+    setSuccess("");
+    setDialogOpen(true);
+  }
+
+  function closeCreateDialog() {
+    if (!saving) {
+      setDialogOpen(false);
+    }
+  }
+
+  async function saveDecision() {
+    setSaving(true);
+    setError("");
+    setSuccess("");
+
+    const amountText =
+      form.amountText
+        .trim()
+        .replace(/\./g, "")
+        .replace(",", ".");
+
+    const amount =
+      amountText.length > 0
+        ? Number(amountText)
+        : null;
+
+    if (
+      amount !== null &&
+      !Number.isFinite(amount)
+    ) {
+      setError(
+        "L’importo inserito non è valido.",
+      );
+      setSaving(false);
+      return;
+    }
+
+    const payload: CreateDecisionRequest = {
+      date: form.date,
+      title: form.title.trim(),
+      category: form.category,
+      status: form.status,
+      priority: form.priority,
+      motivation: form.motivation.trim(),
+      analysis: form.analysis.trim(),
+
+      alternatives:
+        form.alternativesText
+          .split("\n")
+          .map((item) => item.trim())
+          .filter(Boolean),
+
+      finalDecision:
+        form.finalDecision.trim(),
+
+      impact: form.impact.trim(),
+      amount,
+      result: form.result.trim(),
+      lessons: form.lessons.trim(),
+    };
+
+    try {
+      await createDecision(payload);
+
+      setDialogOpen(false);
+
+      setSuccess(
+        "Decisione registrata nel database. Lo storico precedente è rimasto invariato.",
+      );
+
+      await loadDecisions();
+    } catch (requestError) {
+      console.error(requestError);
+
+      setError(
+        "Registrazione non riuscita. Compilare tutti i campi obbligatori.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading && !data) {
+    return (
+      <Box
+        sx={{
+          minHeight: 420,
+          display: "grid",
+          placeItems: "center",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4">
-          Decisioni
-        </Typography>
-
-        <Typography
-          color="text.secondary"
-          sx={{ mt: 0.5 }}
-        >
-          Registro storico delle decisioni
-          strategiche del Family Office.
-        </Typography>
-      </Box>
-
-      <Paper
-        elevation={0}
+      <Box
         sx={{
-          position: "relative",
-          overflow: "hidden",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: {
+            xs: "flex-start",
+            md: "center",
+          },
+          flexDirection: {
+            xs: "column",
+            md: "row",
+          },
+          gap: 2,
           mb: 3,
-          p: {
-            xs: 3,
-            md: 4,
-          },
-          color: "white",
-          background:
-            "linear-gradient(120deg, #332353 0%, #584080 55%, #8565AD 135%)",
-          boxShadow:
-            "0 18px 42px rgba(69, 45, 105, 0.23)",
-
-          "&::after": {
-            content: '""',
-            position: "absolute",
-            width: 330,
-            height: 330,
-            borderRadius: "50%",
-            top: -205,
-            right: -55,
-            backgroundColor:
-              "rgba(255,255,255,0.10)",
-          },
         }}
       >
-        <Typography
-          variant="overline"
-          sx={{
-            color:
-              "rgba(255,255,255,0.72)",
-            letterSpacing: "0.15em",
-          }}
-        >
-          Strategic Decision Log
-        </Typography>
+        <Box>
+          <Typography variant="h4">
+            Decisioni
+          </Typography>
 
-        <Typography
-          sx={{
-            mt: 1,
-            color:
-              "rgba(255,255,255,0.76)",
-          }}
-        >
-          Decisioni registrate
-        </Typography>
-
-        <Typography
-          sx={{
-            mt: 0.5,
-            fontSize: {
-              xs: "2.25rem",
-              md: "3.1rem",
-            },
-            lineHeight: 1.05,
-            fontWeight: 800,
-            letterSpacing: "-0.045em",
-          }}
-        >
-          {DECISIONS.length}
-        </Typography>
+          <Typography
+            color="text.secondary"
+            sx={{ mt: 0.5 }}
+          >
+            Registro permanente delle decisioni
+            strategiche del Family Office.
+          </Typography>
+        </Box>
 
         <Box
           sx={{
             display: "flex",
-            flexWrap: "wrap",
-            gap: 1.5,
-            mt: 3,
+            gap: 1.2,
           }}
         >
-          <Chip
-            label="Storico permanente"
-            sx={{
-              color: "white",
-              backgroundColor:
-                "rgba(255,255,255,0.17)",
-            }}
-          />
+          <Button
+            variant="outlined"
+            startIcon={
+              <RefreshRoundedIcon />
+            }
+            onClick={() =>
+              void loadDecisions()
+            }
+            disabled={loading}
+          >
+            Aggiorna
+          </Button>
 
-          <Chip
-            label={`${highPriorityCount} priorità alte`}
-            sx={{
-              color: "white",
-              backgroundColor:
-                "rgba(255,255,255,0.17)",
-            }}
-          />
-
-          <Chip
-            label="Aggiornamento cronologico"
-            sx={{
-              color: "white",
-              backgroundColor:
-                "rgba(255,255,255,0.17)",
-            }}
-          />
+          <Button
+            variant="contained"
+            startIcon={<AddRoundedIcon />}
+            onClick={openCreateDialog}
+          >
+            Nuova decisione
+          </Button>
         </Box>
-      </Paper>
-
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "1fr",
-            sm: "repeat(2, minmax(0, 1fr))",
-            xl: "repeat(4, minmax(0, 1fr))",
-          },
-          gap: 2.2,
-          mb: 3,
-        }}
-      >
-        <KpiCard
-          title="Decisioni totali"
-          value={String(DECISIONS.length)}
-          subtitle="Registro storico"
-          icon={<GavelRoundedIcon />}
-          tone="primary"
-        />
-
-        <KpiCard
-          title="Approvate"
-          value={String(approvedCount)}
-          subtitle="Decisioni formalizzate"
-          icon={<CheckCircleRoundedIcon />}
-          tone="success"
-        />
-
-        <KpiCard
-          title="In esecuzione"
-          value={String(inProgressCount)}
-          subtitle="Attività operative"
-          icon={<PendingActionsRoundedIcon />}
-          tone="warning"
-        />
-
-        <KpiCard
-          title="Priorità alta"
-          value={String(highPriorityCount)}
-          subtitle="Da presidiare"
-          icon={<PriorityHighRoundedIcon />}
-          tone="error"
-        />
       </Box>
 
-      <Alert severity="info" sx={{ mb: 3 }}>
-        Il registro non deve essere modificato
-        retroattivamente. Eventuali aggiornamenti,
-        risultati o insegnamenti devono essere
-        aggiunti preservando la decisione originale.
-      </Alert>
+      {success && (
+        <Alert
+          severity="success"
+          sx={{ mb: 3 }}
+        >
+          {success}
+        </Alert>
+      )}
 
-      <Box
-        sx={{
-          display: "grid",
-          gap: 2.5,
-        }}
-      >
-        {[...DECISIONS]
-          .reverse()
-          .map((decision) => (
-            <Paper
-              key={decision.id}
-              elevation={0}
+      {error && (
+        <Alert
+          severity="error"
+          sx={{ mb: 3 }}
+        >
+          {error}
+        </Alert>
+      )}
+
+      {data && (
+        <>
+          <Paper
+            elevation={0}
+            sx={{
+              position: "relative",
+              overflow: "hidden",
+              mb: 3,
+              p: {
+                xs: 3,
+                md: 4,
+              },
+              color: "white",
+              background:
+                "linear-gradient(120deg, #332353 0%, #584080 55%, #8565AD 135%)",
+              boxShadow:
+                "0 18px 42px rgba(69,45,105,0.23)",
+
+              "&::after": {
+                content: '""',
+                position: "absolute",
+                width: 330,
+                height: 330,
+                borderRadius: "50%",
+                top: -205,
+                right: -55,
+                backgroundColor:
+                  "rgba(255,255,255,0.10)",
+              },
+            }}
+          >
+            <Typography
+              variant="overline"
               sx={{
-                p: {
-                  xs: 2.5,
-                  md: 3.5,
-                },
-                border: "1px solid",
-                borderColor: "divider",
-                boxShadow:
-                  "0 12px 32px rgba(26,45,75,0.06)",
+                color:
+                  "rgba(255,255,255,0.72)",
+                letterSpacing: "0.15em",
               }}
             >
-              <Box
+              Strategic Decision Log
+            </Typography>
+
+            <Typography
+              sx={{
+                mt: 1,
+                color:
+                  "rgba(255,255,255,0.76)",
+              }}
+            >
+              Decisioni registrate nel database
+            </Typography>
+
+            <Typography
+              sx={{
+                mt: 0.5,
+                fontSize: {
+                  xs: "2.25rem",
+                  md: "3.1rem",
+                },
+                lineHeight: 1.05,
+                fontWeight: 800,
+                letterSpacing: "-0.045em",
+              }}
+            >
+              {data.summary.total}
+            </Typography>
+
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 1.5,
+                mt: 3,
+              }}
+            >
+              <Chip
+                label="Storico permanente"
                 sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  flexDirection: {
-                    xs: "column",
-                    md: "row",
-                  },
-                  gap: 2,
-                  mb: 2.5,
+                  color: "white",
+                  backgroundColor:
+                    "rgba(255,255,255,0.17)",
                 }}
-              >
-                <Box
+              />
+
+              <Chip
+                label={`${data.summary.highPriority} priorità alte`}
+                sx={{
+                  color: "white",
+                  backgroundColor:
+                    "rgba(255,255,255,0.17)",
+                }}
+              />
+
+              <Chip
+                label="Database SQLite"
+                sx={{
+                  color: "white",
+                  backgroundColor:
+                    "rgba(255,255,255,0.17)",
+                }}
+              />
+            </Box>
+          </Paper>
+
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, minmax(0, 1fr))",
+                xl: "repeat(4, minmax(0, 1fr))",
+              },
+              gap: 2.2,
+              mb: 3,
+            }}
+          >
+            <KpiCard
+              title="Decisioni totali"
+              value={String(
+                data.summary.total,
+              )}
+              subtitle="Registro storico"
+              icon={<GavelRoundedIcon />}
+              tone="primary"
+            />
+
+            <KpiCard
+              title="Approvate"
+              value={String(
+                data.summary.approved,
+              )}
+              subtitle="Decisioni formalizzate"
+              icon={
+                <CheckCircleRoundedIcon />
+              }
+              tone="success"
+            />
+
+            <KpiCard
+              title="In esecuzione"
+              value={String(
+                data.summary.inProgress,
+              )}
+              subtitle="Attività operative"
+              icon={
+                <PendingActionsRoundedIcon />
+              }
+              tone="warning"
+            />
+
+            <KpiCard
+              title="Priorità alta"
+              value={String(
+                data.summary.highPriority,
+              )}
+              subtitle="Da presidiare"
+              icon={
+                <PriorityHighRoundedIcon />
+              }
+              tone="error"
+            />
+          </Box>
+
+          <Alert
+            severity="info"
+            sx={{ mb: 3 }}
+          >
+            Il registro è append-only. Le nuove
+            decisioni vengono aggiunte senza
+            modificare o cancellare lo storico
+            precedente.
+          </Alert>
+
+          <Box
+            sx={{
+              display: "grid",
+              gap: 2.5,
+            }}
+          >
+            {data.decisions.map(
+              (decision: DecisionEntry) => (
+                <Paper
+                  key={decision.id}
+                  elevation={0}
                   sx={{
-                    display: "flex",
-                    gap: 2,
-                    alignItems: "flex-start",
+                    p: {
+                      xs: 2.5,
+                      md: 3.5,
+                    },
+                    border: "1px solid",
+                    borderColor: "divider",
+                    boxShadow:
+                      "0 12px 32px rgba(26,45,75,0.06)",
                   }}
                 >
                   <Box
                     sx={{
-                      width: 48,
-                      height: 48,
-                      flexShrink: 0,
-                      display: "grid",
-                      placeItems: "center",
-                      borderRadius: "14px",
-                      color: "primary.main",
-                      backgroundColor:
-                        "rgba(32, 91, 170, 0.10)",
+                      display: "flex",
+                      justifyContent:
+                        "space-between",
+                      alignItems:
+                        "flex-start",
+                      flexDirection: {
+                        xs: "column",
+                        md: "row",
+                      },
+                      gap: 2,
+                      mb: 2.5,
                     }}
                   >
-                    {categoryIcon(
-                      decision.category,
-                    )}
-                  </Box>
-
-                  <Box>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ fontWeight: 700 }}
-                    >
-                      {decision.date} ·{" "}
-                      {categoryLabel(
-                        decision.category,
-                      )}
-                    </Typography>
-
-                    <Typography
-                      variant="h6"
-                      sx={{ mt: 0.5 }}
-                    >
-                      {decision.title}
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Box
-                  sx={{
-                    display: "flex",
-                    gap: 1,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <Chip
-                    size="small"
-                    color={statusColor(
-                      decision.status,
-                    )}
-                    label={statusLabel(
-                      decision.status,
-                    )}
-                  />
-
-                  <Chip
-                    size="small"
-                    variant="outlined"
-                    color={
-                      decision.priority === "HIGH"
-                        ? "error"
-                        : decision.priority ===
-                            "MEDIUM"
-                          ? "warning"
-                          : "success"
-                    }
-                    label={`Priorità ${priorityLabel(
-                      decision.priority,
-                    )}`}
-                  />
-                </Box>
-              </Box>
-
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    lg: "repeat(2, minmax(0, 1fr))",
-                  },
-                  gap: 3,
-                }}
-              >
-                <Box>
-                  <Typography
-                    variant="subtitle2"
-                    sx={{ mb: 0.7 }}
-                  >
-                    Motivazione
-                  </Typography>
-
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                  >
-                    {decision.motivation}
-                  </Typography>
-                </Box>
-
-                <Box>
-                  <Typography
-                    variant="subtitle2"
-                    sx={{ mb: 0.7 }}
-                  >
-                    Analisi effettuata
-                  </Typography>
-
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                  >
-                    {decision.analysis}
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Divider sx={{ my: 2.5 }} />
-
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    lg: "minmax(0, 0.8fr) minmax(0, 1.2fr)",
-                  },
-                  gap: 3,
-                }}
-              >
-                <Box>
-                  <Typography
-                    variant="subtitle2"
-                    sx={{ mb: 1 }}
-                  >
-                    Alternative considerate
-                  </Typography>
-
-                  <Box
-                    component="ul"
-                    sx={{
-                      mt: 0,
-                      mb: 0,
-                      pl: 2.2,
-                      color: "text.secondary",
-                    }}
-                  >
-                    {decision.alternatives.map(
-                      (alternative) => (
-                        <Typography
-                          key={alternative}
-                          component="li"
-                          variant="body2"
-                          sx={{ mb: 0.6 }}
-                        >
-                          {alternative}
-                        </Typography>
-                      ),
-                    )}
-                  </Box>
-                </Box>
-
-                <Box>
-                  <Typography
-                    variant="subtitle2"
-                    sx={{ mb: 0.7 }}
-                  >
-                    Decisione finale
-                  </Typography>
-
-                  <Typography variant="body2">
-                    {decision.finalDecision}
-                  </Typography>
-
-                  {decision.amount !== null && (
-                    <Typography
+                    <Box
                       sx={{
-                        mt: 1.2,
-                        fontWeight: 800,
-                        color:
-                          decision.amount < 0
-                            ? "error.main"
-                            : "primary.main",
+                        display: "flex",
+                        gap: 2,
+                        alignItems:
+                          "flex-start",
                       }}
                     >
-                      {euro(decision.amount)}
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
+                      <Box
+                        sx={{
+                          width: 48,
+                          height: 48,
+                          flexShrink: 0,
+                          display: "grid",
+                          placeItems: "center",
+                          borderRadius: "14px",
+                          color: "primary.main",
+                          backgroundColor:
+                            "rgba(32,91,170,0.10)",
+                        }}
+                      >
+                        {categoryIcon(
+                          decision.category,
+                        )}
+                      </Box>
 
-              <Divider sx={{ my: 2.5 }} />
+                      <Box>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{
+                            fontWeight: 700,
+                          }}
+                        >
+                          {decision.date} ·{" "}
+                          {categoryLabel(
+                            decision.category,
+                          )}
+                        </Typography>
 
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    lg: "repeat(3, minmax(0, 1fr))",
-                  },
-                  gap: 3,
-                }}
-              >
-                <Box>
-                  <Typography
-                    variant="subtitle2"
-                    sx={{ mb: 0.7 }}
+                        <Typography
+                          variant="h6"
+                          sx={{ mt: 0.5 }}
+                        >
+                          {decision.title}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 1,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <Chip
+                        size="small"
+                        color={statusColor(
+                          decision.status,
+                        )}
+                        label={statusLabel(
+                          decision.status,
+                        )}
+                      />
+
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        color={priorityColor(
+                          decision.priority,
+                        )}
+                        label={`Priorità ${priorityLabel(
+                          decision.priority,
+                        )}`}
+                      />
+                    </Box>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "1fr",
+                        lg: "repeat(2, minmax(0, 1fr))",
+                      },
+                      gap: 3,
+                    }}
                   >
-                    Effetti sul patrimonio
-                  </Typography>
+                    <Box>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ mb: 0.7 }}
+                      >
+                        Motivazione
+                      </Typography>
 
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                  >
-                    {decision.impact}
-                  </Typography>
-                </Box>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                      >
+                        {decision.motivation}
+                      </Typography>
+                    </Box>
 
-                <Box>
-                  <Typography
-                    variant="subtitle2"
-                    sx={{ mb: 0.7 }}
-                  >
-                    Risultato
-                  </Typography>
+                    <Box>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ mb: 0.7 }}
+                      >
+                        Analisi effettuata
+                      </Typography>
 
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                  >
-                    {decision.result}
-                  </Typography>
-                </Box>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                      >
+                        {decision.analysis}
+                      </Typography>
+                    </Box>
+                  </Box>
 
-                <Box>
-                  <Typography
-                    variant="subtitle2"
-                    sx={{ mb: 0.7 }}
-                  >
-                    Insegnamenti
-                  </Typography>
+                  <Divider sx={{ my: 2.5 }} />
 
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "1fr",
+                        lg: "minmax(0, 0.8fr) minmax(0, 1.2fr)",
+                      },
+                      gap: 3,
+                    }}
                   >
-                    {decision.lessons}
-                  </Typography>
-                </Box>
-              </Box>
-            </Paper>
-          ))}
-      </Box>
+                    <Box>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ mb: 1 }}
+                      >
+                        Alternative considerate
+                      </Typography>
+
+                      {decision.alternatives
+                        .length > 0 ? (
+                        <Box
+                          component="ul"
+                          sx={{
+                            mt: 0,
+                            mb: 0,
+                            pl: 2.2,
+                            color:
+                              "text.secondary",
+                          }}
+                        >
+                          {decision.alternatives.map(
+                            (alternative) => (
+                              <Typography
+                                key={
+                                  alternative
+                                }
+                                component="li"
+                                variant="body2"
+                                sx={{
+                                  mb: 0.6,
+                                }}
+                              >
+                                {alternative}
+                              </Typography>
+                            ),
+                          )}
+                        </Box>
+                      ) : (
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                        >
+                          Nessuna alternativa
+                          registrata.
+                        </Typography>
+                      )}
+                    </Box>
+
+                    <Box>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ mb: 0.7 }}
+                      >
+                        Decisione finale
+                      </Typography>
+
+                      <Typography variant="body2">
+                        {decision.finalDecision}
+                      </Typography>
+
+                      {decision.amount !==
+                        null && (
+                        <Typography
+                          sx={{
+                            mt: 1.2,
+                            fontWeight: 800,
+                            color:
+                              decision.amount <
+                              0
+                                ? "error.main"
+                                : "primary.main",
+                          }}
+                        >
+                          {euro(
+                            decision.amount,
+                          )}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+
+                  <Divider sx={{ my: 2.5 }} />
+
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "1fr",
+                        lg: "repeat(3, minmax(0, 1fr))",
+                      },
+                      gap: 3,
+                    }}
+                  >
+                    <Box>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ mb: 0.7 }}
+                      >
+                        Effetti sul patrimonio
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                      >
+                        {decision.impact}
+                      </Typography>
+                    </Box>
+
+                    <Box>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ mb: 0.7 }}
+                      >
+                        Risultato
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                      >
+                        {decision.result}
+                      </Typography>
+                    </Box>
+
+                    <Box>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ mb: 0.7 }}
+                      >
+                        Insegnamenti
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                      >
+                        {decision.lessons}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Paper>
+              ),
+            )}
+          </Box>
+        </>
+      )}
+
+      <Dialog
+        open={dialogOpen}
+        onClose={closeCreateDialog}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>
+          Registra nuova decisione
+        </DialogTitle>
+
+        <DialogContent>
+          <Alert
+            severity="warning"
+            sx={{ mt: 1, mb: 3 }}
+          >
+            Una volta registrata, la decisione
+            entrerà nello storico permanente.
+          </Alert>
+
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                md: "repeat(3, minmax(0, 1fr))",
+              },
+              gap: 2,
+            }}
+          >
+            <TextField
+              label="Data"
+              type="date"
+              value={form.date}
+              onChange={(event) =>
+                updateForm(
+                  "date",
+                  event.target.value,
+                )
+              }
+              slotProps={{
+                inputLabel: {
+                  shrink: true,
+                },
+              }}
+              required
+            />
+
+            <TextField
+              select
+              label="Categoria"
+              value={form.category}
+              onChange={(event) =>
+                updateForm(
+                  "category",
+                  event.target
+                    .value as DecisionCategory,
+                )
+              }
+            >
+              <MenuItem value="POLICY">
+                Politica patrimoniale
+              </MenuItem>
+
+              <MenuItem value="PROPERTY">
+                Immobili
+              </MenuItem>
+
+              <MenuItem value="PLANNING">
+                Pianificazione
+              </MenuItem>
+
+              <MenuItem value="PLATFORM">
+                Piattaforma
+              </MenuItem>
+
+              <MenuItem value="INVESTMENT">
+                Investimenti
+              </MenuItem>
+
+              <MenuItem value="LIQUIDITY">
+                Liquidità
+              </MenuItem>
+
+              <MenuItem value="TAX">
+                Fiscalità
+              </MenuItem>
+            </TextField>
+
+            <TextField
+              select
+              label="Priorità"
+              value={form.priority}
+              onChange={(event) =>
+                updateForm(
+                  "priority",
+                  event.target
+                    .value as DecisionPriority,
+                )
+              }
+            >
+              <MenuItem value="HIGH">
+                Alta
+              </MenuItem>
+
+              <MenuItem value="MEDIUM">
+                Media
+              </MenuItem>
+
+              <MenuItem value="LOW">
+                Bassa
+              </MenuItem>
+            </TextField>
+
+            <TextField
+              select
+              label="Stato"
+              value={form.status}
+              onChange={(event) =>
+                updateForm(
+                  "status",
+                  event.target
+                    .value as DecisionStatus,
+                )
+              }
+            >
+              <MenuItem value="APPROVED">
+                Approvata
+              </MenuItem>
+
+              <MenuItem value="IN_PROGRESS">
+                In esecuzione
+              </MenuItem>
+
+              <MenuItem value="MONITORING">
+                Monitoraggio
+              </MenuItem>
+            </TextField>
+
+            <TextField
+              label="Importo opzionale"
+              value={form.amountText}
+              onChange={(event) =>
+                updateForm(
+                  "amountText",
+                  event.target.value,
+                )
+              }
+              placeholder="Es. 250000 oppure -50000"
+            />
+
+            <TextField
+              label="Titolo"
+              value={form.title}
+              onChange={(event) =>
+                updateForm(
+                  "title",
+                  event.target.value,
+                )
+              }
+              required
+              sx={{
+                gridColumn: {
+                  md: "span 3",
+                },
+              }}
+            />
+
+            <TextField
+              label="Motivazione"
+              value={form.motivation}
+              onChange={(event) =>
+                updateForm(
+                  "motivation",
+                  event.target.value,
+                )
+              }
+              multiline
+              minRows={3}
+              required
+              sx={{
+                gridColumn: {
+                  md: "span 3",
+                },
+              }}
+            />
+
+            <TextField
+              label="Analisi effettuata"
+              value={form.analysis}
+              onChange={(event) =>
+                updateForm(
+                  "analysis",
+                  event.target.value,
+                )
+              }
+              multiline
+              minRows={3}
+              required
+              sx={{
+                gridColumn: {
+                  md: "span 3",
+                },
+              }}
+            />
+
+            <TextField
+              label="Alternative considerate"
+              value={form.alternativesText}
+              onChange={(event) =>
+                updateForm(
+                  "alternativesText",
+                  event.target.value,
+                )
+              }
+              multiline
+              minRows={3}
+              helperText="Inserire un’alternativa per ogni riga."
+              sx={{
+                gridColumn: {
+                  md: "span 3",
+                },
+              }}
+            />
+
+            <TextField
+              label="Decisione finale"
+              value={form.finalDecision}
+              onChange={(event) =>
+                updateForm(
+                  "finalDecision",
+                  event.target.value,
+                )
+              }
+              multiline
+              minRows={3}
+              required
+              sx={{
+                gridColumn: {
+                  md: "span 3",
+                },
+              }}
+            />
+
+            <TextField
+              label="Effetti sul patrimonio"
+              value={form.impact}
+              onChange={(event) =>
+                updateForm(
+                  "impact",
+                  event.target.value,
+                )
+              }
+              multiline
+              minRows={3}
+              required
+              sx={{
+                gridColumn: {
+                  md: "span 3",
+                },
+              }}
+            />
+
+            <TextField
+              label="Risultato"
+              value={form.result}
+              onChange={(event) =>
+                updateForm(
+                  "result",
+                  event.target.value,
+                )
+              }
+              multiline
+              minRows={3}
+              required
+              sx={{
+                gridColumn: {
+                  md: "span 3",
+                },
+              }}
+            />
+
+            <TextField
+              label="Insegnamenti"
+              value={form.lessons}
+              onChange={(event) =>
+                updateForm(
+                  "lessons",
+                  event.target.value,
+                )
+              }
+              multiline
+              minRows={3}
+              required
+              sx={{
+                gridColumn: {
+                  md: "span 3",
+                },
+              }}
+            />
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 3 }}>
+          <Button
+            onClick={closeCreateDialog}
+            disabled={saving}
+          >
+            Annulla
+          </Button>
+
+          <Button
+            variant="contained"
+            startIcon={
+              saving ? (
+                <CircularProgress
+                  size={17}
+                  color="inherit"
+                />
+              ) : (
+                <AddRoundedIcon />
+              )
+            }
+            onClick={() =>
+              void saveDecision()
+            }
+            disabled={saving}
+          >
+            {saving
+              ? "Registrazione..."
+              : "Registra decisione"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
