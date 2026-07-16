@@ -4,6 +4,7 @@ import Dashboard from "./pages/Dashboard";
 import DataCatalog from "./pages/DataCatalog";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import Wealth from "./pages/Wealth";
+import Investments from "./pages/Investments";
 
 function App() {
   return (
@@ -17,12 +18,7 @@ function App() {
 
         <Route
           path="investments"
-          element={
-            <PlaceholderPage
-              title="Investimenti"
-              description="Portafoglio, allocazione, rendimento e costi."
-            />
-          }
+          element={<Investments />}
         />
 
         <Route

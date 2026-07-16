@@ -80,3 +80,61 @@ export async function analyzeWorkbook() {
     "Unable to analyze workbook",
   );
 }
+
+export type InvestmentPosition = {
+  id: number;
+  code: string;
+  name: string;
+  portfolio: string;
+  isin: string | null;
+  market: string | null;
+  instrumentType: string;
+  currency: string;
+  quantity: number | null;
+  marketPrice: number | null;
+  marketValue: number;
+  weight: number;
+  valuationDate: string;
+  source: string;
+};
+
+export type InvestmentGroup = {
+  name: string;
+  value: number;
+  positionCount: number;
+  weight: number;
+};
+
+export type InvestmentPortfolioResponse = {
+  household: {
+    id: number;
+    name: string;
+    currency: string;
+  };
+
+  summary: {
+    totalValue: number;
+    positionCount: number;
+    portfolioCount: number;
+    etfCount: number;
+    etfValue: number;
+    etfWeight: number;
+    topFiveValue: number;
+    topFiveConcentration: number;
+  };
+
+  asOfDate: string | null;
+  portfolios: InvestmentGroup[];
+  instrumentTypes: InvestmentGroup[];
+  topPositions: InvestmentPosition[];
+  positions: InvestmentPosition[];
+};
+
+export async function getInvestmentPortfolio(): Promise<InvestmentPortfolioResponse> {
+  const response = await fetch(`${API_URL}/investments`);
+
+  return readJson<InvestmentPortfolioResponse>(
+    response,
+    "Unable to load investment portfolio",
+  );
+}
