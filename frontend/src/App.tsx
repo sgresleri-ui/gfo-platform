@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import DataCatalog from "./pages/DataCatalog";
 import Budget from "./pages/Budget";
 import Planning from "./pages/Planning";
+import Reports from "./pages/Reports";
 import Investments from "./pages/Investments";
 import Liquidity from "./pages/Liquidity";
 import Properties from "./pages/Properties";
@@ -54,12 +55,7 @@ function App() {
 
         <Route
           path="reports"
-          element={
-            <PlaceholderPage
-              title="Report"
-              description="Report patrimoniali, operativi e decisionali."
-            />
-          }
+          element={<Reports />}
         />
 
         <Route
