@@ -8,11 +8,11 @@ import Budget from "./pages/Budget";
 import Planning from "./pages/Planning";
 import Reports from "./pages/Reports";
 import Decisions from "./pages/Decisions";
+import Settings from "./pages/Settings";
 import Investments from "./pages/Investments";
 import Liquidity from "./pages/Liquidity";
 import Properties from "./pages/Properties";
 import Wealth from "./pages/Wealth";
-import PlaceholderPage from "./pages/PlaceholderPage";
 
 function App() {
   return (
@@ -66,12 +66,7 @@ function App() {
 
         <Route
           path="settings"
-          element={
-            <PlaceholderPage
-              title="Impostazioni"
-              description="Configurazione della piattaforma e delle sorgenti dati."
-            />
-          }
+          element={<Settings />}
         />
       </Route>
 
