@@ -8,11 +8,12 @@ datasource db {
 }
 
 model Household {
-  id        Int      @id @default(autoincrement())
-  name      String
-  currency  String   @default("EUR")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              Int              @id @default(autoincrement())
+  name            String
+  currency        String           @default("EUR")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  wealthPositions WealthPosition[]
 }
 
 model Institution {
@@ -35,4 +36,30 @@ model Account {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   institution   Institution @relation(fields: [institutionId], references: [id])
+}
+
+model WealthPosition {
+  id            Int       @id @default(autoincrement())
+  householdId   Int
+  code          String    @unique
+  name          String
+  category      String
+  subcategory   String?
+  country       String?
+  currency      String    @default("EUR")
+  nativeAmount  Decimal?
+  fxRateToBase  Decimal?
+  valueBase     Decimal
+  baseCurrency  String    @default("EUR")
+  isLiability   Boolean   @default(false)
+  valuationDate DateTime
+  source        String    @default("MANUAL")
+  status        String    @default("ACTIVE")
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  household     Household @relation(fields: [householdId], references: [id])
+
+  @@index([householdId, category])
+  @@index([valuationDate])
 }
