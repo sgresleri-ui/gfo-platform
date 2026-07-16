@@ -1,3 +1,4 @@
+import { ImportsModule } from './imports/imports.module';
 import { DataCatalogModule } from './data-catalog/data-catalog.module';
 import { DecisionsModule } from './decisions/decisions.module';
 import { SettingsModule } from './settings/settings.module';
@@ -15,6 +16,7 @@ import { WealthModule } from './wealth/wealth.module';
 
 @Module({
   imports: [
+    ImportsModule,
     DataCatalogModule,
     DecisionsModule,
     SettingsModule,

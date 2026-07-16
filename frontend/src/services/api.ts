@@ -550,3 +550,112 @@ export async function getDataCatalogOverview(): Promise<DataCatalogOverviewRespo
   );
 }
 
+export type ImportRunStatus =
+  | "PREVIEW_READY"
+  | "BLOCKED"
+  | "FAILED"
+  | "IMPORTED";
+
+export type ImportCheckStatus =
+  | "PASS"
+  | "WARNING"
+  | "FAIL";
+
+export type ImportPreviewCheck = {
+  id: string;
+  title: string;
+  status: ImportCheckStatus;
+  message: string;
+};
+
+export type ImportPreviewDetails = {
+  safeToContinue: boolean;
+  duplicateFile: boolean;
+  previousMatchingRunId: string | null;
+  sheetNames: string[];
+  requiredSheets: string[];
+  missingSheets: string[];
+  checks: ImportPreviewCheck[];
+
+  summary: {
+    blockingErrors: number;
+    warnings: number;
+    sheetCount: number;
+    activePositions: number;
+    archivedPositions: number;
+  };
+
+  nextStep: string;
+};
+
+export type ImportRun = {
+  id: string;
+  fileName: string;
+  filePath: string;
+  fileHash: string;
+  fileSize: number;
+  workbookModifiedAt: string | null;
+  status: ImportRunStatus;
+  sheetCount: number;
+  activePositions: number;
+  archivedPositions: number;
+  preview: ImportPreviewDetails | Record<string, never>;
+  errorMessage: string | null;
+  createdAt: string;
+  completedAt: string | null;
+};
+
+export type ImportStatusResponse = {
+  exists: boolean;
+  fileName: string;
+  configuredFolder: string;
+  workbookPath: string;
+  message?: string;
+  fileHash?: string;
+  fileSize?: number;
+  workbookModifiedAt?: string;
+  alreadyAnalyzed?: boolean;
+  latestMatchingRun?: ImportRun | null;
+};
+
+export type ImportHistoryResponse = {
+  count: number;
+  runs: ImportRun[];
+};
+
+export async function getImportStatus(): Promise<ImportStatusResponse> {
+  const response = await fetch(
+    `${API_URL}/imports/status`,
+  );
+
+  return readJson<ImportStatusResponse>(
+    response,
+    "Unable to load import status",
+  );
+}
+
+export async function getImportHistory(): Promise<ImportHistoryResponse> {
+  const response = await fetch(
+    `${API_URL}/imports`,
+  );
+
+  return readJson<ImportHistoryResponse>(
+    response,
+    "Unable to load import history",
+  );
+}
+
+export async function createImportPreview(): Promise<ImportRun> {
+  const response = await fetch(
+    `${API_URL}/imports/preview`,
+    {
+      method: "POST",
+    },
+  );
+
+  return readJson<ImportRun>(
+    response,
+    "Unable to create import preview",
+  );
+}
+

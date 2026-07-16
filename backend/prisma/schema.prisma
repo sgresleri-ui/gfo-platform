@@ -105,3 +105,24 @@ model DecisionLogEntry {
   @@index([priority])
 }
 
+model ImportRun {
+  id                   String    @id @default(cuid())
+  fileName             String
+  filePath             String
+  fileHash             String
+  fileSize             Int
+  workbookModifiedAt   DateTime?
+  status               String
+  sheetCount           Int       @default(0)
+  activePositions      Int       @default(0)
+  archivedPositions    Int       @default(0)
+  previewJson          String    @default("{}")
+  errorMessage         String?
+  createdAt            DateTime  @default(now())
+  completedAt          DateTime?
+
+  @@index([fileHash])
+  @@index([status])
+  @@index([createdAt])
+}
+

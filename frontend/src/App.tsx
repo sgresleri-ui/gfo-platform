@@ -4,6 +4,7 @@ import MainLayout from "./components/layout/MainLayout";
 
 import Dashboard from "./pages/Dashboard";
 import DataCatalog from "./pages/DataCatalog";
+import ImportCenter from "./pages/ImportCenter";
 import Budget from "./pages/Budget";
 import Planning from "./pages/Planning";
 import Reports from "./pages/Reports";
@@ -52,6 +53,11 @@ function App() {
         <Route
           path="data-catalog"
           element={<DataCatalog />}
+        />
+
+        <Route
+          path="imports"
+          element={<ImportCenter />}
         />
 
         <Route
