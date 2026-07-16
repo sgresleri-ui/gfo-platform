@@ -481,3 +481,72 @@ export async function createDecision(
   );
 }
 
+export type DataCatalogSourceStatus =
+  | "HEALTHY"
+  | "WARNING"
+  | "ERROR";
+
+export type DataQualityStatus =
+  | "PASS"
+  | "WARNING"
+  | "FAIL";
+
+export type DataCatalogSource = {
+  id: string;
+  name: string;
+  type: string;
+  status: DataCatalogSourceStatus;
+  location: string;
+  lastUpdated: string | null;
+  records: number;
+  description: string;
+};
+
+export type DataQualityCheck = {
+  id: string;
+  title: string;
+  status: DataQualityStatus;
+  message: string;
+  count: number | null;
+};
+
+export type DataCatalogOverviewResponse = {
+  generatedAt: string;
+
+  summary: {
+    sourceCount: number;
+    healthySources: number;
+    warningSources: number;
+    errorSources: number;
+    activePositions: number;
+    archivedPositions: number;
+    decisionEntries: number;
+    qualityScore: number;
+    latestValuationDate: string | null;
+  };
+
+  categories: Array<{
+    name: string;
+    count: number;
+  }>;
+
+  origins: Array<{
+    name: string;
+    count: number;
+  }>;
+
+  sources: DataCatalogSource[];
+  qualityChecks: DataQualityCheck[];
+};
+
+export async function getDataCatalogOverview(): Promise<DataCatalogOverviewResponse> {
+  const response = await fetch(
+    `${API_URL}/data-catalog`,
+  );
+
+  return readJson<DataCatalogOverviewResponse>(
+    response,
+    "Unable to load data catalog",
+  );
+}
+

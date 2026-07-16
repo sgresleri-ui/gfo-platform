@@ -1,3 +1,4 @@
+import { DataCatalogModule } from './data-catalog/data-catalog.module';
 import { DecisionsModule } from './decisions/decisions.module';
 import { SettingsModule } from './settings/settings.module';
 import { Module } from '@nestjs/common';
@@ -14,6 +15,7 @@ import { WealthModule } from './wealth/wealth.module';
 
 @Module({
   imports: [
+    DataCatalogModule,
     DecisionsModule,
     SettingsModule,
     PrismaModule,
