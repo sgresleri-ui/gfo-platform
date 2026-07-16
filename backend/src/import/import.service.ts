@@ -20,6 +20,7 @@ type PositionInput = {
   valueBase: number;
   isLiability: boolean;
   notes: string;
+  source?: string;
 };
 
 type ParsedWorkbook = {
@@ -389,9 +390,49 @@ export class ImportService {
       }
     }
 
-    if (workbook.getWorksheet('El Toro')) {
+    /*
+     * EL TORO
+     *
+     * Il foglio El Toro contiene il costo storico.
+     * Il valore patrimoniale deriva dal prezzo di vendita
+     * confermato di EUR 2.150.000, con rogito previsto
+     * il 31 luglio 2026.
+     */
+    const elToroSheet = workbook.getWorksheet('El Toro');
+
+    if (elToroSheet) {
+      const elToroHistoricalCost =
+        this.getNumericValue(elToroSheet.getCell('D5'));
+
+      const elToroSalePrice = 2_150_000;
+
+      propertyCount += 1;
+      realEstateTotal += elToroSalePrice;
+
+      positions.push({
+        code: 'PROPERTY_EL_TORO',
+        name: 'Immobile El Toro',
+        category: 'REAL_ESTATE',
+        subcategory: 'PROPERTY_HELD_FOR_SALE',
+        country: 'Spain',
+        currency: 'EUR',
+        nativeAmount: elToroSalePrice,
+        fxRateToBase: 1,
+        valueBase: elToroSalePrice,
+        isLiability: false,
+        source: 'USER_CONFIRMED_2026',
+        notes: [
+          'Valore patrimoniale: prezzo di vendita confermato EUR 2.150.000',
+          'Rogito previsto: 31/07/2026',
+          elToroHistoricalCost !== null
+            ? `Costo storico complessivo da El Toro!D5: EUR ${elToroHistoricalCost}`
+            : 'Costo storico El Toro non disponibile',
+          'L’immobile rimane classificato come patrimonio immobiliare fino al rogito',
+        ].join(' | '),
+      });
+    } else {
       warnings.push(
-        'Il foglio El Toro esiste, ma El Toro non è presente nel foglio consolidato Immobili.',
+        'Foglio El Toro non trovato: immobile non importato.',
       );
     }
 
@@ -542,7 +583,8 @@ export class ImportService {
           baseCurrency: 'EUR',
           isLiability: position.isLiability,
           valuationDate: parsed.valuationDate,
-          source: 'EXCEL_GRESLERI2026',
+          source:
+            position.source ?? 'EXCEL_GRESLERI2026',
           status: 'ACTIVE',
           notes: position.notes,
         };
