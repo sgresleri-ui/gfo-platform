@@ -552,6 +552,7 @@ export async function getDataCatalogOverview(): Promise<DataCatalogOverviewRespo
 
 export type ImportRunStatus =
   | "PREVIEW_READY"
+  | "COMPARISON_READY"
   | "BLOCKED"
   | "FAILED"
   | "IMPORTED";
@@ -656,6 +657,72 @@ export async function createImportPreview(): Promise<ImportRun> {
   return readJson<ImportRun>(
     response,
     "Unable to create import preview",
+  );
+}
+
+export type ImportComparisonStatus =
+  | "UNCHANGED"
+  | "MODIFIED"
+  | "NEW"
+  | "MISSING_IN_WORKBOOK"
+  | "PROTECTED_MANUAL";
+
+export type ImportFieldDifference = {
+  field: string;
+  databaseValue: string | number | null;
+  workbookValue: string | number | null;
+};
+
+export type ImportComparisonItem = {
+  code: string;
+  name: string;
+  category: string;
+  status: ImportComparisonStatus;
+  databaseValue: number | null;
+  workbookValue: number | null;
+  difference: number | null;
+  source: string;
+  origin: string | null;
+  differences: ImportFieldDifference[];
+};
+
+export type ImportComparisonResponse = {
+  runId: string;
+  status: "COMPARISON_READY";
+
+  comparison: {
+    generatedAt: string;
+    fileName: string;
+    fileHash: string;
+
+    summary: {
+      extractedPositions: number;
+      unchanged: number;
+      modified: number;
+      new: number;
+      missingInWorkbook: number;
+      protectedManual: number;
+      databaseManagedValue: number;
+      workbookValue: number;
+      valueDifference: number;
+      requiresReview: boolean;
+    };
+
+    items: ImportComparisonItem[];
+  };
+};
+
+export async function createImportComparison(): Promise<ImportComparisonResponse> {
+  const response = await fetch(
+    `${API_URL}/imports/compare`,
+    {
+      method: "POST",
+    },
+  );
+
+  return readJson<ImportComparisonResponse>(
+    response,
+    "Unable to compare workbook and database",
   );
 }
 

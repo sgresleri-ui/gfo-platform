@@ -1,3 +1,4 @@
+import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import { useMemo, useState } from "react";
 import {
   AppBar,
@@ -73,6 +74,12 @@ const navigation = [
     path: "/data-catalog",
     icon: <StorageRoundedIcon />,
   },
+  {
+    label: "Import Center",
+    path: "/imports",
+    icon: <UploadFileRoundedIcon />,
+  },
+
   {
     label: "Report",
     path: "/reports",

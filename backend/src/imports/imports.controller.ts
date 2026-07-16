@@ -4,6 +4,7 @@ import {
   Post,
 } from '@nestjs/common';
 
+import { ImportComparisonService } from './import-comparison.service';
 import { ImportsService } from './imports.service';
 
 @Controller('imports')
@@ -11,6 +12,9 @@ export class ImportsController {
   constructor(
     private readonly importsService:
       ImportsService,
+
+    private readonly comparisonService:
+      ImportComparisonService,
   ) {}
 
   @Get()
@@ -26,5 +30,10 @@ export class ImportsController {
   @Post('preview')
   createPreview() {
     return this.importsService.createPreview();
+  }
+
+  @Post('compare')
+  compareWorkbook() {
+    return this.comparisonService.compareWorkbook();
   }
 }

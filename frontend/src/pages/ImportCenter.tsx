@@ -31,6 +31,7 @@ import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import ErrorRoundedIcon from "@mui/icons-material/ErrorRounded";
 
 import KpiCard from "../components/KpiCard";
+import ImportComparisonPanel from "../components/ImportComparisonPanel";
 
 import {
   createImportPreview,
@@ -48,6 +49,10 @@ function runStatusLabel(
 ) {
   if (status === "PREVIEW_READY") {
     return "Anteprima pronta";
+  }
+
+  if (status === "COMPARISON_READY") {
+    return "Confronto pronto";
   }
 
   if (status === "BLOCKED") {
@@ -68,7 +73,10 @@ function runStatusColor(
     return "info";
   }
 
-  if (status === "IMPORTED") {
+  if (
+    status === "IMPORTED" ||
+    status === "COMPARISON_READY"
+  ) {
     return "success";
   }
 
@@ -791,6 +799,12 @@ export default function ImportCenter() {
           )}
         </Paper>
       )}
+
+      <ImportComparisonPanel
+        enabled={Boolean(
+          previewDetails?.safeToContinue,
+        )}
+      />
 
       <Typography
         variant="h6"
