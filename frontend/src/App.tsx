@@ -1,71 +1,112 @@
-import { useEffect, useState } from "react";
-import "./App.css";
+import { Navigate, Route, Routes } from "react-router-dom";
+import MainLayout from "./components/layout/MainLayout";
+import Dashboard from "./pages/Dashboard";
+import DataCatalog from "./pages/DataCatalog";
+import PlaceholderPage from "./pages/PlaceholderPage";
 
 function App() {
-  const [data, setData] = useState({
-    netWorth: 0,
-    liquidity: 0,
-    investments: 0,
-    realEstate: 0,
-    liabilities: 0,
-  });
-
-  useEffect(() => {
-  fetch("http://localhost:3000/dashboard")
-    .then((res) => {
-      console.log("STATUS", res.status);
-      return res.json();
-    })
-    .then((json) => {
-      console.log("DATA", json);
-      setData(json);
-    })
-    .catch((err) => {
-      console.error("FETCH ERROR", err);
-    });
-}, []);
-
-  const euro = (value: number) =>
-    value.toLocaleString("it-IT", {
-      style: "currency",
-      currency: "EUR",
-      maximumFractionDigits: 0,
-    });
-
   return (
-    <div className="app">
-      <header className="header">
-        <h1>GFO Platform</h1>
-        <p>Family Office – Stefano Gresleri</p>
-      </header>
+    <Routes>
+      <Route path="/" element={<MainLayout />}>
+        <Route index element={<Navigate to="/dashboard" replace />} />
 
-      <main className="dashboard">
-        <div className="card">
-          <h2>Net Worth</h2>
-          <span>{euro(data.netWorth)}</span>
-        </div>
+        <Route path="dashboard" element={<Dashboard />} />
 
-        <div className="card">
-          <h2>Liquidity</h2>
-          <span>{euro(data.liquidity)}</span>
-        </div>
+        <Route
+          path="wealth"
+          element={
+            <PlaceholderPage
+              title="Patrimonio"
+              description="Registro patrimoniale consolidato della famiglia."
+            />
+          }
+        />
 
-        <div className="card">
-          <h2>Investments</h2>
-          <span>{euro(data.investments)}</span>
-        </div>
+        <Route
+          path="investments"
+          element={
+            <PlaceholderPage
+              title="Investimenti"
+              description="Portafoglio, allocazione, rendimento e costi."
+            />
+          }
+        />
 
-        <div className="card">
-          <h2>Real Estate</h2>
-          <span>{euro(data.realEstate)}</span>
-        </div>
+        <Route
+          path="liquidity"
+          element={
+            <PlaceholderPage
+              title="Liquidità"
+              description="Conti finanziari, riserve operative e disponibilità."
+            />
+          }
+        />
 
-        <div className="card">
-          <h2>Liabilities</h2>
-          <span>{euro(data.liabilities)}</span>
-        </div>
-      </main>
-    </div>
+        <Route
+          path="properties"
+          element={
+            <PlaceholderPage
+              title="Immobili"
+              description="Patrimonio immobiliare, debiti, costi e redditività."
+            />
+          }
+        />
+
+        <Route
+          path="budget"
+          element={
+            <PlaceholderPage
+              title="Budget"
+              description="Budget annuale e piano pluriennale 2027–2066."
+            />
+          }
+        />
+
+        <Route
+          path="planning"
+          element={
+            <PlaceholderPage
+              title="Planning"
+              description="Timeline patrimoniale, scenari e sostenibilità futura."
+            />
+          }
+        />
+
+        <Route path="data-catalog" element={<DataCatalog />} />
+
+        <Route
+          path="reports"
+          element={
+            <PlaceholderPage
+              title="Report"
+              description="Report patrimoniali, operativi e decisionali."
+            />
+          }
+        />
+
+        <Route
+          path="decisions"
+          element={
+            <PlaceholderPage
+              title="Decisioni"
+              description="Registro delle decisioni strategiche del Family Office."
+            />
+          }
+        />
+
+        <Route
+          path="settings"
+          element={
+            <PlaceholderPage
+              title="Impostazioni"
+              description="Configurazione della piattaforma e delle sorgenti dati."
+            />
+          }
+        />
+      </Route>
+
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
   );
 }
 
