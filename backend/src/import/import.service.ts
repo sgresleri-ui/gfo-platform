@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ExcelReader } from './readers/excel.reader';
+import { ExcelReader } from './readers/excel-reader';
 import * as fs from 'fs';
 import * as path from 'path';
 

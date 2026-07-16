@@ -1,7 +1,8 @@
-async importWorkbook() {
+import { Injectable } from '@nestjs/common';
 
-    return {
-        test: "QUESTO È IL NUOVO IMPORT SERVICE"
-    };
-
+@Injectable()
+export class AppService {
+  getHello(): string {
+    return 'Hello World!';
+  }
 }
