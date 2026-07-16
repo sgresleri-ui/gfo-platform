@@ -6,6 +6,11 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Paper,
   Table,
   TableBody,
@@ -16,19 +21,31 @@ import {
   Typography,
 } from "@mui/material";
 
-import CompareArrowsRoundedIcon from "@mui/icons-material/CompareArrowsRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
+import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
+import CompareArrowsRoundedIcon from "@mui/icons-material/CompareArrowsRounded";
+import RestoreRoundedIcon from "@mui/icons-material/RestoreRounded";
+import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 
 import {
+  applyControlledImport,
   createImportComparison,
+  rollbackControlledImport,
+  type ImportApplicationResponse,
   type ImportComparisonItem,
   type ImportComparisonResponse,
   type ImportComparisonStatus,
+  type ImportRollbackResponse,
 } from "../services/api";
 
 type ImportComparisonPanelProps = {
   enabled: boolean;
 };
+
+type ConfirmationMode =
+  | "APPLY"
+  | "ROLLBACK"
+  | null;
 
 function statusLabel(
   status: ImportComparisonStatus,
@@ -95,36 +112,109 @@ function euro(value: number | null) {
 export default function ImportComparisonPanel({
   enabled,
 }: ImportComparisonPanelProps) {
-  const [data, setData] =
+  const [comparison, setComparison] =
     useState<ImportComparisonResponse | null>(
       null,
     );
 
-  const [loading, setLoading] =
+  const [application, setApplication] =
+    useState<ImportApplicationResponse | null>(
+      null,
+    );
+
+  const [rollback, setRollback] =
+    useState<ImportRollbackResponse | null>(
+      null,
+    );
+
+  const [loadingComparison, setLoadingComparison] =
     useState(false);
+
+  const [loadingAction, setLoadingAction] =
+    useState(false);
+
+  const [confirmationMode, setConfirmationMode] =
+    useState<ConfirmationMode>(null);
 
   const [error, setError] =
     useState("");
 
   async function compareWorkbook() {
-    setLoading(true);
+    setLoadingComparison(true);
     setError("");
+    setApplication(null);
+    setRollback(null);
 
     try {
       const result =
         await createImportComparison();
 
-      setData(result);
+      setComparison(result);
     } catch (requestError) {
       console.error(requestError);
 
       setError(
-        "Confronto non riuscito. Eseguire prima l’analisi del workbook.",
+        "Confronto non riuscito. Analizzare nuovamente il workbook.",
       );
     } finally {
-      setLoading(false);
+      setLoadingComparison(false);
     }
   }
+
+  async function applyImport() {
+    setLoadingAction(true);
+    setError("");
+
+    try {
+      const result =
+        await applyControlledImport();
+
+      setApplication(result);
+      setConfirmationMode(null);
+    } catch (requestError) {
+      console.error(requestError);
+
+      setError(
+        "L’importazione controllata non è stata completata.",
+      );
+
+      setConfirmationMode(null);
+    } finally {
+      setLoadingAction(false);
+    }
+  }
+
+  async function restoreSnapshot() {
+    if (!application) {
+      return;
+    }
+
+    setLoadingAction(true);
+    setError("");
+
+    try {
+      const result =
+        await rollbackControlledImport(
+          application.runId,
+        );
+
+      setRollback(result);
+      setConfirmationMode(null);
+    } catch (requestError) {
+      console.error(requestError);
+
+      setError(
+        "Il ripristino dello snapshot non è stato completato.",
+      );
+
+      setConfirmationMode(null);
+    } finally {
+      setLoadingAction(false);
+    }
+  }
+
+  const summary =
+    comparison?.comparison.summary;
 
   return (
     <Box sx={{ mb: 3 }}>
@@ -163,15 +253,15 @@ export default function ImportComparisonPanel({
               color="text.secondary"
               sx={{ mt: 0.4 }}
             >
-              Verifica dettagliata delle posizioni
-              senza applicare modifiche.
+              Verifica le posizioni prima di
+              modificare il database.
             </Typography>
           </Box>
 
           <Button
             variant="contained"
             startIcon={
-              loading ? (
+              loadingComparison ? (
                 <CircularProgress
                   size={18}
                   color="inherit"
@@ -180,12 +270,16 @@ export default function ImportComparisonPanel({
                 <CompareArrowsRoundedIcon />
               )
             }
-            disabled={!enabled || loading}
+            disabled={
+              !enabled ||
+              loadingComparison ||
+              loadingAction
+            }
             onClick={() =>
               void compareWorkbook()
             }
           >
-            {loading
+            {loadingComparison
               ? "Confronto..."
               : "Confronta posizioni"}
           </Button>
@@ -196,8 +290,7 @@ export default function ImportComparisonPanel({
             severity="info"
             sx={{ mt: 2.5 }}
           >
-            Analizzare prima il workbook per
-            abilitare il confronto.
+            Analizzare prima il workbook.
           </Alert>
         )}
 
@@ -211,22 +304,20 @@ export default function ImportComparisonPanel({
         )}
       </Paper>
 
-      {data && (
+      {comparison && summary && (
         <>
           <Alert
             severity={
-              data.comparison.summary
-                .requiresReview
+              summary.requiresReview
                 ? "warning"
                 : "success"
             }
             icon={<CheckCircleRoundedIcon />}
             sx={{ my: 3 }}
           >
-            {data.comparison.summary
-              .requiresReview
-              ? "Sono presenti differenze che richiedono revisione."
-              : "Excel e database risultano riconciliati. Nessuna modifica necessaria."}
+            {summary.requiresReview
+              ? "Sono presenti differenze da controllare prima dell’importazione."
+              : "Excel e database risultano riconciliati."}
           </Alert>
 
           <Box
@@ -245,37 +336,29 @@ export default function ImportComparisonPanel({
               {
                 label: "Estratte",
                 value:
-                  data.comparison.summary
-                    .extractedPositions,
+                  summary.extractedPositions,
               },
               {
                 label: "Invariate",
-                value:
-                  data.comparison.summary
-                    .unchanged,
+                value: summary.unchanged,
               },
               {
                 label: "Modificate",
-                value:
-                  data.comparison.summary
-                    .modified,
+                value: summary.modified,
               },
               {
                 label: "Nuove",
-                value:
-                  data.comparison.summary.new,
+                value: summary.new,
               },
               {
                 label: "Assenti",
                 value:
-                  data.comparison.summary
-                    .missingInWorkbook,
+                  summary.missingInWorkbook,
               },
               {
                 label: "Manuali protette",
                 value:
-                  data.comparison.summary
-                    .protectedManual,
+                  summary.protectedManual,
               },
             ].map((item) => (
               <Paper
@@ -343,8 +426,7 @@ export default function ImportComparisonPanel({
                   sx={{ mt: 0.5 }}
                 >
                   {euro(
-                    data.comparison.summary
-                      .databaseManagedValue,
+                    summary.databaseManagedValue,
                   )}
                 </Typography>
               </Box>
@@ -361,10 +443,7 @@ export default function ImportComparisonPanel({
                   variant="h6"
                   sx={{ mt: 0.5 }}
                 >
-                  {euro(
-                    data.comparison.summary
-                      .workbookValue,
-                  )}
+                  {euro(summary.workbookValue)}
                 </Typography>
               </Box>
 
@@ -381,20 +460,129 @@ export default function ImportComparisonPanel({
                   sx={{
                     mt: 0.5,
                     color:
-                      data.comparison.summary
-                        .valueDifference === 0
+                      summary.valueDifference ===
+                      0
                         ? "success.main"
                         : "warning.main",
                   }}
                 >
                   {euro(
-                    data.comparison.summary
-                      .valueDifference,
+                    summary.valueDifference,
                   )}
                 </Typography>
               </Box>
             </Box>
           </Paper>
+
+          {!application && (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 3,
+                mb: 3,
+                border: "1px solid",
+                borderColor: "primary.main",
+                backgroundColor:
+                  "rgba(28, 78, 121, 0.025)",
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent:
+                    "space-between",
+                  alignItems: {
+                    xs: "flex-start",
+                    md: "center",
+                  },
+                  flexDirection: {
+                    xs: "column",
+                    md: "row",
+                  },
+                  gap: 2,
+                }}
+              >
+                <Box>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                    }}
+                  >
+                    <ShieldRoundedIcon />
+                    Importazione controllata
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 0.8 }}
+                  >
+                    Prima dell’importazione verrà
+                    creato uno snapshot completo
+                    delle posizioni patrimoniali.
+                  </Typography>
+                </Box>
+
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={
+                    <CloudUploadRoundedIcon />
+                  }
+                  disabled={loadingAction}
+                  onClick={() =>
+                    setConfirmationMode("APPLY")
+                  }
+                >
+                  Applica importazione
+                </Button>
+              </Box>
+            </Paper>
+          )}
+
+          {application && !rollback && (
+            <Alert
+              severity="success"
+              sx={{ mb: 3 }}
+              action={
+                <Button
+                  color="inherit"
+                  startIcon={
+                    <RestoreRoundedIcon />
+                  }
+                  disabled={loadingAction}
+                  onClick={() =>
+                    setConfirmationMode(
+                      "ROLLBACK",
+                    )
+                  }
+                >
+                  Ripristina
+                </Button>
+              }
+            >
+              Importazione completata:{" "}
+              {application.summary
+                .appliedPositions}{" "}
+              posizioni applicate. Snapshot
+              preventivo creato correttamente.
+            </Alert>
+          )}
+
+          {rollback && (
+            <Alert
+              severity="info"
+              sx={{ mb: 3 }}
+              icon={<RestoreRoundedIcon />}
+            >
+              Snapshot ripristinato:{" "}
+              {rollback.restoredPositions}{" "}
+              posizioni recuperate.
+            </Alert>
+          )}
 
           <Typography
             variant="h6"
@@ -410,15 +598,17 @@ export default function ImportComparisonPanel({
               maxHeight: 620,
               border: "1px solid",
               borderColor: "divider",
-              boxShadow:
-                "0 12px 32px rgba(26,45,75,0.06)",
             }}
           >
             <Table stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell>Posizione</TableCell>
-                  <TableCell>Categoria</TableCell>
+                  <TableCell>
+                    Posizione
+                  </TableCell>
+                  <TableCell>
+                    Categoria
+                  </TableCell>
                   <TableCell>Stato</TableCell>
                   <TableCell align="right">
                     Database
@@ -429,14 +619,17 @@ export default function ImportComparisonPanel({
                   <TableCell align="right">
                     Differenza
                   </TableCell>
-                  <TableCell>Origine</TableCell>
+                  <TableCell>
+                    Origine
+                  </TableCell>
                 </TableRow>
               </TableHead>
 
               <TableBody>
-                {data.comparison.items.map(
+                {comparison.comparison.items.map(
                   (
-                    item: ImportComparisonItem,
+                    item:
+                      ImportComparisonItem,
                   ) => (
                     <TableRow
                       key={item.code}
@@ -445,7 +638,9 @@ export default function ImportComparisonPanel({
                       <TableCell>
                         <Typography
                           variant="body2"
-                          sx={{ fontWeight: 750 }}
+                          sx={{
+                            fontWeight: 750,
+                          }}
                         >
                           {item.name}
                         </Typography>
@@ -491,22 +686,9 @@ export default function ImportComparisonPanel({
                       </TableCell>
 
                       <TableCell align="right">
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontWeight: 700,
-                            color:
-                              item.difference ===
-                                null ||
-                              item.difference === 0
-                                ? "text.primary"
-                                : "warning.main",
-                          }}
-                        >
-                          {euro(
-                            item.difference,
-                          )}
-                        </Typography>
+                        {euro(
+                          item.difference,
+                        )}
                       </TableCell>
 
                       <TableCell>
@@ -525,6 +707,65 @@ export default function ImportComparisonPanel({
           </TableContainer>
         </>
       )}
+
+      <Dialog
+        open={confirmationMode !== null}
+        onClose={() => {
+          if (!loadingAction) {
+            setConfirmationMode(null);
+          }
+        }}
+      >
+        <DialogTitle>
+          {confirmationMode === "APPLY"
+            ? "Confermare l’importazione?"
+            : "Ripristinare lo snapshot?"}
+        </DialogTitle>
+
+        <DialogContent>
+          <DialogContentText>
+            {confirmationMode === "APPLY"
+              ? "Verrà creato uno snapshot completo prima di aggiornare le posizioni gestite dal workbook. Le posizioni manuali, compreso El Toro, resteranno protette."
+              : "Le posizioni patrimoniali verranno riportate esattamente allo stato precedente all’importazione."}
+          </DialogContentText>
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            disabled={loadingAction}
+            onClick={() =>
+              setConfirmationMode(null)
+            }
+          >
+            Annulla
+          </Button>
+
+          <Button
+            variant="contained"
+            color={
+              confirmationMode === "ROLLBACK"
+                ? "warning"
+                : "primary"
+            }
+            disabled={loadingAction}
+            onClick={() => {
+              if (
+                confirmationMode === "APPLY"
+              ) {
+                void applyImport();
+              } else {
+                void restoreSnapshot();
+              }
+            }}
+          >
+            {loadingAction
+              ? "Operazione in corso..."
+              : confirmationMode === "APPLY"
+                ? "Conferma importazione"
+                : "Conferma ripristino"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

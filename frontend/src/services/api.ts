@@ -555,7 +555,8 @@ export type ImportRunStatus =
   | "COMPARISON_READY"
   | "BLOCKED"
   | "FAILED"
-  | "IMPORTED";
+  | "IMPORTED"
+  | "ROLLED_BACK";
 
 export type ImportCheckStatus =
   | "PASS"
@@ -723,6 +724,105 @@ export async function createImportComparison(): Promise<ImportComparisonResponse
   return readJson<ImportComparisonResponse>(
     response,
     "Unable to compare workbook and database",
+  );
+}
+
+export type ImportApplicationResponse = {
+  runId: string;
+  status: "IMPORTED";
+  snapshotId: string;
+
+  summary: {
+    importedAt: string;
+    snapshotId: string;
+    appliedPositions: number;
+    unchanged: number;
+    modified: number;
+    created: number;
+    archived: number;
+    protectedManual: number;
+    valueDifference: number;
+  };
+};
+
+export type ImportRollbackResponse = {
+  runId: string;
+  status: "ROLLED_BACK";
+  snapshotId: string;
+  restoredPositions: number;
+};
+
+export type WealthSnapshotSummary = {
+  id: string;
+  snapshotType: string;
+  reason: string;
+  sourceRunId: string | null;
+  activePositions: number;
+  archivedPositions: number;
+  netValue: number;
+  createdAt: string;
+  restoredAt: string | null;
+};
+
+export type WealthSnapshotsResponse = {
+  count: number;
+  snapshots: WealthSnapshotSummary[];
+};
+
+export async function applyControlledImport(): Promise<ImportApplicationResponse> {
+  const response = await fetch(
+    `${API_URL}/imports/apply`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({
+        confirm: true,
+      }),
+    },
+  );
+
+  return readJson<ImportApplicationResponse>(
+    response,
+    "Unable to apply controlled import",
+  );
+}
+
+export async function rollbackControlledImport(
+  runId: string,
+): Promise<ImportRollbackResponse> {
+  const response = await fetch(
+    `${API_URL}/imports/${runId}/rollback`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({
+        confirm: true,
+      }),
+    },
+  );
+
+  return readJson<ImportRollbackResponse>(
+    response,
+    "Unable to restore the pre-import snapshot",
+  );
+}
+
+export async function getWealthSnapshots(): Promise<WealthSnapshotsResponse> {
+  const response = await fetch(
+    `${API_URL}/imports/snapshots`,
+  );
+
+  return readJson<WealthSnapshotsResponse>(
+    response,
+    "Unable to load wealth snapshots",
   );
 }
 

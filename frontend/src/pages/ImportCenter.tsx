@@ -55,6 +55,10 @@ function runStatusLabel(
     return "Confronto pronto";
   }
 
+  if (status === "ROLLED_BACK") {
+    return "Ripristinata";
+  }
+
   if (status === "BLOCKED") {
     return "Bloccata";
   }
