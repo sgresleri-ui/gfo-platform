@@ -204,3 +204,66 @@ export async function getLiquidityOverview(): Promise<LiquidityOverviewResponse>
     "Unable to load liquidity overview",
   );
 }
+
+export type PropertyRecord = {
+  id: number;
+  code: string;
+  name: string;
+  country: string | null;
+  currency: string;
+  grossValue: number;
+  debt: number;
+  netEquity: number;
+  ltv: number;
+  status: "OWNED" | "HELD_FOR_SALE";
+  historicalCost: number | null;
+  differenceFromHistoricalCost: number | null;
+  expectedClosingDate: string | null;
+  liabilityName: string | null;
+  liabilityType: string | null;
+  valuationDate: string;
+  source: string;
+  notes: string | null;
+};
+
+export type PropertyCountryAllocation = {
+  name: string;
+  grossValue: number;
+  netEquity: number;
+  propertyCount: number;
+  weight: number;
+};
+
+export type PropertiesOverviewResponse = {
+  household: {
+    id: number;
+    name: string;
+    currency: string;
+  };
+
+  summary: {
+    grossValue: number;
+    debt: number;
+    netEquity: number;
+    propertyCount: number;
+    weightedLtv: number;
+    heldForSaleValue: number;
+    heldForSaleCount: number;
+    highestLtv: number;
+    highestLtvProperty: string | null;
+  };
+
+  asOfDate: string | null;
+  countries: PropertyCountryAllocation[];
+  properties: PropertyRecord[];
+};
+
+export async function getPropertiesOverview(): Promise<PropertiesOverviewResponse> {
+  const response = await fetch(`${API_URL}/properties`);
+
+  return readJson<PropertiesOverviewResponse>(
+    response,
+    "Unable to load properties overview",
+  );
+}
+

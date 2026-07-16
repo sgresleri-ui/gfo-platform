@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { ImportModule } from './import/import.module';
 import { InvestmentsModule } from './investments/investments.module';
 import { LiquidityModule } from './liquidity/liquidity.module';
+import { PropertiesModule } from './properties/properties.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { WealthModule } from './wealth/wealth.module';
 
@@ -16,6 +17,7 @@ import { WealthModule } from './wealth/wealth.module';
     WealthModule,
     InvestmentsModule,
     LiquidityModule,
+    PropertiesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

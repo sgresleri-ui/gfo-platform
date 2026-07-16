@@ -1,11 +1,14 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+
 import MainLayout from "./components/layout/MainLayout";
+
 import Dashboard from "./pages/Dashboard";
 import DataCatalog from "./pages/DataCatalog";
-import PlaceholderPage from "./pages/PlaceholderPage";
-import Wealth from "./pages/Wealth";
 import Investments from "./pages/Investments";
 import Liquidity from "./pages/Liquidity";
+import Properties from "./pages/Properties";
+import Wealth from "./pages/Wealth";
+import PlaceholderPage from "./pages/PlaceholderPage";
 
 function App() {
   return (
@@ -29,12 +32,7 @@ function App() {
 
         <Route
           path="properties"
-          element={
-            <PlaceholderPage
-              title="Immobili"
-              description="Patrimonio immobiliare, debiti, costi e redditività."
-            />
-          }
+          element={<Properties />}
         />
 
         <Route
@@ -57,7 +55,10 @@ function App() {
           }
         />
 
-        <Route path="data-catalog" element={<DataCatalog />} />
+        <Route
+          path="data-catalog"
+          element={<DataCatalog />}
+        />
 
         <Route
           path="reports"
@@ -90,7 +91,10 @@ function App() {
         />
       </Route>
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route
+        path="*"
+        element={<Navigate to="/dashboard" replace />}
+      />
     </Routes>
   );
 }
