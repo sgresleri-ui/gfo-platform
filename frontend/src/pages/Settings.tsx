@@ -5,7 +5,6 @@ import {
   Button,
   Chip,
   CircularProgress,
-  Divider,
   FormControlLabel,
   MenuItem,
   Paper,
@@ -27,22 +26,13 @@ import KpiCard from "../components/KpiCard";
 
 import {
   getBudgetOverview,
+  getPlatformSettings,
   getPropertiesOverview,
+  resetPlatformSettings,
+  updatePlatformSettings,
+  type PlatformSettingsInput,
+  type PlatformSettingsResponse,
 } from "../services/api";
-
-type PlatformSettings = {
-  householdName: string;
-  ownerName: string;
-  baseCurrency: string;
-  timezone: string;
-  fiscalResidence: string;
-  plannedFiscalResidence: string;
-  sourceWorkbook: string;
-  dataFolder: string;
-  automaticRefresh: boolean;
-  showArchivedPositions: boolean;
-  requireDecisionNotes: boolean;
-};
 
 type ConnectionStatus = {
   backendOnline: boolean;
@@ -50,9 +40,7 @@ type ConnectionStatus = {
   propertiesAsOfDate: string | null;
 };
 
-const STORAGE_KEY = "gfo-platform-settings";
-
-const DEFAULT_SETTINGS: PlatformSettings = {
+const DEFAULT_SETTINGS: PlatformSettingsInput = {
   householdName: "Family Office – Stefano Gresleri",
   ownerName: "Stefano Gresleri",
   baseCurrency: "EUR",
@@ -66,31 +54,31 @@ const DEFAULT_SETTINGS: PlatformSettings = {
   requireDecisionNotes: true,
 };
 
-function readStoredSettings(): PlatformSettings {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-
-    if (!stored) {
-      return DEFAULT_SETTINGS;
-    }
-
-    const parsed = JSON.parse(
-      stored,
-    ) as Partial<PlatformSettings>;
-
-    return {
-      ...DEFAULT_SETTINGS,
-      ...parsed,
-    };
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
+function toSettingsForm(
+  value: PlatformSettingsResponse,
+): PlatformSettingsInput {
+  return {
+    householdName: value.householdName,
+    ownerName: value.ownerName,
+    baseCurrency: value.baseCurrency,
+    timezone: value.timezone,
+    fiscalResidence: value.fiscalResidence,
+    plannedFiscalResidence:
+      value.plannedFiscalResidence,
+    sourceWorkbook: value.sourceWorkbook,
+    dataFolder: value.dataFolder,
+    automaticRefresh: value.automaticRefresh,
+    showArchivedPositions:
+      value.showArchivedPositions,
+    requireDecisionNotes:
+      value.requireDecisionNotes,
+  };
 }
 
 export default function Settings() {
   const [settings, setSettings] =
-    useState<PlatformSettings>(
-      readStoredSettings,
+    useState<PlatformSettingsInput>(
+      DEFAULT_SETTINGS,
     );
 
   const [connection, setConnection] =
@@ -100,36 +88,65 @@ export default function Settings() {
       propertiesAsOfDate: null,
     });
 
-  const [checking, setChecking] =
+  const [updatedAt, setUpdatedAt] =
+    useState<string | null>(null);
+
+  const [loading, setLoading] =
     useState(true);
 
-  const [saved, setSaved] =
+  const [saving, setSaving] =
     useState(false);
+
+  const [success, setSuccess] =
+    useState("");
 
   const [error, setError] =
     useState("");
 
-  async function checkConnection() {
-    setChecking(true);
+  async function loadSettings() {
+    setLoading(true);
     setError("");
+    setSuccess("");
 
-    const [budgetResult, propertiesResult] =
-      await Promise.allSettled([
-        getBudgetOverview(),
-        getPropertiesOverview(),
-      ]);
+    const [
+      settingsResult,
+      budgetResult,
+      propertiesResult,
+    ] = await Promise.allSettled([
+      getPlatformSettings(),
+      getBudgetOverview(),
+      getPropertiesOverview(),
+    ]);
+
+    if (
+      settingsResult.status === "fulfilled"
+    ) {
+      setSettings(
+        toSettingsForm(settingsResult.value),
+      );
+
+      setUpdatedAt(
+        settingsResult.value.updatedAt,
+      );
+    } else {
+      setError(
+        "Impossibile caricare le impostazioni dal database.",
+      );
+    }
 
     const backendOnline =
+      settingsResult.status === "fulfilled" ||
       budgetResult.status === "fulfilled" ||
-      propertiesResult.status ===
-        "fulfilled";
+      propertiesResult.status === "fulfilled";
 
     setConnection({
       backendOnline,
+
       budgetAsOfDate:
         budgetResult.status === "fulfilled"
           ? budgetResult.value.asOfDate
           : null,
+
       propertiesAsOfDate:
         propertiesResult.status ===
         "fulfilled"
@@ -137,51 +154,79 @@ export default function Settings() {
           : null,
     });
 
-    if (!backendOnline) {
-      setError(
-        "Il backend non risponde. Verificare che NestJS sia attivo sulla porta 3000.",
-      );
-    }
-
-    setChecking(false);
+    setLoading(false);
   }
 
   useEffect(() => {
-    void checkConnection();
+    void loadSettings();
   }, []);
 
   function updateSetting<
-    Key extends keyof PlatformSettings,
+    Key extends keyof PlatformSettingsInput,
   >(
     key: Key,
-    value: PlatformSettings[Key],
+    value: PlatformSettingsInput[Key],
   ) {
     setSettings((current) => ({
       ...current,
       [key]: value,
     }));
 
-    setSaved(false);
+    setSuccess("");
   }
 
-  function saveSettings() {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(settings),
-    );
+  async function saveSettings() {
+    setSaving(true);
+    setError("");
+    setSuccess("");
 
-    setSaved(true);
+    try {
+      const result =
+        await updatePlatformSettings(
+          settings,
+        );
+
+      setSettings(toSettingsForm(result));
+      setUpdatedAt(result.updatedAt);
+
+      setSuccess(
+        "Impostazioni salvate nel database SQLite.",
+      );
+    } catch (requestError) {
+      console.error(requestError);
+
+      setError(
+        "Salvataggio non riuscito. Verificare che il backend sia attivo.",
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function resetSettings() {
-    setSettings(DEFAULT_SETTINGS);
+  async function restoreSettings() {
+    setSaving(true);
+    setError("");
+    setSuccess("");
 
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(DEFAULT_SETTINGS),
-    );
+    try {
+      const result =
+        await resetPlatformSettings();
 
-    setSaved(true);
+      setSettings(toSettingsForm(result));
+      setUpdatedAt(result.updatedAt);
+
+      setSuccess(
+        "Impostazioni predefinite ripristinate nel database.",
+      );
+    } catch (requestError) {
+      console.error(requestError);
+
+      setError(
+        "Ripristino delle impostazioni non riuscito.",
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   function formatDate(
@@ -207,11 +252,11 @@ export default function Settings() {
       <Box
         sx={{
           display: "flex",
+          justifyContent: "space-between",
           alignItems: {
             xs: "flex-start",
             md: "center",
           },
-          justifyContent: "space-between",
           flexDirection: {
             xs: "column",
             md: "row",
@@ -229,7 +274,7 @@ export default function Settings() {
             color="text.secondary"
             sx={{ mt: 0.5 }}
           >
-            Configurazione generale del
+            Configurazione persistente del
             Family Office e delle sorgenti dati.
           </Typography>
         </Box>
@@ -238,7 +283,6 @@ export default function Settings() {
           sx={{
             display: "flex",
             gap: 1.2,
-            flexWrap: "wrap",
           }}
         >
           <Button
@@ -246,28 +290,44 @@ export default function Settings() {
             startIcon={
               <RestartAltRoundedIcon />
             }
-            onClick={resetSettings}
+            onClick={() =>
+              void restoreSettings()
+            }
+            disabled={loading || saving}
           >
             Ripristina
           </Button>
 
           <Button
             variant="contained"
-            startIcon={<SaveRoundedIcon />}
-            onClick={saveSettings}
+            startIcon={
+              saving ? (
+                <CircularProgress
+                  size={17}
+                  color="inherit"
+                />
+              ) : (
+                <SaveRoundedIcon />
+              )
+            }
+            onClick={() =>
+              void saveSettings()
+            }
+            disabled={loading || saving}
           >
-            Salva
+            {saving
+              ? "Salvataggio..."
+              : "Salva"}
           </Button>
         </Box>
       </Box>
 
-      {saved && (
+      {success && (
         <Alert
           severity="success"
           sx={{ mb: 3 }}
         >
-          Impostazioni salvate correttamente
-          nel browser.
+          {success}
         </Alert>
       )}
 
@@ -294,7 +354,7 @@ export default function Settings() {
           background:
             "linear-gradient(120deg, #26384E 0%, #415D78 55%, #66839D 135%)",
           boxShadow:
-            "0 18px 42px rgba(38, 56, 78, 0.23)",
+            "0 18px 42px rgba(38,56,78,0.23)",
 
           "&::after": {
             content: '""',
@@ -317,7 +377,7 @@ export default function Settings() {
             letterSpacing: "0.15em",
           }}
         >
-          Platform Configuration
+          Database Configuration
         </Typography>
 
         <Typography
@@ -374,8 +434,8 @@ export default function Settings() {
           <Chip
             label={
               connection.backendOnline
-                ? "Backend connesso"
-                : "Backend non disponibile"
+                ? "Database connesso"
+                : "Database non disponibile"
             }
             sx={{
               color: "white",
@@ -383,6 +443,19 @@ export default function Settings() {
                 "rgba(255,255,255,0.17)",
             }}
           />
+
+          {updatedAt && (
+            <Chip
+              label={`Salvato ${formatDate(
+                updatedAt,
+              )}`}
+              sx={{
+                color: "white",
+                backgroundColor:
+                  "rgba(255,255,255,0.17)",
+              }}
+            />
+          )}
         </Box>
       </Paper>
 
@@ -427,15 +500,15 @@ export default function Settings() {
         />
 
         <KpiCard
-          title="Backend"
+          title="Database"
           value={
-            checking
+            loading
               ? "Verifica..."
               : connection.backendOnline
                 ? "Online"
                 : "Offline"
           }
-          subtitle="localhost:3000"
+          subtitle="SQLite · Prisma"
           icon={
             connection.backendOnline ? (
               <CloudDoneRoundedIcon />
@@ -459,20 +532,14 @@ export default function Settings() {
             xl: "repeat(2, minmax(0, 1fr))",
           },
           gap: 2.5,
-          mb: 3,
         }}
       >
         <Paper
           elevation={0}
           sx={{
-            p: {
-              xs: 2.5,
-              md: 3.5,
-            },
+            p: 3,
             border: "1px solid",
             borderColor: "divider",
-            boxShadow:
-              "0 12px 32px rgba(26,45,75,0.06)",
           }}
         >
           <Typography
@@ -551,14 +618,9 @@ export default function Settings() {
         <Paper
           elevation={0}
           sx={{
-            p: {
-              xs: 2.5,
-              md: 3.5,
-            },
+            p: 3,
             border: "1px solid",
             borderColor: "divider",
-            boxShadow:
-              "0 12px 32px rgba(26,45,75,0.06)",
           }}
         >
           <Typography
@@ -573,8 +635,7 @@ export default function Settings() {
             color="text.secondary"
             sx={{ mb: 3 }}
           >
-            Valuta e riferimenti fiscali della
-            piattaforma.
+            Valuta e riferimenti fiscali.
           </Typography>
 
           <Box
@@ -665,14 +726,9 @@ export default function Settings() {
         <Paper
           elevation={0}
           sx={{
-            p: {
-              xs: 2.5,
-              md: 3.5,
-            },
+            p: 3,
             border: "1px solid",
             borderColor: "divider",
-            boxShadow:
-              "0 12px 32px rgba(26,45,75,0.06)",
           }}
         >
           <Typography
@@ -687,8 +743,8 @@ export default function Settings() {
             color="text.secondary"
             sx={{ mb: 3 }}
           >
-            File utilizzato dalla piattaforma
-            per importare i dati patrimoniali.
+            Workbook utilizzato dalla
+            piattaforma.
           </Typography>
 
           <Box
@@ -721,63 +777,35 @@ export default function Settings() {
               fullWidth
             />
 
-            <Divider />
+            <Typography variant="body2">
+              <strong>
+                Aggiornamento Budget:
+              </strong>{" "}
+              {formatDate(
+                connection.budgetAsOfDate,
+              )}
+            </Typography>
 
-            <Box>
-              <Typography
-                variant="body2"
-                sx={{ fontWeight: 700 }}
-              >
-                Ultimo aggiornamento Budget
-              </Typography>
-
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mt: 0.4 }}
-              >
-                {formatDate(
-                  connection.budgetAsOfDate,
-                )}
-              </Typography>
-            </Box>
-
-            <Box>
-              <Typography
-                variant="body2"
-                sx={{ fontWeight: 700 }}
-              >
-                Ultimo aggiornamento Immobili
-              </Typography>
-
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mt: 0.4 }}
-              >
-                {formatDate(
-                  connection.propertiesAsOfDate,
-                )}
-              </Typography>
-            </Box>
+            <Typography variant="body2">
+              <strong>
+                Aggiornamento Immobili:
+              </strong>{" "}
+              {formatDate(
+                connection.propertiesAsOfDate,
+              )}
+            </Typography>
 
             <Button
               variant="outlined"
               startIcon={
-                checking ? (
-                  <CircularProgress
-                    size={17}
-                  />
-                ) : (
-                  <RefreshRoundedIcon />
-                )
+                <RefreshRoundedIcon />
               }
               onClick={() =>
-                void checkConnection()
+                void loadSettings()
               }
-              disabled={checking}
+              disabled={loading}
             >
-              Verifica connessione
+              Ricarica dal database
             </Button>
           </Box>
         </Paper>
@@ -785,14 +813,9 @@ export default function Settings() {
         <Paper
           elevation={0}
           sx={{
-            p: {
-              xs: 2.5,
-              md: 3.5,
-            },
+            p: 3,
             border: "1px solid",
             borderColor: "divider",
-            boxShadow:
-              "0 12px 32px rgba(26,45,75,0.06)",
           }}
         >
           <Typography
@@ -807,8 +830,8 @@ export default function Settings() {
             color="text.secondary"
             sx={{ mb: 3 }}
           >
-            Regole operative e visualizzazione
-            dei dati.
+            Regole operative salvate nel
+            database.
           </Typography>
 
           <Box
@@ -870,13 +893,11 @@ export default function Settings() {
           </Box>
 
           <Alert
-            severity="info"
+            severity="success"
             sx={{ mt: 3 }}
           >
-            In questa versione le impostazioni
-            sono salvate localmente nel browser.
-            Il successivo motore di configurazione
-            le trasferirà nel database centrale.
+            Le impostazioni sono memorizzate
+            nel database SQLite centrale.
           </Alert>
         </Paper>
       </Box>
