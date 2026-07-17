@@ -62,6 +62,14 @@ function euro(value: number): string {
   });
 }
 
+function optionalEuro(
+  value: number | null,
+): string {
+  return value === null
+    ? "—"
+    : euro(value);
+}
+
 function percentage(
   value: number | null,
 ): string {
@@ -121,6 +129,68 @@ function confidenceColor(
   }
 
   if (confidence === "MEDIUM") {
+    return "warning";
+  }
+
+  return "default";
+}
+
+function rebalanceActionLabel(
+  action:
+    | "INCREASE"
+    | "REDUCE"
+    | "INCREASE_TOWARD_TARGET"
+    | "REDUCE_TOWARD_TARGET"
+    | "HOLD"
+    | null,
+): string {
+  const labels = {
+    INCREASE:
+      "Aumentare fino al minimo",
+    REDUCE:
+      "Ridurre fino al massimo",
+    INCREASE_TOWARD_TARGET:
+      "Aumentare verso il target",
+    REDUCE_TOWARD_TARGET:
+      "Ridurre verso il target",
+    HOLD:
+      "Mantenere",
+  };
+
+  return action
+    ? labels[action]
+    : "Calcolo sospeso";
+}
+
+function rebalanceActionColor(
+  action:
+    | "INCREASE"
+    | "REDUCE"
+    | "INCREASE_TOWARD_TARGET"
+    | "REDUCE_TOWARD_TARGET"
+    | "HOLD"
+    | null,
+):
+  | "default"
+  | "success"
+  | "warning"
+  | "error"
+  | "info" {
+  if (action === "HOLD") {
+    return "success";
+  }
+
+  if (
+    action === "INCREASE" ||
+    action === "REDUCE"
+  ) {
+    return "error";
+  }
+
+  if (
+    action === "INCREASE_TOWARD_TARGET" ||
+    action === "REDUCE_TOWARD_TARGET"
+  ) {
     return "warning";
   }
 
@@ -744,6 +814,143 @@ export default function IpsClassification() {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <Typography
+        variant="h6"
+        sx={{ mb: 1.5 }}
+      >
+        Piano di ribilanciamento
+      </Typography>
+
+      {!data.summary.rebalanceAvailable ? (
+        <Alert
+          severity="info"
+          sx={{ mb: 3 }}
+        >
+          Il piano operativo è sospeso perché
+          risultano ancora{" "}
+          <strong>
+            {data.summary.unclassifiedPositions}
+          </strong>{" "}
+          posizioni finanziarie da classificare.
+          Nessun importo di acquisto o vendita
+          viene calcolato su dati incompleti.
+        </Alert>
+      ) : (
+        <TableContainer
+          component={Paper}
+          elevation={0}
+          sx={{
+            mb: 3,
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>
+                  Classe IPS
+                </TableCell>
+
+                <TableCell align="right">
+                  Valore attuale
+                </TableCell>
+
+                <TableCell align="right">
+                  Minimo €
+                </TableCell>
+
+                <TableCell align="right">
+                  Target €
+                </TableCell>
+
+                <TableCell align="right">
+                  Massimo €
+                </TableCell>
+
+                <TableCell align="right">
+                  Scostamento
+                </TableCell>
+
+                <TableCell>
+                  Azione indicativa
+                </TableCell>
+              </TableRow>
+            </TableHead>
+
+            <TableBody>
+              {data.allocation
+                .filter(
+                  (item) =>
+                    item.strategic,
+                )
+                .map((item) => (
+                  <TableRow
+                    key={item.code}
+                    hover
+                  >
+                    <TableCell>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 750,
+                        }}
+                      >
+                        {item.label}
+                      </Typography>
+                    </TableCell>
+
+                    <TableCell align="right">
+                      {euro(item.value)}
+                    </TableCell>
+
+                    <TableCell align="right">
+                      {optionalEuro(
+                        item.minimumValue,
+                      )}
+                    </TableCell>
+
+                    <TableCell align="right">
+                      {optionalEuro(
+                        item.targetValue,
+                      )}
+                    </TableCell>
+
+                    <TableCell align="right">
+                      {optionalEuro(
+                        item.maximumValue,
+                      )}
+                    </TableCell>
+
+                    <TableCell
+                      align="right"
+                      sx={{
+                        fontWeight: 750,
+                      }}
+                    >
+                      {optionalEuro(
+                        item.gapToTarget,
+                      )}
+                    </TableCell>
+
+                    <TableCell>
+                      <Chip
+                        size="small"
+                        color={rebalanceActionColor(
+                          item.rebalanceAction,
+                        )}
+                        label={rebalanceActionLabel(
+                          item.rebalanceAction,
+                        )}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       <Typography
         variant="h6"

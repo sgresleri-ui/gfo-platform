@@ -1632,6 +1632,14 @@ export type IpsAllocationStatus =
   | "BELOW_MINIMUM"
   | "ABOVE_MAXIMUM";
 
+
+export type IpsRebalanceAction =
+  | "INCREASE"
+  | "REDUCE"
+  | "INCREASE_TOWARD_TARGET"
+  | "REDUCE_TOWARD_TARGET"
+  | "HOLD";
+
 export type IpsClassificationAllocation = {
   code: IpsAssetClassCode;
   label: string;
@@ -1642,6 +1650,12 @@ export type IpsClassificationAllocation = {
   value: number;
   weight: number | null;
   status: IpsAllocationStatus;
+
+  targetValue: number | null;
+  minimumValue: number | null;
+  maximumValue: number | null;
+  gapToTarget: number | null;
+  rebalanceAction: IpsRebalanceAction | null;
 };
 
 export type IpsClassificationItem = {
@@ -1687,6 +1701,7 @@ export type IpsClassificationOverviewResponse = {
     operatingCashValue: number;
     coveragePercentage: number;
     complianceAvailable: boolean;
+    rebalanceAvailable: boolean;
   };
 
   allocation: IpsClassificationAllocation[];
