@@ -1,3 +1,4 @@
+import Ips from "./pages/Ips";
 import DataQuality from "./pages/DataQuality";
 import Risk from "./pages/Risk";
 import Performance from "./pages/Performance";
@@ -48,6 +49,11 @@ function App() {
         <Route
           path="risk"
           element={<Risk />}
+        />
+
+        <Route
+          path="ips"
+          element={<Ips />}
         />
 
         <Route

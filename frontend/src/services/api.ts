@@ -1503,3 +1503,117 @@ export async function updatePositionCountry(
     "Unable to update position country",
   );
 }
+
+export type IpsUnit =
+  | "PERCENT"
+  | "EUR";
+
+export type IpsComplianceStatus =
+  | "NOT_CONFIGURED"
+  | "COMPLIANT"
+  | "BELOW_MINIMUM"
+  | "ABOVE_MAXIMUM";
+
+export type IpsPolicyLimit = {
+  code: string;
+  label: string;
+  dimension: string;
+  unit: IpsUnit;
+  description: string;
+  minimum: number | null;
+  maximum: number | null;
+  target: number | null;
+  enabled: boolean;
+  rationale: string | null;
+  source: string | null;
+  updatedAt: string | null;
+};
+
+export type IpsLimitsResponse = {
+  count: number;
+  limits: IpsPolicyLimit[];
+};
+
+export type IpsComplianceAssessment =
+  IpsPolicyLimit & {
+    currentValue: number;
+    status: IpsComplianceStatus;
+    deviationFromTarget: number | null;
+  };
+
+export type IpsComplianceResponse = {
+  asOf: string;
+
+  summary: {
+    total: number;
+    configured: number;
+    notConfigured: number;
+    compliant: number;
+    breaches: number;
+  };
+
+  assessments: IpsComplianceAssessment[];
+};
+
+export type UpdateIpsLimitPayload = {
+  minimum: number | null;
+  maximum: number | null;
+  target: number | null;
+  enabled: boolean;
+  rationale: string | null;
+};
+
+export async function getIpsLimits(): Promise<IpsLimitsResponse> {
+  const response = await fetch(
+    `${API_URL}/ips/limits`,
+  );
+
+  return readJson<IpsLimitsResponse>(
+    response,
+    "Unable to load IPS limits",
+  );
+}
+
+export async function getIpsCompliance(): Promise<IpsComplianceResponse> {
+  const response = await fetch(
+    `${API_URL}/ips/compliance`,
+  );
+
+  return readJson<IpsComplianceResponse>(
+    response,
+    "Unable to load IPS compliance",
+  );
+}
+
+export async function updateIpsLimit(
+  code: string,
+  payload: UpdateIpsLimitPayload,
+): Promise<{
+  updated: boolean;
+  limit: IpsPolicyLimit;
+}> {
+  const response = await fetch(
+    `${API_URL}/ips/limits/${encodeURIComponent(code)}`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({
+        ...payload,
+        confirm: true,
+      }),
+    },
+  );
+
+  return readJson<{
+    updated: boolean;
+    limit: IpsPolicyLimit;
+  }>(
+    response,
+    "Unable to update IPS limit",
+  );
+}
+

@@ -1,3 +1,4 @@
+import PolicyRoundedIcon from "@mui/icons-material/PolicyRounded";
 import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded";
@@ -67,6 +68,12 @@ const navigation = [
     path: "/risk",
     icon: <ShieldRoundedIcon />,
   },
+  {
+    label: "IPS e Conformità",
+    path: "/ips",
+    icon: <PolicyRoundedIcon />,
+  },
+
   {
     label: "Qualità Dati",
     path: "/data-quality",
