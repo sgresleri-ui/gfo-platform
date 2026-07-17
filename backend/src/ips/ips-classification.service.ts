@@ -442,6 +442,10 @@ export class IpsClassificationService
       classifiedValue +
       unclassifiedValue;
 
+    const allocationAvailable =
+      unclassifiedValue === 0 &&
+      strategicValue > 0;
+
     const allocation =
       IPS_ASSET_CLASSES.map(
         (definition) => {
@@ -460,6 +464,56 @@ export class IpsClassificationService
                   ) * 100,
                 )
               : null;
+
+          const targetValue =
+            definition.strategic &&
+            definition.target !== null &&
+            allocationAvailable
+              ? this.round(
+                  strategicValue *
+                    (
+                      definition.target /
+                      100
+                    ),
+                  2,
+                )
+              : null;
+
+          const minimumValue =
+            definition.strategic &&
+            definition.minimum !== null &&
+            allocationAvailable
+              ? this.round(
+                  strategicValue *
+                    (
+                      definition.minimum /
+                      100
+                    ),
+                  2,
+                )
+              : null;
+
+          const maximumValue =
+            definition.strategic &&
+            definition.maximum !== null &&
+            allocationAvailable
+              ? this.round(
+                  strategicValue *
+                    (
+                      definition.maximum /
+                      100
+                    ),
+                  2,
+                )
+              : null;
+
+          const gapToTarget =
+            targetValue === null
+              ? null
+              : this.round(
+                  targetValue - value,
+                  2,
+                );
 
           let status:
             | 'DATA_INCOMPLETE'
@@ -498,6 +552,53 @@ export class IpsClassificationService
               'COMPLIANT';
           }
 
+          let rebalanceAction:
+            | 'INCREASE'
+            | 'REDUCE'
+            | 'INCREASE_TOWARD_TARGET'
+            | 'REDUCE_TOWARD_TARGET'
+            | 'HOLD'
+            | null = null;
+
+          if (
+            allocationAvailable &&
+            definition.strategic
+          ) {
+            if (
+              status ===
+              'BELOW_MINIMUM'
+            ) {
+              rebalanceAction =
+                'INCREASE';
+            } else if (
+              status ===
+              'ABOVE_MAXIMUM'
+            ) {
+              rebalanceAction =
+                'REDUCE';
+            } else if (
+              gapToTarget !== null &&
+              Math.abs(
+                gapToTarget,
+              ) < 0.01
+            ) {
+              rebalanceAction =
+                'HOLD';
+            } else if (
+              gapToTarget !== null &&
+              gapToTarget > 0
+            ) {
+              rebalanceAction =
+                'INCREASE_TOWARD_TARGET';
+            } else if (
+              gapToTarget !== null &&
+              gapToTarget < 0
+            ) {
+              rebalanceAction =
+                'REDUCE_TOWARD_TARGET';
+            }
+          }
+
           return {
             ...definition,
 
@@ -509,6 +610,12 @@ export class IpsClassificationService
 
             weight,
             status,
+
+            targetValue,
+            minimumValue,
+            maximumValue,
+            gapToTarget,
+            rebalanceAction,
           };
         },
       );
@@ -594,8 +701,10 @@ export class IpsClassificationService
               ),
 
         complianceAvailable:
-          unclassifiedValue === 0 &&
-          strategicValue > 0,
+          allocationAvailable,
+
+        rebalanceAvailable:
+          allocationAvailable,
       },
 
       allocation,
