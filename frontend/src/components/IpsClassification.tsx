@@ -32,6 +32,8 @@ import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
+import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import PlaylistPlayRoundedIcon from "@mui/icons-material/PlaylistPlayRounded";
 
 import {
   getIpsClassificationAudit,
@@ -282,6 +284,24 @@ export default function IpsClassification() {
   const [notice, setNotice] =
     useState<Notice | null>(null);
 
+  const [searchTerm, setSearchTerm] =
+    useState("");
+
+  const [reviewFilter, setReviewFilter] =
+    useState<
+      | "ALL"
+      | "UNCLASSIFIED"
+      | "SUGGESTED"
+      | "CLASSIFIED"
+    >("UNCLASSIFIED");
+
+  const [categoryFilter, setCategoryFilter] =
+    useState<
+      | "ALL"
+      | "LIQUIDITY"
+      | "INVESTMENT"
+    >("ALL");
+
   const loadData = useCallback(
     async () => {
       setLoading(true);
@@ -354,6 +374,84 @@ export default function IpsClassification() {
         },
       ),
     [data],
+  );
+
+  const visibleItems = useMemo(
+    () => {
+      const query =
+        searchTerm
+          .trim()
+          .toUpperCase();
+
+      return sortedItems.filter(
+        (item) => {
+          const searchableText = [
+            item.name,
+            item.code,
+            item.category,
+            item.subcategory ?? "",
+          ]
+            .join(" ")
+            .toUpperCase();
+
+          const matchesSearch =
+            !query ||
+            searchableText.includes(
+              query,
+            );
+
+          const matchesCategory =
+            categoryFilter === "ALL" ||
+            item.category ===
+              categoryFilter;
+
+          const matchesReview =
+            reviewFilter === "ALL" ||
+            (
+              reviewFilter ===
+                "UNCLASSIFIED" &&
+              item.ipsAssetClass ===
+                null
+            ) ||
+            (
+              reviewFilter ===
+                "SUGGESTED" &&
+              item.ipsAssetClass ===
+                null &&
+              item.suggestedClass !==
+                null
+            ) ||
+            (
+              reviewFilter ===
+                "CLASSIFIED" &&
+              item.ipsAssetClass !==
+                null
+            );
+
+          return (
+            matchesSearch &&
+            matchesCategory &&
+            matchesReview
+          );
+        },
+      );
+    },
+    [
+      sortedItems,
+      searchTerm,
+      reviewFilter,
+      categoryFilter,
+    ],
+  );
+
+  const nextReviewItem = useMemo(
+    () =>
+      visibleItems.find(
+        (item) =>
+          item.ipsAssetClass ===
+          null,
+      ) ?? null,
+    [visibleItems],
   );
 
   function openDialog(
@@ -959,6 +1057,147 @@ export default function IpsClassification() {
         Posizioni finanziarie
       </Typography>
 
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2,
+          mb: 2,
+          border: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              md:
+                "minmax(260px, 2fr) minmax(180px, 1fr) minmax(180px, 1fr) auto",
+            },
+            gap: 2,
+            alignItems: "center",
+          }}
+        >
+          <TextField
+            size="small"
+            label="Cerca posizione"
+            value={searchTerm}
+            onChange={(event) =>
+              setSearchTerm(
+                event.target.value,
+              )
+            }
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <SearchRoundedIcon
+                    fontSize="small"
+                    sx={{
+                      mr: 1,
+                      color:
+                        "text.secondary",
+                    }}
+                  />
+                ),
+              },
+            }}
+          />
+
+          <TextField
+            select
+            size="small"
+            label="Stato revisione"
+            value={reviewFilter}
+            onChange={(event) =>
+              setReviewFilter(
+                event.target.value as
+                  | "ALL"
+                  | "UNCLASSIFIED"
+                  | "SUGGESTED"
+                  | "CLASSIFIED",
+              )
+            }
+          >
+            <MenuItem value="ALL">
+              Tutte
+            </MenuItem>
+
+            <MenuItem value="UNCLASSIFIED">
+              Da classificare
+            </MenuItem>
+
+            <MenuItem value="SUGGESTED">
+              Con suggerimento
+            </MenuItem>
+
+            <MenuItem value="CLASSIFIED">
+              Classificate
+            </MenuItem>
+          </TextField>
+
+          <TextField
+            select
+            size="small"
+            label="Categoria"
+            value={categoryFilter}
+            onChange={(event) =>
+              setCategoryFilter(
+                event.target.value as
+                  | "ALL"
+                  | "LIQUIDITY"
+                  | "INVESTMENT",
+              )
+            }
+          >
+            <MenuItem value="ALL">
+              Tutte
+            </MenuItem>
+
+            <MenuItem value="INVESTMENT">
+              Investimenti
+            </MenuItem>
+
+            <MenuItem value="LIQUIDITY">
+              Liquidità
+            </MenuItem>
+          </TextField>
+
+          <Button
+            variant="contained"
+            startIcon={
+              <PlaylistPlayRoundedIcon />
+            }
+            disabled={!nextReviewItem}
+            onClick={() => {
+              if (nextReviewItem) {
+                openDialog(
+                  nextReviewItem,
+                  Boolean(
+                    nextReviewItem
+                      .suggestedClass,
+                  ),
+                );
+              }
+            }}
+          >
+            Rivedi prossima
+          </Button>
+        </Box>
+
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{
+            display: "block",
+            mt: 1.5,
+          }}
+        >
+          {visibleItems.length} posizioni
+          visualizzate su{" "}
+          {data.summary.positions}.
+        </Typography>
+      </Paper>
+
       <TableContainer
         component={Paper}
         elevation={0}
@@ -997,7 +1236,7 @@ export default function IpsClassification() {
           </TableHead>
 
           <TableBody>
-            {sortedItems.map(
+            {visibleItems.map(
               (item) => (
                 <TableRow
                   key={item.code}
