@@ -14,6 +14,12 @@ export class RiskController {
       RiskService,
   ) {}
 
+  @Get('data-quality')
+  getDataQuality() {
+    return this.riskService
+      .getDataQuality();
+  }
+
   @Get('overview')
   getOverview() {
     return this.riskService

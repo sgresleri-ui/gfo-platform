@@ -677,4 +677,390 @@ export class RiskService
         topPositions.slice(0, 15),
     };
   }
+
+  async getDataQuality() {
+    const household =
+      await this.prisma.household.findFirst({
+        orderBy: {
+          id: 'asc',
+        },
+
+        select: {
+          id: true,
+          name: true,
+          currency: true,
+        },
+      });
+
+    if (!household) {
+      throw new BadRequestException(
+        'Household principale non trovato.',
+      );
+    }
+
+    const positions =
+      await this.prisma.wealthPosition.findMany(
+        {
+          where: {
+            householdId: household.id,
+            status: 'ACTIVE',
+          },
+
+          orderBy: [
+            {
+              valuationDate: 'asc',
+            },
+            {
+              name: 'asc',
+            },
+          ],
+        },
+      );
+
+    const now = new Date();
+
+    const dayMilliseconds =
+      24 * 60 * 60 * 1000;
+
+    const sourceMap =
+      new Map<
+        string,
+        {
+          source: string;
+          positions: number;
+          valueBase: number;
+        }
+      >();
+
+    let missingCountry = 0;
+    let missingCurrency = 0;
+    let futureValuationDates = 0;
+
+    let fresh30Days = 0;
+    let age31To90Days = 0;
+    let age91To180Days = 0;
+    let olderThan180Days = 0;
+
+    const items =
+      positions.map((position) => {
+        const valueBase =
+          Number(position.valueBase);
+
+        const ageDays =
+          Math.floor(
+            (
+              now.getTime() -
+              position.valuationDate.getTime()
+            ) / dayMilliseconds,
+          );
+
+        const countryMissing =
+          !position.country ||
+          position.country.trim() === '';
+
+        const currencyMissing =
+          !position.currency ||
+          position.currency.trim() === '';
+
+        const futureValuationDate =
+          ageDays < -1;
+
+        if (countryMissing) {
+          missingCountry += 1;
+        }
+
+        if (currencyMissing) {
+          missingCurrency += 1;
+        }
+
+        if (futureValuationDate) {
+          futureValuationDates += 1;
+        }
+
+        if (ageDays <= 30) {
+          fresh30Days += 1;
+        } else if (ageDays <= 90) {
+          age31To90Days += 1;
+        } else if (ageDays <= 180) {
+          age91To180Days += 1;
+        } else {
+          olderThan180Days += 1;
+        }
+
+        const normalizedSource =
+          position.source?.trim() ||
+          'NON_SPECIFICATA';
+
+        const sourceSummary =
+          sourceMap.get(
+            normalizedSource,
+          ) ?? {
+            source:
+              normalizedSource,
+
+            positions: 0,
+            valueBase: 0,
+          };
+
+        sourceSummary.positions += 1;
+        sourceSummary.valueBase +=
+          valueBase;
+
+        sourceMap.set(
+          normalizedSource,
+          sourceSummary,
+        );
+
+        const issues: Array<{
+          code: string;
+          severity:
+            | 'ERROR'
+            | 'WARNING'
+            | 'INFO';
+          message: string;
+        }> = [];
+
+        if (futureValuationDate) {
+          issues.push({
+            code:
+              'FUTURE_VALUATION_DATE',
+
+            severity: 'ERROR',
+
+            message:
+              'La data di valorizzazione è futura.',
+          });
+        }
+
+        if (countryMissing) {
+          issues.push({
+            code:
+              'MISSING_COUNTRY',
+
+            severity: 'WARNING',
+
+            message:
+              'Paese non specificato.',
+          });
+        }
+
+        if (currencyMissing) {
+          issues.push({
+            code:
+              'MISSING_CURRENCY',
+
+            severity: 'ERROR',
+
+            message:
+              'Valuta non specificata.',
+          });
+        }
+
+        if (ageDays > 180) {
+          issues.push({
+            code:
+              'VALUATION_OLDER_THAN_180_DAYS',
+
+            severity: 'WARNING',
+
+            message:
+              'Valorizzazione precedente a oltre 180 giorni.',
+          });
+        } else if (ageDays > 90) {
+          issues.push({
+            code:
+              'VALUATION_OLDER_THAN_90_DAYS',
+
+            severity: 'INFO',
+
+            message:
+              'Valorizzazione precedente a oltre 90 giorni.',
+          });
+        }
+
+        return {
+          id: position.id,
+          code: position.code,
+          name: position.name,
+          category:
+            position.category,
+
+          subcategory:
+            position.subcategory,
+
+          country:
+            position.country,
+
+          currency:
+            position.currency,
+
+          valueBase:
+            this.roundCurrency(
+              valueBase,
+            ),
+
+          isLiability:
+            position.isLiability,
+
+          source:
+            normalizedSource,
+
+          valuationDate:
+            position.valuationDate
+              .toISOString(),
+
+          ageDays,
+
+          countryMissing,
+          currencyMissing,
+          futureValuationDate,
+
+          issueCount:
+            issues.length,
+
+          issues,
+        };
+      })
+      .sort((left, right) => {
+        if (
+          right.issueCount !==
+          left.issueCount
+        ) {
+          return (
+            right.issueCount -
+            left.issueCount
+          );
+        }
+
+        return (
+          right.ageDays -
+          left.ageDays
+        );
+      });
+
+    const totalPositions =
+      positions.length;
+
+    const positionsWithIssues =
+      items.filter(
+        (item) =>
+          item.issueCount > 0,
+      ).length;
+
+    const errorPositions =
+      items.filter(
+        (item) =>
+          item.issues.some(
+            (issue) =>
+              issue.severity ===
+              'ERROR',
+          ),
+      ).length;
+
+    const warningPositions =
+      items.filter(
+        (item) =>
+          item.issues.some(
+            (issue) =>
+              issue.severity ===
+              'WARNING',
+          ),
+      ).length;
+
+    const countryCompleteness =
+      totalPositions === 0
+        ? 0
+        : this.roundPercentage(
+            (
+              (
+                totalPositions -
+                missingCountry
+              ) /
+              totalPositions
+            ) * 100,
+          );
+
+    const currencyCompleteness =
+      totalPositions === 0
+        ? 0
+        : this.roundPercentage(
+            (
+              (
+                totalPositions -
+                missingCurrency
+              ) /
+              totalPositions
+            ) * 100,
+          );
+
+    const sources =
+      Array.from(
+        sourceMap.values(),
+      )
+        .map((source) => ({
+          source:
+            source.source,
+
+          positions:
+            source.positions,
+
+          valueBase:
+            this.roundCurrency(
+              source.valueBase,
+            ),
+        }))
+        .sort(
+          (left, right) =>
+            right.valueBase -
+            left.valueBase,
+        );
+
+    return {
+      asOf:
+        now.toISOString(),
+
+      household: {
+        id: household.id,
+        name: household.name,
+        baseCurrency:
+          household.currency,
+      },
+
+      summary: {
+        totalPositions,
+        positionsWithIssues,
+        positionsWithoutIssues:
+          totalPositions -
+          positionsWithIssues,
+
+        errorPositions,
+        warningPositions,
+
+        missingCountry,
+        missingCurrency,
+        futureValuationDates,
+
+        countryCompleteness,
+        currencyCompleteness,
+      },
+
+      freshness: {
+        fresh30Days,
+        age31To90Days,
+        age91To180Days,
+        olderThan180Days,
+
+        fresh30DaysPercentage:
+          this.percentage(
+            fresh30Days,
+            totalPositions,
+          ),
+      },
+
+      sources,
+
+      items,
+    };
+  }
+
 }
