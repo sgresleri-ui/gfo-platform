@@ -93,6 +93,36 @@ function dateLabel(value: string): string {
   );
 }
 
+function percentage(
+  value: number | null,
+): string {
+  if (value === null) {
+    return "—";
+  }
+
+  return `${value.toLocaleString(
+    "it-IT",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    },
+  )}%`;
+}
+
+function chartDateLabel(
+  value: string,
+): string {
+  return new Date(value).toLocaleString(
+    "it-IT",
+    {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    },
+  );
+}
+
 function dateTimeLabel(value: string): string {
   return new Date(value).toLocaleString(
     "it-IT",
@@ -228,7 +258,7 @@ export default function WealthHistory() {
     () =>
       snapshots.map((snapshot) => ({
         date:
-          dateLabel(
+          chartDateLabel(
             snapshot.snapshotDate,
           ),
 
@@ -423,7 +453,7 @@ export default function WealthHistory() {
                 sm:
                   "repeat(2, minmax(0, 1fr))",
                 xl:
-                  "repeat(4, minmax(0, 1fr))",
+                  "repeat(5, minmax(0, 1fr))",
               },
               gap: 2,
               mb: 3,
@@ -453,6 +483,26 @@ export default function WealthHistory() {
                 latest.liabilities,
               )}
               subtitle="Debiti patrimoniali"
+            />
+
+            <KpiCard
+              label="Variazione ultima"
+              value={
+                latest.changeAbsolute ===
+                null
+                  ? "Prima rilevazione"
+                  : euro(
+                      latest.changeAbsolute,
+                    )
+              }
+              subtitle={
+                latest.changePercent ===
+                null
+                  ? "Nessun confronto precedente"
+                  : percentage(
+                      latest.changePercent,
+                    )
+              }
             />
 
             <KpiCard
@@ -718,6 +768,14 @@ export default function WealthHistory() {
                   <TableCell align="right">
                     Patrimonio netto
                   </TableCell>
+
+                  <TableCell align="right">
+                    Variazione
+                  </TableCell>
+
+                  <TableCell align="right">
+                    Variazione %
+                  </TableCell>
                 </TableRow>
               </TableHead>
 
@@ -766,6 +824,21 @@ export default function WealthHistory() {
                       >
                         {euro(
                           snapshot.netWorth,
+                        )}
+                      </TableCell>
+
+                      <TableCell align="right">
+                        {snapshot.changeAbsolute ===
+                        null
+                          ? "—"
+                          : euro(
+                              snapshot.changeAbsolute,
+                            )}
+                      </TableCell>
+
+                      <TableCell align="right">
+                        {percentage(
+                          snapshot.changePercent,
                         )}
                       </TableCell>
                     </TableRow>

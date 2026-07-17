@@ -10,6 +10,10 @@ import {
 } from '@prisma/client';
 
 import {
+  captureNetWorthSnapshot,
+} from '../ledger/net-worth-snapshot';
+
+import {
   ImportComparisonService,
   type WorkbookPosition,
 } from './import-comparison.service';
@@ -338,6 +342,24 @@ export class ImportApplicationService {
               },
             );
 
+          const historyCapture =
+            await captureNetWorthSnapshot(
+              transaction,
+              {
+                householdId:
+                  household.id,
+
+                source:
+                  'EXCEL_IMPORT',
+
+                importRunId:
+                  run.id,
+
+                snapshotDate:
+                  new Date(),
+              },
+            );
+
           const existingPreview =
             this.parseJson(
               run.previewJson,
@@ -371,6 +393,17 @@ export class ImportApplicationService {
             valueDifference:
               comparison.summary
                 .valueDifference,
+
+            historySnapshotId:
+              historyCapture
+                .snapshot.id,
+
+            historySnapshotCreated:
+              historyCapture.created,
+
+            historyValuations:
+              historyCapture
+                .valuationsCreated,
           };
 
           await transaction.importRun.update({

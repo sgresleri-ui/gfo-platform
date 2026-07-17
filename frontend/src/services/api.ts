@@ -840,6 +840,8 @@ export type LedgerNetWorthSnapshot = {
   investments: number;
   realEstate: number;
   otherAssets: number;
+  changeAbsolute: number | null;
+  changePercent: number | null;
   createdAt: string;
 };
 

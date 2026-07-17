@@ -4,18 +4,13 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 
-import { PrismaClient } from '@prisma/client';
-import { createHash } from 'crypto';
+import {
+  PrismaClient,
+} from '@prisma/client';
 
-type SnapshotTotals = {
-  grossAssets: number;
-  liabilities: number;
-  netWorth: number;
-  liquidity: number;
-  investments: number;
-  realEstate: number;
-  otherAssets: number;
-};
+import {
+  captureNetWorthSnapshot,
+} from './net-worth-snapshot';
 
 @Injectable()
 export class LedgerService
@@ -28,11 +23,24 @@ export class LedgerService
     await this.prisma.$disconnect();
   }
 
-  private round(value: number): number {
+  private roundCurrency(
+    value: number,
+  ): number {
     return (
       Math.round(
         (value + Number.EPSILON) * 100,
       ) / 100
+    );
+  }
+
+  private roundPercentage(
+    value: number,
+  ): number {
+    return (
+      Math.round(
+        (value + Number.EPSILON) *
+          10000,
+      ) / 10000
     );
   }
 
@@ -53,119 +61,6 @@ export class LedgerService
     );
   }
 
-  private calculateTotals(
-    positions: Array<{
-      category: string;
-      isLiability: boolean;
-      valueBase: unknown;
-    }>,
-  ): SnapshotTotals {
-    let grossAssets = 0;
-    let liabilities = 0;
-    let liquidity = 0;
-    let investments = 0;
-    let realEstate = 0;
-    let otherAssets = 0;
-
-    for (const position of positions) {
-      const value = Number(
-        position.valueBase,
-      );
-
-      if (position.isLiability) {
-        liabilities += value;
-        continue;
-      }
-
-      grossAssets += value;
-
-      if (
-        position.category ===
-        'LIQUIDITY'
-      ) {
-        liquidity += value;
-      } else if (
-        position.category ===
-        'INVESTMENT'
-      ) {
-        investments += value;
-      } else if (
-        position.category ===
-        'REAL_ESTATE'
-      ) {
-        realEstate += value;
-      } else {
-        otherAssets += value;
-      }
-    }
-
-    return {
-      grossAssets:
-        this.round(grossAssets),
-
-      liabilities:
-        this.round(liabilities),
-
-      netWorth:
-        this.round(
-          grossAssets - liabilities,
-        ),
-
-      liquidity:
-        this.round(liquidity),
-
-      investments:
-        this.round(investments),
-
-      realEstate:
-        this.round(realEstate),
-
-      otherAssets:
-        this.round(otherAssets),
-    };
-  }
-
-  private createDataHash(
-    positions: Array<{
-      code: string;
-      valueBase: unknown;
-      isLiability: boolean;
-      status: string;
-    }>,
-    snapshotDate: Date,
-  ): string {
-    const dailyKey =
-      snapshotDate
-        .toISOString()
-        .slice(0, 10);
-
-    const normalized = positions
-      .map((position) => ({
-        code: position.code,
-        valueBase:
-          this.round(
-            Number(position.valueBase),
-          ),
-        isLiability:
-          position.isLiability,
-        status: position.status,
-      }))
-      .sort((left, right) =>
-        left.code.localeCompare(
-          right.code,
-        ),
-      );
-
-    return createHash('sha256')
-      .update(
-        JSON.stringify({
-          dailyKey,
-          positions: normalized,
-        }),
-      )
-      .digest('hex');
-  }
-
   private serializeSnapshot(
     snapshot: {
       id: string;
@@ -183,19 +78,47 @@ export class LedgerService
       otherAssets: unknown;
       createdAt: Date;
     },
+    previousNetWorth: number | null,
   ) {
+    const netWorth =
+      Number(snapshot.netWorth);
+
+    const changeAbsolute =
+      previousNetWorth === null
+        ? null
+        : this.roundCurrency(
+            netWorth -
+              previousNetWorth,
+          );
+
+    const changePercent =
+      previousNetWorth === null ||
+      previousNetWorth === 0
+        ? null
+        : this.roundPercentage(
+            (
+              (netWorth -
+                previousNetWorth) /
+              Math.abs(
+                previousNetWorth,
+              )
+            ) * 100,
+          );
+
     return {
       id: snapshot.id,
 
       snapshotDate:
         snapshot.snapshotDate.toISOString(),
 
-      source: snapshot.source,
+      source:
+        snapshot.source,
 
       importRunId:
         snapshot.importRunId,
 
-      dataHash: snapshot.dataHash,
+      dataHash:
+        snapshot.dataHash,
 
       positionCount:
         snapshot.positionCount,
@@ -206,8 +129,7 @@ export class LedgerService
       liabilities:
         Number(snapshot.liabilities),
 
-      netWorth:
-        Number(snapshot.netWorth),
+      netWorth,
 
       liquidity:
         Number(snapshot.liquidity),
@@ -221,6 +143,9 @@ export class LedgerService
       otherAssets:
         Number(snapshot.otherAssets),
 
+      changeAbsolute,
+      changePercent,
+
       createdAt:
         snapshot.createdAt.toISOString(),
     };
@@ -231,7 +156,7 @@ export class LedgerService
       transactionCount,
       snapshotCount,
       valuationCount,
-      latestSnapshot,
+      latestSnapshots,
     ] = await Promise.all([
       this.prisma.wealthTransaction.count(),
 
@@ -239,12 +164,20 @@ export class LedgerService
 
       this.prisma.positionValuation.count(),
 
-      this.prisma.netWorthSnapshot.findFirst({
+      this.prisma.netWorthSnapshot.findMany({
         orderBy: {
           snapshotDate: 'desc',
         },
+
+        take: 2,
       }),
     ]);
+
+    const latest =
+      latestSnapshots[0] ?? null;
+
+    const previous =
+      latestSnapshots[1] ?? null;
 
     return {
       transactions:
@@ -257,9 +190,14 @@ export class LedgerService
         valuationCount,
 
       latestSnapshot:
-        latestSnapshot
+        latest
           ? this.serializeSnapshot(
-              latestSnapshot,
+              latest,
+              previous
+                ? Number(
+                    previous.netWorth,
+                  )
+                : null,
             )
           : null,
     };
@@ -289,10 +227,25 @@ export class LedgerService
       count: snapshots.length,
 
       snapshots:
-        snapshots.map((snapshot) =>
-          this.serializeSnapshot(
+        snapshots.map(
+          (
             snapshot,
-          ),
+            index,
+          ) => {
+            const previous =
+              index > 0
+                ? snapshots[index - 1]
+                : null;
+
+            return this.serializeSnapshot(
+              snapshot,
+              previous
+                ? Number(
+                    previous.netWorth,
+                  )
+                : null,
+            );
+          },
         ),
     };
   }
@@ -327,19 +280,23 @@ export class LedgerService
       );
 
     return {
-      count: transactions.length,
+      count:
+        transactions.length,
 
       transactions:
         transactions.map(
           (transaction) => ({
-            id: transaction.id,
+            id:
+              transaction.id,
 
             transactionDate:
-              transaction.transactionDate
+              transaction
+                .transactionDate
                 .toISOString(),
 
             transactionType:
-              transaction.transactionType,
+              transaction
+                .transactionType,
 
             direction:
               transaction.direction,
@@ -369,10 +326,14 @@ export class LedgerService
               ),
 
             fees:
-              Number(transaction.fees),
+              Number(
+                transaction.fees,
+              ),
 
             taxes:
-              Number(transaction.taxes),
+              Number(
+                transaction.taxes,
+              ),
 
             netAmount:
               Number(
@@ -422,6 +383,10 @@ export class LedgerService
         orderBy: {
           id: 'asc',
         },
+
+        select: {
+          id: true,
+        },
       });
 
     if (!household) {
@@ -430,161 +395,43 @@ export class LedgerService
       );
     }
 
-    const positions =
-      await this.prisma.wealthPosition.findMany(
-        {
-          where: {
-            householdId: household.id,
-            status: 'ACTIVE',
-          },
-
-          orderBy: {
-            code: 'asc',
-          },
-        },
-      );
-
-    if (positions.length === 0) {
-      throw new BadRequestException(
-        'Nessuna posizione attiva disponibile.',
-      );
-    }
-
-    const snapshotDate =
-      new Date();
-
-    const dataHash =
-      this.createDataHash(
-        positions,
-        snapshotDate,
-      );
-
-    const existing =
-      await this.prisma.netWorthSnapshot.findUnique(
-        {
-          where: {
-            dataHash,
-          },
-        },
-      );
-
-    if (existing) {
-      return {
-        created: false,
-
-        reason:
-          'Lo stesso stato patrimoniale è già stato registrato oggi.',
-
-        snapshot:
-          this.serializeSnapshot(
-            existing,
-          ),
-      };
-    }
-
-    const totals =
-      this.calculateTotals(
-        positions,
-      );
-
     const result =
       await this.prisma.$transaction(
-        async (transaction) => {
-          const snapshot =
-            await transaction.netWorthSnapshot.create(
-              {
-                data: {
-                  householdId:
-                    household.id,
-
-                  snapshotDate,
-
-                  source:
-                    'CURRENT_DATABASE_CAPTURE',
-
-                  dataHash,
-
-                  positionCount:
-                    positions.length,
-
-                  grossAssets:
-                    totals.grossAssets,
-
-                  liabilities:
-                    totals.liabilities,
-
-                  netWorth:
-                    totals.netWorth,
-
-                  liquidity:
-                    totals.liquidity,
-
-                  investments:
-                    totals.investments,
-
-                  realEstate:
-                    totals.realEstate,
-
-                  otherAssets:
-                    totals.otherAssets,
-                },
-              },
-            );
-
-          await transaction.positionValuation.createMany(
+        async (transaction) =>
+          captureNetWorthSnapshot(
+            transaction,
             {
-              data: positions.map(
-                (position) => ({
-                  positionId:
-                    position.id,
+              householdId:
+                household.id,
 
-                  snapshotId:
-                    snapshot.id,
+              source:
+                'CURRENT_DATABASE_CAPTURE',
 
-                  valuationDate:
-                    snapshotDate,
-
-                  sourceValuationDate:
-                    position.valuationDate,
-
-                  nativeAmount:
-                    position.nativeAmount,
-
-                  currency:
-                    position.currency,
-
-                  fxRateToBase:
-                    position.fxRateToBase,
-
-                  valueBase:
-                    position.valueBase,
-
-                  baseCurrency:
-                    position.baseCurrency,
-
-                  source:
-                    position.source,
-                }),
-              ),
+              snapshotDate:
+                new Date(),
             },
-          );
-
-          return snapshot;
-        },
+          ),
         {
           timeout: 20000,
         },
       );
 
     return {
-      created: true,
+      created:
+        result.created,
+
+      reason:
+        result.created
+          ? undefined
+          : 'Lo stesso stato patrimoniale è già stato registrato oggi.',
 
       valuationsCreated:
-        positions.length,
+        result.valuationsCreated,
 
       snapshot:
         this.serializeSnapshot(
-          result,
+          result.snapshot,
+          null,
         ),
     };
   }
