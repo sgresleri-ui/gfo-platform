@@ -1,7 +1,16 @@
 import { Module } from '@nestjs/common';
 
-import { LedgerController } from './ledger.controller';
-import { LedgerService } from './ledger.service';
+import {
+  LedgerController,
+} from './ledger.controller';
+
+import {
+  LedgerService,
+} from './ledger.service';
+
+import {
+  TransactionLedgerService,
+} from './transaction-ledger.service';
 
 @Module({
   controllers: [
@@ -10,6 +19,7 @@ import { LedgerService } from './ledger.service';
 
   providers: [
     LedgerService,
+    TransactionLedgerService,
   ],
 })
 export class LedgerModule {}

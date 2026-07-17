@@ -49,6 +49,12 @@ const navigation = [
     path: "/wealth-history",
     icon: <TimelineRoundedIcon />,
   },
+  {
+    label: "Registro Movimenti",
+    path: "/transactions",
+    icon: <ReceiptLongRoundedIcon />,
+  },
+
 
   {
     label: "Investimenti",

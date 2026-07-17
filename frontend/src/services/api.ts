@@ -910,3 +910,164 @@ export async function captureLedgerCurrentState(): Promise<LedgerCaptureResponse
   );
 }
 
+export type LedgerTransactionType = {
+  code: string;
+  label: string;
+  direction: "INFLOW" | "OUTFLOW" | "TRANSFER";
+  positionRecommended: boolean;
+};
+
+export type LedgerTransactionTypesResponse = {
+  types: LedgerTransactionType[];
+};
+
+export type LedgerPositionOption = {
+  code: string;
+  name: string;
+  category: string;
+  subcategory: string | null;
+  currency: string;
+};
+
+export type LedgerPositionsResponse = {
+  count: number;
+  positions: LedgerPositionOption[];
+};
+
+export type LedgerTransaction = {
+  id: string;
+  transactionDate: string;
+  transactionType: string;
+  direction: "INFLOW" | "OUTFLOW" | "TRANSFER";
+
+  position: {
+    code: string;
+    name: string;
+  } | null;
+
+  quantity: number | null;
+  unitPrice: number | null;
+  grossAmount: number;
+  fees: number;
+  taxes: number;
+  netAmount: number;
+  currency: string;
+  fxRateToBase: number | null;
+  baseAmount: number;
+  baseCurrency: string;
+  sourceAccountCode: string | null;
+  destinationAccountCode: string | null;
+  source: string;
+  status: string;
+  externalReference: string | null;
+  notes: string | null;
+  createdAt: string;
+};
+
+export type LedgerTransactionsResponse = {
+  count: number;
+  transactions: LedgerTransaction[];
+};
+
+export type LedgerTransactionSummary = {
+  transactions: number;
+  inflows: number;
+  outflows: number;
+  transfers: number;
+  netCashFlow: number;
+  fees: number;
+  taxes: number;
+};
+
+export type CreateLedgerTransactionPayload = {
+  confirm: boolean;
+  transactionDate: string;
+  transactionType: string;
+  positionCode?: string | null;
+  quantity?: number | null;
+  unitPrice?: number | null;
+  grossAmount: number;
+  fees?: number;
+  taxes?: number;
+  currency?: string;
+  fxRateToBase?: number | null;
+  sourceAccountCode?: string | null;
+  destinationAccountCode?: string | null;
+  source?: string;
+  externalReference?: string | null;
+  notes?: string | null;
+};
+
+export type CreateLedgerTransactionResponse = {
+  created: boolean;
+  transaction: LedgerTransaction;
+};
+
+export async function getLedgerTransactionTypes(): Promise<LedgerTransactionTypesResponse> {
+  const response = await fetch(
+    `${API_URL}/ledger/transaction-types`,
+  );
+
+  return readJson<LedgerTransactionTypesResponse>(
+    response,
+    "Unable to load transaction types",
+  );
+}
+
+export async function getLedgerPositions(): Promise<LedgerPositionsResponse> {
+  const response = await fetch(
+    `${API_URL}/ledger/positions`,
+  );
+
+  return readJson<LedgerPositionsResponse>(
+    response,
+    "Unable to load ledger positions",
+  );
+}
+
+export async function getLedgerTransactions(
+  limit = 500,
+): Promise<LedgerTransactionsResponse> {
+  const response = await fetch(
+    `${API_URL}/ledger/transactions?limit=${limit}`,
+  );
+
+  return readJson<LedgerTransactionsResponse>(
+    response,
+    "Unable to load ledger transactions",
+  );
+}
+
+export async function getLedgerTransactionSummary(): Promise<LedgerTransactionSummary> {
+  const response = await fetch(
+    `${API_URL}/ledger/transactions/summary`,
+  );
+
+  return readJson<LedgerTransactionSummary>(
+    response,
+    "Unable to load transaction summary",
+  );
+}
+
+export async function createLedgerTransaction(
+  payload: CreateLedgerTransactionPayload,
+): Promise<CreateLedgerTransactionResponse> {
+  const response = await fetch(
+    `${API_URL}/ledger/transactions`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify(payload),
+    },
+  );
+
+  return readJson<CreateLedgerTransactionResponse>(
+    response,
+    "Unable to create ledger transaction",
+  );
+}
+
