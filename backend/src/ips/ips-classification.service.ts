@@ -89,6 +89,166 @@ export class IpsClassificationService
     );
   }
 
+  private suggestClass(
+    position: {
+      code: string;
+      name: string;
+      category: string;
+      subcategory: string | null;
+    },
+  ): {
+    code: IpsAssetClassCode;
+    confidence:
+      | 'HIGH'
+      | 'MEDIUM';
+    reason: string;
+  } | null {
+    const searchableText = [
+      position.code,
+      position.name,
+      position.subcategory ?? '',
+    ]
+      .join(' ')
+      .toUpperCase();
+
+    if (
+      position.category ===
+      'LIQUIDITY'
+    ) {
+      return {
+        code: 'OPERATING_CASH',
+
+        confidence: 'MEDIUM',
+
+        reason:
+          'La posizione è registrata nella categoria Liquidità. Verificare se si tratta di liquidità operativa o strategica.',
+      };
+    }
+
+    if (
+      [
+        'XEON',
+        'CSH2',
+        'MONEY MARKET',
+        'MONETARIO',
+        'OVERNIGHT',
+        'LIQUIDITY FUND',
+      ].some((token) =>
+        searchableText.includes(
+          token,
+        ),
+      )
+    ) {
+      return {
+        code: 'MONEY_MARKET',
+
+        confidence: 'HIGH',
+
+        reason:
+          'Il nome o il codice identifica uno strumento monetario o overnight.',
+      };
+    }
+
+    if (
+      [
+        'GOLD',
+        'ORO',
+        'PHYSICAL GOLD',
+        'XETRA-GOLD',
+      ].some((token) =>
+        searchableText.includes(
+          token,
+        ),
+      )
+    ) {
+      return {
+        code: 'GOLD',
+
+        confidence: 'HIGH',
+
+        reason:
+          'Il nome identifica un’esposizione all’oro.',
+      };
+    }
+
+    if (
+      [
+        'BOND',
+        'OBBLIG',
+        'TREASURY',
+        'GOVERNMENT BOND',
+        'CORPORATE BOND',
+        'FIXED INCOME',
+        'ERNX',
+      ].some((token) =>
+        searchableText.includes(
+          token,
+        ),
+      )
+    ) {
+      return {
+        code: 'BONDS',
+
+        confidence: 'HIGH',
+
+        reason:
+          'Il nome o il codice identifica uno strumento obbligazionario.',
+      };
+    }
+
+    if (
+      [
+        'EQUITY',
+        'AZION',
+        'MSCI',
+        'WORLD',
+        'S&P 500',
+        'VALUE',
+        'MOMENTUM',
+        'IWVL',
+        'C50',
+      ].some((token) =>
+        searchableText.includes(
+          token,
+        ),
+      )
+    ) {
+      return {
+        code: 'EQUITY_GLOBAL',
+
+        confidence: 'MEDIUM',
+
+        reason:
+          'Il nome o il codice contiene riferimenti tipici di strumenti azionari.',
+      };
+    }
+
+    if (
+      [
+        'PRIVATE EQUITY',
+        'HEDGE FUND',
+        'CRYPTO',
+        'BITCOIN',
+        'ALTERNATIVE',
+      ].some((token) =>
+        searchableText.includes(
+          token,
+        ),
+      )
+    ) {
+      return {
+        code: 'ALTERNATIVES',
+
+        confidence: 'MEDIUM',
+
+        reason:
+          'Il nome contiene riferimenti a investimenti alternativi.',
+      };
+    }
+
+    return null;
+  }
+
   private definition(
     code: string,
   ) {
@@ -162,6 +322,21 @@ export class IpsClassificationService
           Number(
             position.valueBase,
           );
+
+        const suggestion =
+          this.suggestClass({
+            code:
+              position.code,
+
+            name:
+              position.name,
+
+            category:
+              position.category,
+
+            subcategory:
+              position.subcategory,
+          });
 
         const classification =
           position.ipsClassification;
@@ -241,6 +416,25 @@ export class IpsClassificationService
               ?.updatedAt
               .toISOString() ??
             null,
+
+          suggestedClass:
+            classification
+              ? null
+              : suggestion?.code ??
+                null,
+
+          suggestionConfidence:
+            classification
+              ? null
+              : suggestion
+                  ?.confidence ??
+                null,
+
+          suggestionReason:
+            classification
+              ? null
+              : suggestion?.reason ??
+                null,
         };
       });
 
@@ -348,6 +542,15 @@ export class IpsClassificationService
             (item) =>
               item.ipsAssetClass ===
               null,
+          ).length,
+
+        suggestedPositions:
+          items.filter(
+            (item) =>
+              item.ipsAssetClass ===
+                null &&
+              item.suggestedClass !==
+                null,
           ).length,
 
         totalFinancialValue:
