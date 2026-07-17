@@ -1,3 +1,4 @@
+import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import { useMemo, useState } from "react";
 import {
@@ -54,6 +55,12 @@ const navigation = [
     path: "/transactions",
     icon: <ReceiptLongRoundedIcon />,
   },
+  {
+    label: "Performance",
+    path: "/performance",
+    icon: <AssessmentRoundedIcon />,
+  },
+
 
 
   {

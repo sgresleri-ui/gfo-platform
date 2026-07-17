@@ -1104,3 +1104,121 @@ export async function voidLedgerTransaction(
   );
 }
 
+export type PerformancePeriodSnapshot = {
+  id: string;
+  snapshotDate: string;
+  source: string;
+  netWorth: number;
+};
+
+export type PerformancePeriodsResponse = {
+  count: number;
+  snapshots: PerformancePeriodSnapshot[];
+};
+
+export type PerformanceSnapshot = {
+  id: string;
+  snapshotDate: string;
+  source: string;
+  importRunId: string | null;
+  positionCount: number;
+  grossAssets: number;
+  liabilities: number;
+  netWorth: number;
+  liquidity: number;
+  investments: number;
+  realEstate: number;
+  otherAssets: number;
+};
+
+export type PerformanceSummaryResponse = {
+  methodology: {
+    name: string;
+    currency: string;
+    description: string;
+  };
+
+  period: {
+    start: string;
+    end: string;
+    days: number;
+  };
+
+  startSnapshot: PerformanceSnapshot;
+  endSnapshot: PerformanceSnapshot;
+
+  performance: {
+    startingNetWorth: number;
+    endingNetWorth: number;
+    netWorthChange: number;
+    contributions: number;
+    withdrawals: number;
+    netExternalFlow: number;
+    weightedExternalFlows: number;
+    investmentResult: number;
+    modifiedDietzReturn: number | null;
+  };
+
+  transactionAnalysis: {
+    postedTransactions: number;
+    investmentIncome: number;
+    investmentExpenses: number;
+    fees: number;
+    taxes: number;
+    internalTransfers: number;
+    purchases: number;
+    sales: number;
+  };
+
+  assetClassChanges: {
+    liquidity: number;
+    investments: number;
+    realEstate: number;
+    otherAssets: number;
+    liabilities: number;
+  };
+
+  warnings: string[];
+};
+
+export async function getPerformancePeriods(): Promise<PerformancePeriodsResponse> {
+  const response = await fetch(
+    `${API_URL}/performance/periods`,
+  );
+
+  return readJson<PerformancePeriodsResponse>(
+    response,
+    "Unable to load performance periods",
+  );
+}
+
+export async function getPerformanceSummary(
+  from?: string,
+  to?: string,
+): Promise<PerformanceSummaryResponse> {
+  const parameters =
+    new URLSearchParams();
+
+  if (from) {
+    parameters.set("from", from);
+  }
+
+  if (to) {
+    parameters.set("to", to);
+  }
+
+  const query =
+    parameters.toString();
+
+  const response = await fetch(
+    `${API_URL}/performance/summary${
+      query ? `?${query}` : ""
+    }`,
+  );
+
+  return readJson<PerformanceSummaryResponse>(
+    response,
+    "Unable to load performance summary",
+  );
+}
+

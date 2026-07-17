@@ -1,3 +1,4 @@
+import Performance from "./pages/Performance";
 import Transactions from "./pages/Transactions";
 import WealthHistory from "./pages/WealthHistory";
 import { Navigate, Route, Routes } from "react-router-dom";
@@ -35,6 +36,11 @@ function App() {
         <Route
           path="transactions"
           element={<Transactions />}
+        />
+
+        <Route
+          path="performance"
+          element={<Performance />}
         />
 
         <Route
