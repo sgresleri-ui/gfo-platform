@@ -38,6 +38,7 @@ import PlaylistPlayRoundedIcon from "@mui/icons-material/PlaylistPlayRounded";
 
 import {
   getIpsClassificationAudit,
+  getIpsClassificationReviewAudit,
   getIpsClassifications,
   updateIpsPositionClassification,
   updateIpsPositionReview,
@@ -45,6 +46,7 @@ import {
   type IpsAssetClassCode,
   type IpsClassificationAudit,
   type IpsClassificationItem,
+  type IpsClassificationReviewAudit,
   type IpsClassificationOverviewResponse,
   type IpsReviewStatus,
 } from "../services/api";
@@ -202,6 +204,56 @@ function rebalanceActionColor(
   return "default";
 }
 
+function reviewAuditStatusLabel(
+  status: string | null,
+): string {
+  if (!status) {
+    return "Nessuno";
+  }
+
+  if (status === "PENDING_INFORMATION") {
+    return "Da approfondire";
+  }
+
+  if (status === "DEFERRED") {
+    return "Rinviata";
+  }
+
+  if (
+    status ===
+    "RESOLVED_BY_CLASSIFICATION"
+  ) {
+    return "Risolta con classificazione";
+  }
+
+  return status;
+}
+
+function reviewAuditStatusColor(
+  status: string,
+):
+  | "default"
+  | "info"
+  | "warning"
+  | "success" {
+  if (status === "PENDING_INFORMATION") {
+    return "info";
+  }
+
+  if (status === "DEFERRED") {
+    return "warning";
+  }
+
+  if (
+    status ===
+    "RESOLVED_BY_CLASSIFICATION"
+  ) {
+    return "success";
+  }
+
+  return "default";
+}
+
 function statusLabel(
   status: IpsAllocationStatus,
 ): string {
@@ -259,6 +311,12 @@ export default function IpsClassification() {
 
   const [audits, setAudits] =
     useState<IpsClassificationAudit[]>(
+      [],
+    );
+
+
+  const [reviewAudits, setReviewAudits] =
+    useState<IpsClassificationReviewAudit[]>(
       [],
     );
 
@@ -332,13 +390,18 @@ export default function IpsClassification() {
         const [
           overview,
           auditResult,
+          reviewAuditResult,
         ] = await Promise.all([
           getIpsClassifications(),
           getIpsClassificationAudit(),
+          getIpsClassificationReviewAudit(),
         ]);
 
         setData(overview);
         setAudits(auditResult.audits);
+        setReviewAudits(
+          reviewAuditResult.audits,
+        );
       } catch (error) {
         console.error(error);
 
@@ -1731,6 +1794,139 @@ export default function IpsClassification() {
 
                       <TableCell>
                         {audit.reason}
+                      </TableCell>
+                    </TableRow>
+                  ),
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </Paper>
+
+      <Paper
+        elevation={0}
+        sx={{
+          mt: 3,
+          mb: 3,
+          border: "1px solid",
+          borderColor: "divider",
+          overflow: "hidden",
+        }}
+      >
+        <Box
+          sx={{
+            p: 2.5,
+            display: "flex",
+            gap: 1,
+            alignItems: "center",
+          }}
+        >
+          <HistoryRoundedIcon />
+
+          <Box>
+            <Typography variant="h6">
+              Storico revisioni IPS
+            </Typography>
+
+            <Typography
+              variant="body2"
+              color="text.secondary"
+            >
+              {reviewAudits.length} variazioni
+              registrate.
+            </Typography>
+          </Box>
+        </Box>
+
+        {reviewAudits.length === 0 ? (
+          <Alert
+            severity="info"
+            sx={{ m: 2.5, mt: 0 }}
+          >
+            Nessuna posizione è stata ancora
+            rinviata o segnalata per
+            approfondimento.
+          </Alert>
+        ) : (
+          <TableContainer
+            sx={{ maxHeight: 420 }}
+          >
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell>
+                    Data
+                  </TableCell>
+
+                  <TableCell>
+                    Posizione
+                  </TableCell>
+
+                  <TableCell>
+                    Stato precedente
+                  </TableCell>
+
+                  <TableCell>
+                    Nuovo stato
+                  </TableCell>
+
+                  <TableCell>
+                    Motivazione
+                  </TableCell>
+
+                  <TableCell>
+                    Fonte
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+
+              <TableBody>
+                {reviewAudits.map(
+                  (audit) => (
+                    <TableRow
+                      key={audit.id}
+                      hover
+                    >
+                      <TableCell>
+                        {dateTimeLabel(
+                          audit.createdAt,
+                        )}
+                      </TableCell>
+
+                      <TableCell
+                        sx={{
+                          fontFamily:
+                            "monospace",
+                        }}
+                      >
+                        {audit.positionCode}
+                      </TableCell>
+
+                      <TableCell>
+                        {reviewAuditStatusLabel(
+                          audit.oldStatus,
+                        )}
+                      </TableCell>
+
+                      <TableCell>
+                        <Chip
+                          size="small"
+                          color={reviewAuditStatusColor(
+                            audit.newStatus,
+                          )}
+                          label={reviewAuditStatusLabel(
+                            audit.newStatus,
+                          )}
+                        />
+                      </TableCell>
+
+                      <TableCell>
+                        {audit.note}
+                      </TableCell>
+
+                      <TableCell>
+                        {audit.source}
                       </TableCell>
                     </TableRow>
                   ),

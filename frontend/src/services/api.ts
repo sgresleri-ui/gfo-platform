@@ -1735,6 +1735,23 @@ export type IpsClassificationAuditResponse = {
   audits: IpsClassificationAudit[];
 };
 
+
+export type IpsClassificationReviewAudit = {
+  id: number;
+  positionId: number;
+  positionCode: string;
+  oldStatus: string | null;
+  newStatus: string;
+  note: string;
+  source: string;
+  createdAt: string;
+};
+
+export type IpsClassificationReviewAuditResponse = {
+  count: number;
+  audits: IpsClassificationReviewAudit[];
+};
+
 export async function getIpsClassifications(): Promise<IpsClassificationOverviewResponse> {
   const response = await fetch(
     `${API_URL}/ips/classifications`,
@@ -1818,6 +1835,17 @@ export async function updateIpsPositionReview(
   }>(
     response,
     "Unable to update IPS review status",
+  );
+}
+
+export async function getIpsClassificationReviewAudit(): Promise<IpsClassificationReviewAuditResponse> {
+  const response = await fetch(
+    `${API_URL}/ips/classifications/review-audit`,
+  );
+
+  return readJson<IpsClassificationReviewAuditResponse>(
+    response,
+    "Unable to load IPS review audit",
   );
 }
 
