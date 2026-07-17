@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
@@ -28,6 +29,8 @@ import {
 } from "@mui/material";
 
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
+import FilterAltOffRoundedIcon from "@mui/icons-material/FilterAltOffRounded";
 import BlockRoundedIcon from "@mui/icons-material/BlockRounded";
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
@@ -202,6 +205,31 @@ function transactionStatusColor(
   return "warning";
 }
 
+function csvCell(
+  value: string | number | null,
+): string {
+  const normalized =
+    value === null ? "" : String(value);
+
+  return `"${normalized.replace(
+    /"/g,
+    '""',
+  )}"`;
+}
+
+function csvNumber(
+  value: number,
+): string {
+  return value.toLocaleString(
+    "it-IT",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      useGrouping: false,
+    },
+  );
+}
+
 type SummaryCardProps = {
   label: string;
   value: string;
@@ -295,6 +323,24 @@ export default function Transactions() {
   const [notice, setNotice] =
     useState<Notice | null>(null);
 
+  const [searchQuery, setSearchQuery] =
+    useState("");
+
+  const [typeFilter, setTypeFilter] =
+    useState("");
+
+  const [directionFilter, setDirectionFilter] =
+    useState("");
+
+  const [statusFilter, setStatusFilter] =
+    useState("");
+
+  const [dateFrom, setDateFrom] =
+    useState("");
+
+  const [dateTo, setDateTo] =
+    useState("");
+
   const loadData = useCallback(
     async () => {
       setLoading(true);
@@ -336,6 +382,254 @@ export default function Transactions() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  const transactionTypeLabels =
+    useMemo(
+      () =>
+        new Map(
+          types.map((type) => [
+            type.code,
+            type.label,
+          ]),
+        ),
+      [types],
+    );
+
+  const filteredTransactions =
+    useMemo(() => {
+      const normalizedSearch =
+        searchQuery
+          .trim()
+          .toLowerCase();
+
+      return transactions.filter(
+        (transaction) => {
+          if (
+            typeFilter &&
+            transaction.transactionType !==
+              typeFilter
+          ) {
+            return false;
+          }
+
+          if (
+            directionFilter &&
+            transaction.direction !==
+              directionFilter
+          ) {
+            return false;
+          }
+
+          if (
+            statusFilter &&
+            transaction.status !==
+              statusFilter
+          ) {
+            return false;
+          }
+
+          const operationDate =
+            transaction.transactionDate
+              .slice(0, 10);
+
+          if (
+            dateFrom &&
+            operationDate < dateFrom
+          ) {
+            return false;
+          }
+
+          if (
+            dateTo &&
+            operationDate > dateTo
+          ) {
+            return false;
+          }
+
+          if (!normalizedSearch) {
+            return true;
+          }
+
+          const searchableText = [
+            transaction.transactionType,
+            transactionTypeLabels.get(
+              transaction.transactionType,
+            ),
+            transaction.position?.name,
+            transaction.position?.code,
+            transaction.notes,
+            transaction.voidReason,
+            transaction.externalReference,
+            transaction.sourceAccountCode,
+            transaction.destinationAccountCode,
+            transaction.currency,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+          return searchableText.includes(
+            normalizedSearch,
+          );
+        },
+      );
+    }, [
+      transactions,
+      transactionTypeLabels,
+      searchQuery,
+      typeFilter,
+      directionFilter,
+      statusFilter,
+      dateFrom,
+      dateTo,
+    ]);
+
+  function clearFilters() {
+    setSearchQuery("");
+    setTypeFilter("");
+    setDirectionFilter("");
+    setStatusFilter("");
+    setDateFrom("");
+    setDateTo("");
+  }
+
+  function exportTransactions() {
+    if (
+      filteredTransactions.length === 0
+    ) {
+      setNotice({
+        severity: "info",
+        text:
+          "Nessun movimento disponibile per l’esportazione.",
+      });
+
+      return;
+    }
+
+    const header = [
+      "Data",
+      "Tipo",
+      "Posizione",
+      "Codice posizione",
+      "Direzione",
+      "Stato",
+      "Importo lordo",
+      "Commissioni",
+      "Imposte",
+      "Importo netto",
+      "Valuta",
+      "Cambio EUR",
+      "Importo base EUR",
+      "Conto origine",
+      "Conto destinazione",
+      "Riferimento esterno",
+      "Note",
+      "Motivo annullamento",
+    ];
+
+    const rows =
+      filteredTransactions.map(
+        (transaction) => [
+          transaction.transactionDate
+            .slice(0, 10),
+
+          transactionTypeLabels.get(
+            transaction.transactionType,
+          ) ??
+            transaction.transactionType,
+
+          transaction.position?.name ??
+            "",
+
+          transaction.position?.code ??
+            "",
+
+          directionLabel(
+            transaction.direction,
+          ),
+
+          transactionStatusLabel(
+            transaction.status,
+          ),
+
+          csvNumber(
+            transaction.grossAmount,
+          ),
+
+          csvNumber(
+            transaction.fees,
+          ),
+
+          csvNumber(
+            transaction.taxes,
+          ),
+
+          csvNumber(
+            transaction.netAmount,
+          ),
+
+          transaction.currency,
+
+          transaction.fxRateToBase ===
+          null
+            ? ""
+            : csvNumber(
+                transaction.fxRateToBase,
+              ),
+
+          csvNumber(
+            transaction.baseAmount,
+          ),
+
+          transaction.sourceAccountCode ??
+            "",
+
+          transaction
+            .destinationAccountCode ??
+            "",
+
+          transaction.externalReference ??
+            "",
+
+          transaction.notes ?? "",
+
+          transaction.voidReason ?? "",
+        ],
+      );
+
+    const csv = [
+      header,
+      ...rows,
+    ]
+      .map((row) =>
+        row.map(csvCell).join(";"),
+      )
+      .join("\n");
+
+    const blob = new Blob(
+      ["\ufeff" + csv],
+      {
+        type:
+          "text/csv;charset=utf-8;",
+      },
+    );
+
+    const url =
+      URL.createObjectURL(blob);
+
+    const link =
+      document.createElement("a");
+
+    link.href = url;
+    link.download =
+      `gfo-registro-movimenti-${localDate()}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+  }
 
   function updateForm(
     field: keyof FormState,
@@ -655,6 +949,20 @@ export default function Transactions() {
           </Button>
 
           <Button
+            variant="outlined"
+            startIcon={
+              <DownloadRoundedIcon />
+            }
+            disabled={
+              filteredTransactions.length ===
+              0
+            }
+            onClick={exportTransactions}
+          >
+            Esporta CSV
+          </Button>
+
+          <Button
             variant="contained"
             startIcon={
               <AddRoundedIcon />
@@ -729,6 +1037,171 @@ export default function Transactions() {
         />
       </Box>
 
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2.5,
+          mb: 3,
+          border: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              md:
+                "repeat(3, minmax(0, 1fr))",
+              xl:
+                "repeat(6, minmax(0, 1fr))",
+            },
+            gap: 2,
+          }}
+        >
+          <TextField
+            label="Cerca"
+            value={searchQuery}
+            onChange={(event) =>
+              setSearchQuery(
+                event.target.value,
+              )
+            }
+            placeholder="Posizione, note, conto..."
+          />
+
+          <TextField
+            select
+            label="Tipo operazione"
+            value={typeFilter}
+            onChange={(event) =>
+              setTypeFilter(
+                event.target.value,
+              )
+            }
+          >
+            <MenuItem value="">
+              Tutti
+            </MenuItem>
+
+            {types.map((type) => (
+              <MenuItem
+                key={type.code}
+                value={type.code}
+              >
+                {type.label}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField
+            select
+            label="Direzione"
+            value={directionFilter}
+            onChange={(event) =>
+              setDirectionFilter(
+                event.target.value,
+              )
+            }
+          >
+            <MenuItem value="">
+              Tutte
+            </MenuItem>
+            <MenuItem value="INFLOW">
+              Entrata
+            </MenuItem>
+            <MenuItem value="OUTFLOW">
+              Uscita
+            </MenuItem>
+            <MenuItem value="TRANSFER">
+              Trasferimento
+            </MenuItem>
+          </TextField>
+
+          <TextField
+            select
+            label="Stato"
+            value={statusFilter}
+            onChange={(event) =>
+              setStatusFilter(
+                event.target.value,
+              )
+            }
+          >
+            <MenuItem value="">
+              Tutti
+            </MenuItem>
+            <MenuItem value="POSTED">
+              Registrati
+            </MenuItem>
+            <MenuItem value="VOIDED">
+              Annullati
+            </MenuItem>
+          </TextField>
+
+          <TextField
+            label="Dal"
+            type="date"
+            value={dateFrom}
+            onChange={(event) =>
+              setDateFrom(
+                event.target.value,
+              )
+            }
+            slotProps={{
+              inputLabel: {
+                shrink: true,
+              },
+            }}
+          />
+
+          <TextField
+            label="Al"
+            type="date"
+            value={dateTo}
+            onChange={(event) =>
+              setDateTo(
+                event.target.value,
+              )
+            }
+            slotProps={{
+              inputLabel: {
+                shrink: true,
+              },
+            }}
+          />
+        </Box>
+
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent:
+              "space-between",
+            alignItems: "center",
+            gap: 2,
+            mt: 2,
+          }}
+        >
+          <Typography
+            variant="body2"
+            color="text.secondary"
+          >
+            {filteredTransactions.length} di{" "}
+            {transactions.length} movimenti
+          </Typography>
+
+          <Button
+            size="small"
+            startIcon={
+              <FilterAltOffRoundedIcon />
+            }
+            onClick={clearFilters}
+          >
+            Azzera filtri
+          </Button>
+        </Box>
+      </Paper>
+
       <Typography
         variant="h6"
         sx={{ mb: 1.5 }}
@@ -772,7 +1245,7 @@ export default function Transactions() {
           </TableHead>
 
           <TableBody>
-            {transactions.length === 0 ? (
+            {filteredTransactions.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={11}
@@ -783,11 +1256,11 @@ export default function Transactions() {
                       "text.secondary",
                   }}
                 >
-                  Nessun movimento registrato.
+                  Nessun movimento corrisponde ai filtri selezionati.
                 </TableCell>
               </TableRow>
             ) : (
-              transactions.map(
+              filteredTransactions.map(
                 (transaction) => (
                   <TableRow
                     key={transaction.id}
@@ -800,7 +1273,10 @@ export default function Transactions() {
                     </TableCell>
 
                     <TableCell>
-                      {transaction.transactionType}
+                      {transactionTypeLabels.get(
+                        transaction.transactionType,
+                      ) ??
+                        transaction.transactionType}
                     </TableCell>
 
                     <TableCell>
