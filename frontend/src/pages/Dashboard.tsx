@@ -14,6 +14,7 @@ import CreditCardRoundedIcon from "@mui/icons-material/CreditCardRounded";
 
 import KpiCard from "../components/KpiCard";
 import ExecutiveIpsPanel from "../components/ExecutiveIpsPanel";
+import ExecutiveRiskDataPanel from "../components/ExecutiveRiskDataPanel";
 import { getDashboard } from "../services/api";
 
 type DashboardData = {
@@ -197,33 +198,7 @@ export default function Dashboard() {
           gap: 2.2,
         }}
       >
-        <Paper
-          elevation={0}
-          sx={{
-            p: 3,
-            minHeight: 300,
-            border: "1px solid",
-            borderColor: "divider",
-            boxShadow: "0 12px 32px rgba(26, 45, 75, 0.06)",
-          }}
-        >
-          <Typography variant="h6">Andamento patrimoniale</Typography>
-
-          <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
-            Il grafico storico verrà collegato al Wealth Registry.
-          </Typography>
-
-          <Box
-            sx={{
-              mt: 4,
-              height: 190,
-              borderRadius: 3,
-              background:
-                "linear-gradient(180deg, rgba(23,74,156,0.11), rgba(23,74,156,0.01))",
-              borderBottom: "2px solid rgba(23,74,156,0.5)",
-            }}
-          />
-        </Paper>
+        <ExecutiveRiskDataPanel />
 
         <ExecutiveIpsPanel />
       </Box>
