@@ -1,0 +1,2447 @@
+{
+  "sheet": "El Toro",
+  "rowCount": 89,
+  "columnCount": 8,
+  "rows": [
+    {
+      "row": 2,
+      "cells": [
+        {
+          "address": "B2",
+          "text": "Realizzazione El Toro",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C2",
+          "text": "Realizzazione El Toro",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D2",
+          "text": "Realizzazione El Toro",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E2",
+          "text": "Realizzazione El Toro",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F2",
+          "text": "Realizzazione El Toro",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G2",
+          "text": "Realizzazione El Toro",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 4,
+      "cells": [
+        {
+          "address": "B4",
+          "text": "Gran Totale senza Mobili",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D4",
+          "text": "1163994.1099999999",
+          "formula": "D6+D7",
+          "result": 1163994.1099999999
+        }
+      ]
+    },
+    {
+      "row": 5,
+      "cells": [
+        {
+          "address": "B5",
+          "text": "Gran Totale",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D5",
+          "text": "1184195.48",
+          "formula": "SUM(D6:D8)",
+          "result": 1184195.48
+        }
+      ]
+    },
+    {
+      "row": 6,
+      "cells": [
+        {
+          "address": "B6",
+          "text": "di cui Terreno",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D6",
+          "text": "274802.15",
+          "formula": "D12+D13+D14+D15+D17",
+          "result": 274802.15
+        }
+      ]
+    },
+    {
+      "row": 7,
+      "cells": [
+        {
+          "address": "B7",
+          "text": "di cui Immobile",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D7",
+          "text": "889191.96",
+          "formula": "SUM(D22:D24)+SUM(D30:D40)+SUM(D44:D61)+D16+D18",
+          "result": 889191.96
+        }
+      ]
+    },
+    {
+      "row": 8,
+      "cells": [
+        {
+          "address": "B8",
+          "text": "di cui Mobili",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D8",
+          "text": "20201.370000000003",
+          "formula": "SUM(D66:D86)",
+          "result": 20201.370000000003
+        }
+      ]
+    },
+    {
+      "row": 10,
+      "cells": [
+        {
+          "address": "B10",
+          "text": "Anno 2021",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 11,
+      "cells": [
+        {
+          "address": "C11",
+          "text": "Data",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D11",
+          "text": "Spesa",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E11",
+          "text": "IVA",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F11",
+          "text": "Imponibile",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G11",
+          "text": "Note",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 12,
+      "cells": [
+        {
+          "address": "B12",
+          "text": "Mallorca Prime Homes",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C12",
+          "text": "Wed May 12 2021 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D12",
+          "text": "6000",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G12",
+          "text": "Terreno",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H12",
+          "text": "OK- verificare Caixabank - vedi stipula su cartaceo faldone giallo",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 13,
+      "cells": [
+        {
+          "address": "B13",
+          "text": "Prats Consulting S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C13",
+          "text": "Thu May 13 2021 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D13",
+          "text": "3025",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G13",
+          "text": "Terreno",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H13",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 14,
+      "cells": [
+        {
+          "address": "B14",
+          "text": "Notaio Victor Alonso Cuevillas Fortuny",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C14",
+          "text": "Thu Jun 17 2021 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D14",
+          "text": "244000",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G14",
+          "text": "Terreno",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H14",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 15,
+      "cells": [
+        {
+          "address": "B15",
+          "text": "Prats Consulting S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C15",
+          "text": "Wed Jun 23 2021 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D15",
+          "text": "25000",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G15",
+          "text": "Terreno",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H15",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 16,
+      "cells": [
+        {
+          "address": "B16",
+          "text": "A3 Luxury Living Spain S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C16",
+          "text": "Thu Jun 24 2021 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D16",
+          "text": "42350",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E16",
+          "text": "0.21",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F16",
+          "text": "35000",
+          "formula": "D16/(1+E16)",
+          "result": 35000
+        },
+        {
+          "address": "G16",
+          "text": "Progetto iniziale",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H16",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 17,
+      "cells": [
+        {
+          "address": "B17",
+          "text": "Prats Consulting S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C17",
+          "text": "Mon Sep 13 2021 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D17",
+          "text": "-3222.85",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G17",
+          "text": "Terreno",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 18,
+      "cells": [
+        {
+          "address": "B18",
+          "text": "Ayuntamento",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C18",
+          "text": "Sun Oct 24 2021 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D18",
+          "text": "4637.51",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G18",
+          "text": "Avviamento autorizzazione progetto",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H18",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 20,
+      "cells": [
+        {
+          "address": "B20",
+          "text": "Anno 2022",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 21,
+      "cells": [
+        {
+          "address": "C21",
+          "text": "Data",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D21",
+          "text": "Spesa",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G21",
+          "text": "Note",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 22,
+      "cells": [
+        {
+          "address": "B22",
+          "text": "A3 Luxury Living Spain S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C22",
+          "text": "Thu Oct 06 2022 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D22",
+          "text": "74536",
+          "formula": "24536+50000",
+          "result": 74536
+        },
+        {
+          "address": "E22",
+          "text": "0.1",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F22",
+          "text": "67760",
+          "formula": "D22/(1+E22)",
+          "result": 67760
+        },
+        {
+          "address": "G22",
+          "text": "Anticipo 10% su contratto opere edili",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H22",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 23,
+      "cells": [
+        {
+          "address": "B23",
+          "text": "Ayuntamento",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C23",
+          "text": "Mon Dec 19 2022 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D23",
+          "text": "1472.39",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G23",
+          "text": "Spese costi smaltimento rifiuti",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H23",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 24,
+      "cells": [
+        {
+          "address": "B24",
+          "text": "Ayuntamento",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C24",
+          "text": "Sat Nov 19 2022 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D24",
+          "text": "10981.29",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G24",
+          "text": "Licenza per costruire",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H24",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 27,
+      "cells": [
+        {
+          "address": "B27",
+          "text": "Anno 2023 - 2024",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 29,
+      "cells": [
+        {
+          "address": "B29",
+          "text": "Opere civili a contratto",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C29",
+          "text": "Data",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D29",
+          "text": "Spesa Totale",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E29",
+          "text": "IVA",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F29",
+          "text": "Imponibile",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G29",
+          "text": "Note",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 30,
+      "cells": [
+        {
+          "address": "B30",
+          "text": "A3 Luxury Living Spain S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C30",
+          "text": "Mon Jan 09 2023 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D30",
+          "text": "67604.15",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E30",
+          "text": "0.1",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F30",
+          "text": "61458.31818181817",
+          "formula": "D30/(1+E30)",
+          "result": 61458.31818181817
+        },
+        {
+          "address": "G30",
+          "text": "Prima trance opere edili",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H30",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 31,
+      "cells": [
+        {
+          "address": "B31",
+          "text": "A3 Luxury Living Spain S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C31",
+          "text": "Thu Feb 09 2023 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D31",
+          "text": "63355.6",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E31",
+          "text": "0.1",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F31",
+          "text": "57595.99999999999",
+          "formula": "D31/(1+E31)",
+          "result": 57595.99999999999
+        },
+        {
+          "address": "G31",
+          "text": "Seconda trance opere edili",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H31",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 32,
+      "cells": [
+        {
+          "address": "B32",
+          "text": "A3 Luxury Living Spain S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C32",
+          "text": "Thu Mar 09 2023 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D32",
+          "text": "61492.2",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E32",
+          "text": "0.1",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F32",
+          "text": "55901.99999999999",
+          "formula": null,
+          "result": 55901.99999999999
+        },
+        {
+          "address": "G32",
+          "text": "Terza trance opere edili",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H32",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 33,
+      "cells": [
+        {
+          "address": "B33",
+          "text": "A3 Luxury Living Spain S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C33",
+          "text": "Wed May 10 2023 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D33",
+          "text": "89812.23",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E33",
+          "text": "0.1",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F33",
+          "text": "81647.48181818181",
+          "formula": null,
+          "result": 81647.48181818181
+        },
+        {
+          "address": "G33",
+          "text": "Quarta trance opere edili",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H33",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 34,
+      "cells": [
+        {
+          "address": "B34",
+          "text": "A3 Luxury Living Spain S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C34",
+          "text": "Tue May 30 2023 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D34",
+          "text": "30932.44",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E34",
+          "text": "0.1",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F34",
+          "text": "28120.399999999998",
+          "formula": null,
+          "result": 28120.399999999998
+        },
+        {
+          "address": "G34",
+          "text": "Quinta trance opere edili",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H34",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 35,
+      "cells": [
+        {
+          "address": "B35",
+          "text": "A3 Luxury Living Spain S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C35",
+          "text": "Mon Jul 03 2023 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D35",
+          "text": "48467.76",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E35",
+          "text": "0.1",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F35",
+          "text": "44061.6",
+          "formula": null,
+          "result": 44061.6
+        },
+        {
+          "address": "G35",
+          "text": "Sesta trance opere edili",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H35",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 36,
+      "cells": [
+        {
+          "address": "B36",
+          "text": "A3 Luxury Living Spain S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C36",
+          "text": "Tue Aug 01 2023 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D36",
+          "text": "99946.4",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E36",
+          "text": "0.1",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F36",
+          "text": "90860.36363636362",
+          "formula": null,
+          "result": 90860.36363636362
+        },
+        {
+          "address": "G36",
+          "text": "Settima trance opere edili",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H36",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 37,
+      "cells": [
+        {
+          "address": "B37",
+          "text": "A3 Luxury Living Spain S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C37",
+          "text": "Fri Sep 01 2023 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D37",
+          "text": "65517.14",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E37",
+          "text": "0.1",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F37",
+          "text": "59561.03636363636",
+          "formula": null,
+          "result": 59561.03636363636
+        },
+        {
+          "address": "G37",
+          "text": "Ottava trance opere edili",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H37",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 38,
+      "cells": [
+        {
+          "address": "B38",
+          "text": "A3 Luxury Living Spain S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C38",
+          "text": "Tue Oct 03 2023 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D38",
+          "text": "47255.82",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E38",
+          "text": "0.1",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F38",
+          "text": "42959.83636363636",
+          "formula": null,
+          "result": 42959.83636363636
+        },
+        {
+          "address": "G38",
+          "text": "Nona trance opere edili",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H38",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 39,
+      "cells": [
+        {
+          "address": "B39",
+          "text": "A3 Luxury Living Spain S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C39",
+          "text": "Fri Nov 03 2023 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D39",
+          "text": "44348.92",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E39",
+          "text": "0.1",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F39",
+          "text": "40317.2",
+          "formula": null,
+          "result": 40317.2
+        },
+        {
+          "address": "G39",
+          "text": "Decima trance opere edili",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H39",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 40,
+      "cells": [
+        {
+          "address": "B40",
+          "text": "A3 Luxury Living Spain S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C40",
+          "text": "Thu Jun 20 2024 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D40",
+          "text": "13591.34",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E40",
+          "text": "0.1",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F40",
+          "text": "12355.763636363636",
+          "formula": null,
+          "result": 12355.763636363636
+        },
+        {
+          "address": "G40",
+          "text": "Ultima trance opere edili",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H40",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 43,
+      "cells": [
+        {
+          "address": "B43",
+          "text": "Opere civili fuori contratto",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C43",
+          "text": "Data",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D43",
+          "text": "Spesa",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E43",
+          "text": "IVA",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F43",
+          "text": "Imponibile",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G43",
+          "text": "Note",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 44,
+      "cells": [
+        {
+          "address": "B44",
+          "text": "Qualitas Control de Obras S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C44",
+          "text": "Wed Jan 11 2023 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D44",
+          "text": "646.14",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G44",
+          "text": "Controllo qualità - Prima quota",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H44",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 45,
+      "cells": [
+        {
+          "address": "B45",
+          "text": "Ayuntamento de Calvià",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C45",
+          "text": "Mon May 29 2023 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D45",
+          "text": "279.39",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G45",
+          "text": "Conexión a pluviales",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H45",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 46,
+      "cells": [
+        {
+          "address": "B46",
+          "text": "Qualitas Control de Obras S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C46",
+          "text": "Mon Jun 26 2023 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D46",
+          "text": "646.14",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G46",
+          "text": "Controllo qualità - Seconda quota",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H46",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 47,
+      "cells": [
+        {
+          "address": "B47",
+          "text": "ALCOLEAS GARDENS, S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C47",
+          "text": "Tue Dec 12 2023 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D47",
+          "text": "14575",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G47",
+          "text": "Verde",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H47",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 48,
+      "cells": [
+        {
+          "address": "B48",
+          "text": "ALCOLEAS GARDENS, S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C48",
+          "text": "Wed Jan 03 2024 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D48",
+          "text": "14575",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G48",
+          "text": "Verde",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H48",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 49,
+      "cells": [
+        {
+          "address": "B49",
+          "text": "ATERCA",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C49",
+          "text": "Tue Jan 16 2024 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D49",
+          "text": "676.8",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G49",
+          "text": "Collegamento Idrico",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H49",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 50,
+      "cells": [
+        {
+          "address": "B50",
+          "text": "A3 Luxury Living Spain S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C50",
+          "text": "Fri Feb 09 2024 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D50",
+          "text": "20695.4",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E50",
+          "text": "0.1",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F50",
+          "text": "18814",
+          "formula": "D50/(1+E50)",
+          "result": 18814
+        },
+        {
+          "address": "G50",
+          "text": "Muro a Secco e Vetrate Giardinetto",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H50",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 51,
+      "cells": [
+        {
+          "address": "B51",
+          "text": "Qualitas Control de Obras S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C51",
+          "text": "Fri Feb 23 2024 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D51",
+          "text": "861.52",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G51",
+          "text": "Controllo qualità - Terza quota",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H51",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 52,
+      "cells": [
+        {
+          "address": "B52",
+          "text": "Ayuntamento de Calvià",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C52",
+          "text": "Thu Apr 04 2024 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D52",
+          "text": "15.85",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G52",
+          "text": "Fotovoltaico Autoliquidacion Impuesto Instalaciones",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H52",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 53,
+      "cells": [
+        {
+          "address": "B53",
+          "text": "Ayuntamento de Calvià",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C53",
+          "text": "Thu Apr 04 2024 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D53",
+          "text": "133.89",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G53",
+          "text": "Fotovoltaico Licencia Ubanistica",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H53",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 54,
+      "cells": [
+        {
+          "address": "B54",
+          "text": "Impianto Fotovoltaico",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C54",
+          "text": "Thu Dec 19 2024 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D54",
+          "text": "8719",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G54",
+          "text": "Impianto Fotovoltaico",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H54",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 55,
+      "cells": [
+        {
+          "address": "B55",
+          "text": "A3 Luxury Living Spain S.L.",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C55",
+          "text": "Wed Jun 05 2024 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D55",
+          "text": "38189.8",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E55",
+          "text": "0.1",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F55",
+          "text": "34718",
+          "formula": "D55/(1+E55)",
+          "result": 34718
+        },
+        {
+          "address": "G55",
+          "text": "Extras ejecutado en la vivienda en",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 56,
+      "cells": [
+        {
+          "address": "B56",
+          "text": "Luis Pedrero Morales",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D56",
+          "text": "2577.63",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G56",
+          "text": "Allaccio elettrico",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H56",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 57,
+      "cells": [
+        {
+          "address": "B57",
+          "text": "Luis Pedrero Morales",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D57",
+          "text": "411.4",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G57",
+          "text": "Allaccio elettrico",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "H57",
+          "text": "OK",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 58,
+      "cells": [
+        {
+          "address": "B58",
+          "text": "General cleaning after building",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D58",
+          "text": "2075.15",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G58",
+          "text": "Pulizia finale",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 59,
+      "cells": [
+        {
+          "address": "B59",
+          "text": "Lamas",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C59",
+          "text": "Tue Nov 11 2025 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D59",
+          "text": "665.5",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G59",
+          "text": "Anticipo por documentación de venta",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 60,
+      "cells": [
+        {
+          "address": "B60",
+          "text": "Lamas",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C60",
+          "text": "Tue Jan 20 2026 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D60",
+          "text": "19857.15",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G60",
+          "text": "Escritura de obra nueva",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 61,
+      "cells": [
+        {
+          "address": "B61",
+          "text": "Lamas",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C61",
+          "text": "Thu Feb 12 2026 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D61",
+          "text": "-2709.99",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G61",
+          "text": "Escritura de obra nueva",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 65,
+      "cells": [
+        {
+          "address": "B65",
+          "text": "Spese per arredamento e accessori",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C65",
+          "text": "Data",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D65",
+          "text": "Spesa",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "E65",
+          "text": "IVA",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "F65",
+          "text": "Imponibile",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G65",
+          "text": "Note",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 66,
+      "cells": [
+        {
+          "address": "B66",
+          "text": "Diotti.com srl",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C66",
+          "text": "Thu Oct 12 2023 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D66",
+          "text": "5214.58",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G66",
+          "text": "Camere da letto + mobile salotto",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 67,
+      "cells": [
+        {
+          "address": "B67",
+          "text": "Dismobel.es",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C67",
+          "text": "Fri Oct 13 2023 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D67",
+          "text": "2460",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G67",
+          "text": "Tavolo salotto",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 68,
+      "cells": [
+        {
+          "address": "B68",
+          "text": "Dreame L10",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C68",
+          "text": "Sun Oct 15 2023 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D68",
+          "text": "371.36",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G68",
+          "text": "Robot lavapavimenti",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 69,
+      "cells": [
+        {
+          "address": "B69",
+          "text": "La Redoute",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C69",
+          "text": "Sun Oct 15 2023 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D69",
+          "text": "884.4",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G69",
+          "text": "Poltroncine salotto",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 70,
+      "cells": [
+        {
+          "address": "B70",
+          "text": "Soundbar",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C70",
+          "text": "Wed Oct 18 2023 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D70",
+          "text": "899",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G70",
+          "text": "Sony - Barra de sonido HT-A7000",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 71,
+      "cells": [
+        {
+          "address": "B71",
+          "text": "Tapiceria Angelita",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C71",
+          "text": "Tue Oct 31 2023 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D71",
+          "text": "1200",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G71",
+          "text": "Tende",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 72,
+      "cells": [
+        {
+          "address": "B72",
+          "text": "Supporto a parete",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C72",
+          "text": "Tue Nov 07 2023 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D72",
+          "text": "49",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G72",
+          "text": "SU-WL450",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 73,
+      "cells": [
+        {
+          "address": "B73",
+          "text": "Telecamere",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C73",
+          "text": "Fri Nov 17 2023 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D73",
+          "text": "499.99",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G73",
+          "text": "Eufy",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 74,
+      "cells": [
+        {
+          "address": "B74",
+          "text": "Robot limpiacristales",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C74",
+          "text": "Sat Nov 18 2023 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D74",
+          "text": "219.79",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G74",
+          "text": "Fmart W6",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 75,
+      "cells": [
+        {
+          "address": "B75",
+          "text": "Hair Dryier",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C75",
+          "text": "Sat Nov 18 2023 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D75",
+          "text": "99",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G75",
+          "text": "Parlux Advance Light",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 76,
+      "cells": [
+        {
+          "address": "B76",
+          "text": "Pastamatic",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C76",
+          "text": "Sat Nov 18 2023 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D76",
+          "text": "86.43",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G76",
+          "text": "Ariete 1593 PastaMatic",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 77,
+      "cells": [
+        {
+          "address": "B77",
+          "text": "Idropulitrice",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C77",
+          "text": "Wed Nov 22 2023 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D77",
+          "text": "129.9",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G77",
+          "text": "ARXP Hidrolimpiador BOX3 150LHT",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 78,
+      "cells": [
+        {
+          "address": "B78",
+          "text": "Posate",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C78",
+          "text": "Wed Nov 22 2023 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D78",
+          "text": "128.23",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G78",
+          "text": "WMF Boston Cromargan",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 79,
+      "cells": [
+        {
+          "address": "B79",
+          "text": "Soffione",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C79",
+          "text": "Wed Nov 22 2023 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D79",
+          "text": "78.99",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G79",
+          "text": "Bosch aspirador",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 80,
+      "cells": [
+        {
+          "address": "B80",
+          "text": "Ferro da Stiro",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C80",
+          "text": "Sat Nov 25 2023 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D80",
+          "text": "149",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G80",
+          "text": "Polti Vaporella Next VN18.30",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 81,
+      "cells": [
+        {
+          "address": "B81",
+          "text": "Lavatrice",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C81",
+          "text": "Thu Nov 30 2023 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D81",
+          "text": "567.1",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G81",
+          "text": "Lavatrice LG",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 82,
+      "cells": [
+        {
+          "address": "B82",
+          "text": "Tende",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C82",
+          "text": "Wed Dec 27 2023 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D82",
+          "text": "2490",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G82",
+          "text": "Tapiceria Agelita",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 83,
+      "cells": [
+        {
+          "address": "B83",
+          "text": "Televisore",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C83",
+          "text": "Tue Jan 23 2024 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D83",
+          "text": "2558.61",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G83",
+          "text": "TV OLED SONY XR65A95KAEP",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 84,
+      "cells": [
+        {
+          "address": "B84",
+          "text": "Mobili Bagno",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C84",
+          "text": "Tue Feb 20 2024 01:00:00 GMT+0100 (Central European Standard Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D84",
+          "text": "1122",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G84",
+          "text": "Varobath",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 85,
+      "cells": [
+        {
+          "address": "B85",
+          "text": "Sistema antizanzare per il giardino",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C85",
+          "text": "Tue Apr 16 2024 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D85",
+          "text": "378",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G85",
+          "text": "Stocker",
+          "formula": null,
+          "result": null
+        }
+      ]
+    },
+    {
+      "row": 86,
+      "cells": [
+        {
+          "address": "B86",
+          "text": "BBQ",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "C86",
+          "text": "Fri May 03 2024 02:00:00 GMT+0200 (Central European Summer Time)",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "D86",
+          "text": "615.99",
+          "formula": null,
+          "result": null
+        },
+        {
+          "address": "G86",
+          "text": "Campingaz",
+          "formula": null,
+          "result": null
+        }
+      ]
+    }
+  ]
+}

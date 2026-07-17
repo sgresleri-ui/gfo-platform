@@ -3,8 +3,13 @@ import {
   Controller,
   Get,
   Param,
+  ParseIntPipe,
   Post,
 } from '@nestjs/common';
+
+import {
+  IpsClassificationService,
+} from './ips-classification.service';
 
 import {
   IpsService,
@@ -15,7 +20,48 @@ export class IpsController {
   constructor(
     private readonly ipsService:
       IpsService,
+
+    private readonly classificationService:
+      IpsClassificationService,
   ) {}
+
+  @Get('classifications')
+  getClassifications() {
+    return this.classificationService
+      .getOverview();
+  }
+
+  @Get('classifications/audit')
+  getClassificationAudit() {
+    return this.classificationService
+      .getAuditHistory();
+  }
+
+  @Post('classifications/:positionId')
+  updateClassification(
+    @Param(
+      'positionId',
+      ParseIntPipe,
+    )
+    positionId: number,
+
+    @Body('ipsAssetClass')
+    ipsAssetClass: string,
+
+    @Body('reason')
+    reason: string,
+
+    @Body('confirm')
+    confirm: boolean,
+  ) {
+    return this.classificationService
+      .updateClassification(
+        positionId,
+        ipsAssetClass,
+        reason,
+        confirm,
+      );
+  }
 
   @Get('metrics')
   getSupportedMetrics() {

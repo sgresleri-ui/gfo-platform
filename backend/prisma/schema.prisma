@@ -66,6 +66,8 @@ model WealthPosition {
 
   @@index([householdId, category])
   @@index([valuationDate])
+  ipsClassification       IpsPositionClassification?
+  ipsClassificationAudits IpsClassificationAudit[]
 }
 
 model PlatformSetting {
@@ -261,5 +263,36 @@ model IpsPolicyLimit {
   updatedAt   DateTime @updatedAt
 
   @@index([dimension, enabled])
+}
+
+model IpsPositionClassification {
+  id            Int      @id @default(autoincrement())
+  positionId    Int      @unique
+  ipsAssetClass String
+  source        String   @default("USER_CONFIRMED")
+  rationale     String?
+  confirmed     Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  position WealthPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  @@index([ipsAssetClass])
+}
+
+model IpsClassificationAudit {
+  id           Int      @id @default(autoincrement())
+  positionId   Int
+  positionCode String
+  oldClass     String?
+  newClass     String
+  reason       String
+  source       String   @default("USER_CONFIRMED")
+  createdAt    DateTime @default(now())
+
+  position WealthPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  @@index([positionId, createdAt])
+  @@index([newClass])
 }
 

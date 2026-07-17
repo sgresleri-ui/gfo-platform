@@ -5,6 +5,10 @@ import {
 } from './ips.controller';
 
 import {
+  IpsClassificationService,
+} from './ips-classification.service';
+
+import {
   IpsService,
 } from './ips.service';
 
@@ -15,6 +19,7 @@ import {
 
   providers: [
     IpsService,
+    IpsClassificationService,
   ],
 })
 export class IpsModule {}
