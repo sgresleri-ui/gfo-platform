@@ -21,6 +21,18 @@ export class PerformanceController {
       .getAvailablePeriods();
   }
 
+  @Get('positions')
+  getPositionAttribution(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.performanceService
+      .getPositionAttribution(
+        from,
+        to,
+      );
+  }
+
   @Get('summary')
   getPerformanceSummary(
     @Query('from') from?: string,

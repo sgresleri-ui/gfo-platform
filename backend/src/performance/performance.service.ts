@@ -631,4 +631,548 @@ export class PerformanceService
       ),
     };
   }
+
+  async getPositionAttribution(
+    from?: string,
+    to?: string,
+  ) {
+    const requestedFrom =
+      this.parseOptionalDate(
+        from,
+        'Data iniziale',
+      );
+
+    const requestedTo =
+      this.parseOptionalDate(
+        to,
+        'Data finale',
+      );
+
+    if (
+      requestedFrom &&
+      requestedTo &&
+      requestedFrom >= requestedTo
+    ) {
+      throw new BadRequestException(
+        'La data iniziale deve precedere la data finale.',
+      );
+    }
+
+    const startSnapshot =
+      await this.prisma.netWorthSnapshot.findFirst(
+        {
+          where: requestedFrom
+            ? {
+                snapshotDate: {
+                  gte: requestedFrom,
+                },
+              }
+            : undefined,
+
+          orderBy: {
+            snapshotDate: 'asc',
+          },
+        },
+      );
+
+    const endSnapshot =
+      await this.prisma.netWorthSnapshot.findFirst(
+        {
+          where: requestedTo
+            ? {
+                snapshotDate: {
+                  lte: requestedTo,
+                },
+              }
+            : undefined,
+
+          orderBy: {
+            snapshotDate: 'desc',
+          },
+        },
+      );
+
+    if (
+      !startSnapshot ||
+      !endSnapshot
+    ) {
+      throw new BadRequestException(
+        'Non sono disponibili fotografie patrimoniali per il periodo richiesto.',
+      );
+    }
+
+    if (
+      startSnapshot.id ===
+        endSnapshot.id ||
+      startSnapshot.snapshotDate >=
+        endSnapshot.snapshotDate
+    ) {
+      throw new BadRequestException(
+        'Sono necessarie almeno due fotografie patrimoniali distinte.',
+      );
+    }
+
+    const valuations =
+      await this.prisma.positionValuation.findMany(
+        {
+          where: {
+            snapshotId: {
+              in: [
+                startSnapshot.id,
+                endSnapshot.id,
+              ],
+            },
+          },
+
+          include: {
+            position: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+                category: true,
+                subcategory: true,
+                currency: true,
+                baseCurrency: true,
+                isLiability: true,
+                source: true,
+                status: true,
+              },
+            },
+          },
+        },
+      );
+
+    type AttributionEntry = {
+      position: {
+        id: number;
+        code: string;
+        name: string;
+        category: string;
+        subcategory: string | null;
+        currency: string;
+        baseCurrency: string;
+        isLiability: boolean;
+        source: string;
+        status: string;
+      };
+
+      startValue: number | null;
+      endValue: number | null;
+      startValuationDate: Date | null;
+      endValuationDate: Date | null;
+    };
+
+    const entries =
+      new Map<string, AttributionEntry>();
+
+    for (const valuation of valuations) {
+      const code =
+        valuation.position.code;
+
+      const current =
+        entries.get(code) ?? {
+          position:
+            valuation.position,
+
+          startValue: null,
+          endValue: null,
+
+          startValuationDate: null,
+          endValuationDate: null,
+        };
+
+      if (
+        valuation.snapshotId ===
+        startSnapshot.id
+      ) {
+        current.startValue =
+          Number(valuation.valueBase);
+
+        current.startValuationDate =
+          valuation.sourceValuationDate ??
+          valuation.valuationDate;
+      }
+
+      if (
+        valuation.snapshotId ===
+        endSnapshot.id
+      ) {
+        current.endValue =
+          Number(valuation.valueBase);
+
+        current.endValuationDate =
+          valuation.sourceValuationDate ??
+          valuation.valuationDate;
+      }
+
+      entries.set(code, current);
+    }
+
+    const items =
+      Array.from(entries.values())
+        .map((entry) => {
+          const startValue =
+            entry.startValue ?? 0;
+
+          const endValue =
+            entry.endValue ?? 0;
+
+          const signedStartValue =
+            entry.position.isLiability
+              ? -startValue
+              : startValue;
+
+          const signedEndValue =
+            entry.position.isLiability
+              ? -endValue
+              : endValue;
+
+          const valueChange =
+            this.roundCurrency(
+              endValue - startValue,
+            );
+
+          const contributionChange =
+            this.roundCurrency(
+              signedEndValue -
+                signedStartValue,
+            );
+
+          const percentageChange =
+            entry.startValue === null ||
+            startValue === 0
+              ? null
+              : this.roundPercentage(
+                  (
+                    valueChange /
+                    Math.abs(startValue)
+                  ) * 100,
+                );
+
+          let comparisonStatus:
+            | 'UNCHANGED'
+            | 'CHANGED'
+            | 'NEW'
+            | 'CLOSED';
+
+          if (
+            entry.startValue === null
+          ) {
+            comparisonStatus = 'NEW';
+          } else if (
+            entry.endValue === null
+          ) {
+            comparisonStatus = 'CLOSED';
+          } else if (
+            Math.abs(valueChange) < 0.01
+          ) {
+            comparisonStatus =
+              'UNCHANGED';
+          } else {
+            comparisonStatus =
+              'CHANGED';
+          }
+
+          return {
+            positionId:
+              entry.position.id,
+
+            code:
+              entry.position.code,
+
+            name:
+              entry.position.name,
+
+            category:
+              entry.position.category,
+
+            subcategory:
+              entry.position.subcategory,
+
+            currency:
+              entry.position.currency,
+
+            baseCurrency:
+              entry.position.baseCurrency,
+
+            isLiability:
+              entry.position.isLiability,
+
+            source:
+              entry.position.source,
+
+            currentStatus:
+              entry.position.status,
+
+            comparisonStatus,
+
+            startValue:
+              this.roundCurrency(
+                startValue,
+              ),
+
+            endValue:
+              this.roundCurrency(
+                endValue,
+              ),
+
+            signedStartValue:
+              this.roundCurrency(
+                signedStartValue,
+              ),
+
+            signedEndValue:
+              this.roundCurrency(
+                signedEndValue,
+              ),
+
+            valueChange,
+
+            contributionChange,
+
+            percentageChange,
+
+            startValuationDate:
+              entry.startValuationDate
+                ?.toISOString() ?? null,
+
+            endValuationDate:
+              entry.endValuationDate
+                ?.toISOString() ?? null,
+          };
+        })
+        .sort(
+          (left, right) =>
+            Math.abs(
+              right.contributionChange,
+            ) -
+            Math.abs(
+              left.contributionChange,
+            ),
+        );
+
+    const categoryMap =
+      new Map<
+        string,
+        {
+          category: string;
+          positions: number;
+          startValue: number;
+          endValue: number;
+          contributionChange: number;
+        }
+      >();
+
+    for (const item of items) {
+      const current =
+        categoryMap.get(
+          item.category,
+        ) ?? {
+          category:
+            item.category,
+
+          positions: 0,
+          startValue: 0,
+          endValue: 0,
+          contributionChange: 0,
+        };
+
+      current.positions += 1;
+
+      current.startValue +=
+        item.signedStartValue;
+
+      current.endValue +=
+        item.signedEndValue;
+
+      current.contributionChange +=
+        item.contributionChange;
+
+      categoryMap.set(
+        item.category,
+        current,
+      );
+    }
+
+    const categories =
+      Array.from(
+        categoryMap.values(),
+      )
+        .map((category) => ({
+          category:
+            category.category,
+
+          positions:
+            category.positions,
+
+          startValue:
+            this.roundCurrency(
+              category.startValue,
+            ),
+
+          endValue:
+            this.roundCurrency(
+              category.endValue,
+            ),
+
+          contributionChange:
+            this.roundCurrency(
+              category.contributionChange,
+            ),
+
+          percentageChange:
+            category.startValue === 0
+              ? null
+              : this.roundPercentage(
+                  (
+                    category
+                      .contributionChange /
+                    Math.abs(
+                      category.startValue,
+                    )
+                  ) * 100,
+                ),
+        }))
+        .sort(
+          (left, right) =>
+            Math.abs(
+              right.contributionChange,
+            ) -
+            Math.abs(
+              left.contributionChange,
+            ),
+        );
+
+    const totalContributionChange =
+      this.roundCurrency(
+        items.reduce(
+          (total, item) =>
+            total +
+            item.contributionChange,
+          0,
+        ),
+      );
+
+    const periodMilliseconds =
+      endSnapshot.snapshotDate.getTime() -
+      startSnapshot.snapshotDate.getTime();
+
+    const days =
+      Math.max(
+        1,
+        Math.round(
+          periodMilliseconds /
+            86400000,
+        ),
+      );
+
+    return {
+      period: {
+        start:
+          startSnapshot.snapshotDate
+            .toISOString(),
+
+        end:
+          endSnapshot.snapshotDate
+            .toISOString(),
+
+        days,
+
+        startSnapshotId:
+          startSnapshot.id,
+
+        endSnapshotId:
+          endSnapshot.id,
+      },
+
+      summary: {
+        positions: items.length,
+
+        unchanged:
+          items.filter(
+            (item) =>
+              item.comparisonStatus ===
+              'UNCHANGED',
+          ).length,
+
+        changed:
+          items.filter(
+            (item) =>
+              item.comparisonStatus ===
+              'CHANGED',
+          ).length,
+
+        new:
+          items.filter(
+            (item) =>
+              item.comparisonStatus ===
+              'NEW',
+          ).length,
+
+        closed:
+          items.filter(
+            (item) =>
+              item.comparisonStatus ===
+              'CLOSED',
+          ).length,
+
+        positiveContributors:
+          items.filter(
+            (item) =>
+              item.contributionChange > 0,
+          ).length,
+
+        negativeContributors:
+          items.filter(
+            (item) =>
+              item.contributionChange < 0,
+          ).length,
+
+        totalContributionChange,
+
+        snapshotNetWorthChange:
+          this.roundCurrency(
+            Number(
+              endSnapshot.netWorth,
+            ) -
+              Number(
+                startSnapshot.netWorth,
+              ),
+          ),
+
+        reconciled:
+          Math.abs(
+            totalContributionChange -
+              (
+                Number(
+                  endSnapshot.netWorth,
+                ) -
+                Number(
+                  startSnapshot.netWorth,
+                )
+              ),
+          ) < 0.02,
+      },
+
+      categories,
+      items,
+
+      warnings: [
+        days < 30
+          ? 'Il periodo analizzato è molto breve.'
+          : null,
+
+        items.length === 0
+          ? 'Non sono presenti valorizzazioni confrontabili.'
+          : null,
+      ].filter(
+        (
+          warning,
+        ): warning is string =>
+          warning !== null,
+      ),
+    };
+  }
+
 }
