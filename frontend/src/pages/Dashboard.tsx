@@ -13,6 +13,7 @@ import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded";
 import CreditCardRoundedIcon from "@mui/icons-material/CreditCardRounded";
 
 import KpiCard from "../components/KpiCard";
+import ExecutiveIpsPanel from "../components/ExecutiveIpsPanel";
 import { getDashboard } from "../services/api";
 
 type DashboardData = {
@@ -224,24 +225,7 @@ export default function Dashboard() {
           />
         </Paper>
 
-        <Paper
-          elevation={0}
-          sx={{
-            p: 3,
-            minHeight: 300,
-            border: "1px solid",
-            borderColor: "divider",
-            boxShadow: "0 12px 32px rgba(26, 45, 75, 0.06)",
-          }}
-        >
-          <Typography variant="h6">Executive insight</Typography>
-
-          <Typography color="text.secondary" sx={{ mt: 2, lineHeight: 1.75 }}>
-            Il workbook è collegato al nuovo Excel Engine. Il prossimo passaggio
-            sarà trasformare i fogli patrimoniali in dati strutturati,
-            verificabili e utilizzabili dal Planning Engine.
-          </Typography>
-        </Paper>
+        <ExecutiveIpsPanel />
       </Box>
     </Box>
   );
