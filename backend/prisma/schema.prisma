@@ -169,6 +169,8 @@ model WealthTransaction {
   status                 String          @default("POSTED")
   externalReference      String?
   notes                  String?
+  voidedAt               DateTime?
+  voidReason             String?
   createdAt              DateTime        @default(now())
   updatedAt              DateTime        @updatedAt
   household              Household       @relation(fields: [householdId], references: [id])

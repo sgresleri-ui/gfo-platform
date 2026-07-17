@@ -362,6 +362,13 @@ export class LedgerService
             status:
               transaction.status,
 
+            voidedAt:
+              transaction.voidedAt
+                ?.toISOString() ?? null,
+
+            voidReason:
+              transaction.voidReason,
+
             notes:
               transaction.notes,
           }),

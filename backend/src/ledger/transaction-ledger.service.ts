@@ -248,6 +248,8 @@ export class TransactionLedgerService
       status: string;
       externalReference: string | null;
       notes: string | null;
+      voidedAt: Date | null;
+      voidReason: string | null;
       createdAt: Date;
       position?: {
         code: string;
@@ -338,6 +340,13 @@ export class TransactionLedgerService
       notes:
         transaction.notes,
 
+      voidedAt:
+        transaction.voidedAt
+          ?.toISOString() ?? null,
+
+      voidReason:
+        transaction.voidReason,
+
       createdAt:
         transaction.createdAt
           .toISOString(),
@@ -374,6 +383,90 @@ export class TransactionLedgerService
     return {
       count: positions.length,
       positions,
+    };
+  }
+
+  async voidTransaction(
+    transactionId: string,
+    confirmed: boolean,
+    reason?: string | null,
+  ) {
+    if (!confirmed) {
+      throw new BadRequestException(
+        'L’annullamento richiede conferma esplicita.',
+      );
+    }
+
+    const normalizedReason =
+      this.normalizeText(reason);
+
+    if (!normalizedReason) {
+      throw new BadRequestException(
+        'Indicare la motivazione dell’annullamento.',
+      );
+    }
+
+    const existing =
+      await this.prisma.wealthTransaction.findUnique(
+        {
+          where: {
+            id: transactionId,
+          },
+
+          include: {
+            position: {
+              select: {
+                code: true,
+                name: true,
+              },
+            },
+          },
+        },
+      );
+
+    if (!existing) {
+      throw new NotFoundException(
+        'Movimento non trovato.',
+      );
+    }
+
+    if (existing.status !== 'POSTED') {
+      throw new BadRequestException(
+        'Il movimento risulta già annullato o non è più attivo.',
+      );
+    }
+
+    const transaction =
+      await this.prisma.wealthTransaction.update(
+        {
+          where: {
+            id: transactionId,
+          },
+
+          data: {
+            status: 'VOIDED',
+            voidedAt: new Date(),
+            voidReason: normalizedReason,
+          },
+
+          include: {
+            position: {
+              select: {
+                code: true,
+                name: true,
+              },
+            },
+          },
+        },
+      );
+
+    return {
+      voided: true,
+
+      transaction:
+        this.serializeTransaction(
+          transaction,
+        ),
     };
   }
 

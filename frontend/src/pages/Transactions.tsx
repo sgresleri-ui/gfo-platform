@@ -28,6 +28,7 @@ import {
 } from "@mui/material";
 
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import BlockRoundedIcon from "@mui/icons-material/BlockRounded";
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 
@@ -37,6 +38,7 @@ import {
   getLedgerTransactions,
   getLedgerTransactionSummary,
   getLedgerTransactionTypes,
+  voidLedgerTransaction,
   type LedgerPositionOption,
   type LedgerTransaction,
   type LedgerTransactionSummary,
@@ -172,6 +174,34 @@ function directionColor(
   return "info";
 }
 
+function transactionStatusLabel(
+  status: string,
+): string {
+  if (status === "POSTED") {
+    return "Registrato";
+  }
+
+  if (status === "VOIDED") {
+    return "Annullato";
+  }
+
+  return status;
+}
+
+function transactionStatusColor(
+  status: string,
+): "success" | "default" | "warning" {
+  if (status === "POSTED") {
+    return "success";
+  }
+
+  if (status === "VOIDED") {
+    return "default";
+  }
+
+  return "warning";
+}
+
 type SummaryCardProps = {
   label: string;
   value: string;
@@ -246,6 +276,17 @@ export default function Transactions() {
     useState(false);
 
   const [confirmationOpen, setConfirmationOpen] =
+    useState(false);
+
+  const [voidingTransaction, setVoidingTransaction] =
+    useState<LedgerTransaction | null>(
+      null,
+    );
+
+  const [voidReason, setVoidReason] =
+    useState("");
+
+  const [voiding, setVoiding] =
     useState(false);
 
   const [form, setForm] =
@@ -486,6 +527,56 @@ export default function Transactions() {
     }
   }
 
+  async function voidSelectedTransaction() {
+    if (!voidingTransaction) {
+      return;
+    }
+
+    const normalizedReason =
+      voidReason.trim();
+
+    if (!normalizedReason) {
+      setNotice({
+        severity: "warning",
+        text:
+          "Indicare la motivazione dell’annullamento.",
+      });
+
+      return;
+    }
+
+    setVoiding(true);
+    setNotice(null);
+
+    try {
+      await voidLedgerTransaction(
+        voidingTransaction.id,
+        normalizedReason,
+      );
+
+      setVoidingTransaction(null);
+      setVoidReason("");
+
+      setNotice({
+        severity: "success",
+        text:
+          "Movimento annullato e conservato nell’audit trail.",
+      });
+
+      await loadData();
+    } catch (error) {
+      console.error(error);
+
+      setNotice({
+        severity: "error",
+        text:
+          "Il movimento non è stato annullato.",
+      });
+    } finally {
+      setVoiding(false);
+    }
+  }
+
   if (loading && !summary) {
     return (
       <Box
@@ -660,6 +751,7 @@ export default function Transactions() {
               <TableCell>Operazione</TableCell>
               <TableCell>Posizione</TableCell>
               <TableCell>Direzione</TableCell>
+              <TableCell>Stato</TableCell>
               <TableCell align="right">
                 Importo lordo
               </TableCell>
@@ -673,6 +765,9 @@ export default function Transactions() {
                 Importo base
               </TableCell>
               <TableCell>Note</TableCell>
+              <TableCell align="right">
+                Azioni
+              </TableCell>
             </TableRow>
           </TableHead>
 
@@ -680,7 +775,7 @@ export default function Transactions() {
             {transactions.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={9}
+                  colSpan={11}
                   align="center"
                   sx={{
                     py: 6,
@@ -725,6 +820,24 @@ export default function Transactions() {
                       />
                     </TableCell>
 
+                    <TableCell>
+                      <Chip
+                        size="small"
+                        color={transactionStatusColor(
+                          transaction.status,
+                        )}
+                        label={transactionStatusLabel(
+                          transaction.status,
+                        )}
+                        variant={
+                          transaction.status ===
+                          "VOIDED"
+                            ? "outlined"
+                            : "filled"
+                        }
+                      />
+                    </TableCell>
+
                     <TableCell align="right">
                       {transaction.grossAmount.toLocaleString(
                         "it-IT",
@@ -765,7 +878,39 @@ export default function Transactions() {
                     </TableCell>
 
                     <TableCell>
-                      {transaction.notes ?? "—"}
+                      {transaction.status ===
+                      "VOIDED"
+                        ? transaction.voidReason ??
+                          "Movimento annullato"
+                        : transaction.notes ?? "—"}
+                    </TableCell>
+
+                    <TableCell align="right">
+                      {transaction.status ===
+                      "POSTED" ? (
+                        <Button
+                          size="small"
+                          color="error"
+                          startIcon={
+                            <BlockRoundedIcon />
+                          }
+                          onClick={() => {
+                            setVoidReason("");
+                            setVoidingTransaction(
+                              transaction,
+                            );
+                          }}
+                        >
+                          Annulla
+                        </Button>
+                      ) : (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                        >
+                          Conservato
+                        </Typography>
+                      )}
                     </TableCell>
                   </TableRow>
                 ),
@@ -1078,6 +1223,73 @@ export default function Transactions() {
             {saving
               ? "Registrazione..."
               : "Conferma"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={voidingTransaction !== null}
+        onClose={() => {
+          if (!voiding) {
+            setVoidingTransaction(null);
+            setVoidReason("");
+          }
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Annullare il movimento?
+        </DialogTitle>
+
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Il movimento resterà nel registro
+            con stato “Annullato”. Non verrà
+            cancellato dal database.
+          </DialogContentText>
+
+          <TextField
+            label="Motivazione dell’annullamento"
+            value={voidReason}
+            onChange={(event) =>
+              setVoidReason(
+                event.target.value,
+              )
+            }
+            multiline
+            minRows={3}
+            fullWidth
+            required
+            autoFocus
+          />
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            disabled={voiding}
+            onClick={() => {
+              setVoidingTransaction(null);
+              setVoidReason("");
+            }}
+          >
+            Indietro
+          </Button>
+
+          <Button
+            variant="contained"
+            color="error"
+            disabled={
+              voiding ||
+              !voidReason.trim()
+            }
+            onClick={() =>
+              void voidSelectedTransaction()
+            }
+          >
+            {voiding
+              ? "Annullamento..."
+              : "Conferma annullamento"}
           </Button>
         </DialogActions>
       </Dialog>

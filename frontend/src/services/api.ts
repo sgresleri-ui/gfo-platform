@@ -961,6 +961,8 @@ export type LedgerTransaction = {
   status: string;
   externalReference: string | null;
   notes: string | null;
+  voidedAt: string | null;
+  voidReason: string | null;
   createdAt: string;
 };
 
@@ -1068,6 +1070,37 @@ export async function createLedgerTransaction(
   return readJson<CreateLedgerTransactionResponse>(
     response,
     "Unable to create ledger transaction",
+  );
+}
+
+export type VoidLedgerTransactionResponse = {
+  voided: boolean;
+  transaction: LedgerTransaction;
+};
+
+export async function voidLedgerTransaction(
+  transactionId: string,
+  reason: string,
+): Promise<VoidLedgerTransactionResponse> {
+  const response = await fetch(
+    `${API_URL}/ledger/transactions/${transactionId}/void`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({
+        confirm: true,
+        reason,
+      }),
+    },
+  );
+
+  return readJson<VoidLedgerTransactionResponse>(
+    response,
+    "Unable to void ledger transaction",
   );
 }
 

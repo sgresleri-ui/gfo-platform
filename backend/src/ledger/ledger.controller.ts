@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
   Query,
 } from '@nestjs/common';
@@ -74,6 +75,20 @@ export class LedgerController {
   ) {
     return this.transactionService
       .createTransaction(input);
+  }
+
+  @Post('transactions/:id/void')
+  voidTransaction(
+    @Param('id') id: string,
+    @Body('confirm') confirm: boolean,
+    @Body('reason') reason?: string,
+  ) {
+    return this.transactionService
+      .voidTransaction(
+        id,
+        confirm,
+        reason,
+      );
   }
 
   @Post('capture')
