@@ -31,6 +31,38 @@ export class IpsController {
       .getOverview();
   }
 
+  @Get('classifications/review-audit')
+  getClassificationReviewAudit() {
+    return this.classificationService
+      .getReviewAuditHistory();
+  }
+
+  @Post('classifications/:positionId/review')
+  updateClassificationReview(
+    @Param(
+      'positionId',
+      ParseIntPipe,
+    )
+    positionId: number,
+
+    @Body('status')
+    status: string,
+
+    @Body('note')
+    note: string,
+
+    @Body('confirm')
+    confirm: boolean,
+  ) {
+    return this.classificationService
+      .updateReviewStatus(
+        positionId,
+        status,
+        note,
+        confirm,
+      );
+  }
+
   @Get('classifications/audit')
   getClassificationAudit() {
     return this.classificationService

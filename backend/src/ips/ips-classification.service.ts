@@ -8,6 +8,14 @@ import {
   PrismaClient,
 } from '@prisma/client';
 
+const IPS_REVIEW_STATUSES = [
+  'PENDING_INFORMATION',
+  'DEFERRED',
+] as const;
+
+type IpsReviewStatus =
+  (typeof IPS_REVIEW_STATUSES)[number];
+
 const IPS_ASSET_CLASSES = [
   {
     code: 'EQUITY_GLOBAL',
@@ -296,6 +304,7 @@ export class IpsClassificationService
 
           include: {
             ipsClassification: true,
+            ipsClassificationReview: true,
           },
 
           orderBy: [
@@ -435,6 +444,25 @@ export class IpsClassificationService
               ? null
               : suggestion?.reason ??
                 null,
+
+          reviewStatus:
+            position
+              .ipsClassificationReview
+              ?.status ??
+            null,
+
+          reviewNote:
+            position
+              .ipsClassificationReview
+              ?.note ??
+            null,
+
+          reviewUpdatedAt:
+            position
+              .ipsClassificationReview
+              ?.updatedAt
+              .toISOString() ??
+            null,
         };
       });
 
@@ -658,6 +686,24 @@ export class IpsClassificationService
                 null &&
               item.suggestedClass !==
                 null,
+          ).length,
+
+        pendingInformationPositions:
+          items.filter(
+            (item) =>
+              item.ipsAssetClass ===
+                null &&
+              item.reviewStatus ===
+                'PENDING_INFORMATION',
+          ).length,
+
+        deferredPositions:
+          items.filter(
+            (item) =>
+              item.ipsAssetClass ===
+                null &&
+              item.reviewStatus ===
+                'DEFERRED',
           ).length,
 
         totalFinancialValue:
@@ -901,6 +947,221 @@ export class IpsClassificationService
           result.audit.createdAt
             .toISOString(),
       },
+    };
+  }
+
+  async updateReviewStatus(
+    positionId: number,
+    status: string,
+    note: string,
+    confirmed: boolean,
+  ) {
+    if (!confirmed) {
+      throw new BadRequestException(
+        'Lo stato di revisione richiede conferma esplicita.',
+      );
+    }
+
+    if (
+      !Number.isInteger(positionId) ||
+      positionId <= 0
+    ) {
+      throw new BadRequestException(
+        'Identificativo posizione non valido.',
+      );
+    }
+
+    if (
+      !IPS_REVIEW_STATUSES.includes(
+        status as IpsReviewStatus,
+      )
+    ) {
+      throw new BadRequestException(
+        'Stato di revisione IPS non valido.',
+      );
+    }
+
+    const normalizedNote =
+      note?.trim();
+
+    if (!normalizedNote) {
+      throw new BadRequestException(
+        'Indicare il motivo del rinvio o le informazioni mancanti.',
+      );
+    }
+
+    const position =
+      await this.prisma
+        .wealthPosition
+        .findUnique({
+          where: {
+            id: positionId,
+          },
+
+          include: {
+            ipsClassification: true,
+            ipsClassificationReview: true,
+          },
+        });
+
+    if (!position) {
+      throw new BadRequestException(
+        'Posizione patrimoniale non trovata.',
+      );
+    }
+
+    if (
+      position.status !== 'ACTIVE' ||
+      position.isLiability ||
+      ![
+        'LIQUIDITY',
+        'INVESTMENT',
+      ].includes(
+        position.category,
+      )
+    ) {
+      throw new BadRequestException(
+        'La posizione non appartiene al perimetro finanziario IPS.',
+      );
+    }
+
+    if (position.ipsClassification) {
+      throw new BadRequestException(
+        'La posizione è già classificata.',
+      );
+    }
+
+    const oldStatus =
+      position
+        .ipsClassificationReview
+        ?.status ??
+      null;
+
+    const result =
+      await this.prisma.$transaction(
+        async (transaction) => {
+          const review =
+            await transaction
+              .ipsClassificationReview
+              .upsert({
+                where: {
+                  positionId,
+                },
+
+                create: {
+                  positionId,
+                  status,
+                  note: normalizedNote,
+                  source:
+                    'USER_CONFIRMED',
+                },
+
+                update: {
+                  status,
+                  note: normalizedNote,
+                  source:
+                    'USER_CONFIRMED',
+                },
+              });
+
+          const audit =
+            await transaction
+              .ipsClassificationReviewAudit
+              .create({
+                data: {
+                  positionId,
+
+                  positionCode:
+                    position.code,
+
+                  oldStatus,
+                  newStatus: status,
+
+                  note:
+                    normalizedNote,
+
+                  source:
+                    'USER_CONFIRMED',
+                },
+              });
+
+          return {
+            review,
+            audit,
+          };
+        },
+      );
+
+    return {
+      updated: true,
+
+      position: {
+        id: position.id,
+        code: position.code,
+        name: position.name,
+      },
+
+      review: {
+        status:
+          result.review.status,
+
+        note:
+          result.review.note,
+
+        updatedAt:
+          result.review.updatedAt
+            .toISOString(),
+      },
+
+      audit: {
+        id: result.audit.id,
+
+        createdAt:
+          result.audit.createdAt
+            .toISOString(),
+      },
+    };
+  }
+
+  async getReviewAuditHistory() {
+    const audits =
+      await this.prisma
+        .ipsClassificationReviewAudit
+        .findMany({
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+
+    return {
+      count: audits.length,
+
+      audits:
+        audits.map((audit) => ({
+          id: audit.id,
+
+          positionId:
+            audit.positionId,
+
+          positionCode:
+            audit.positionCode,
+
+          oldStatus:
+            audit.oldStatus,
+
+          newStatus:
+            audit.newStatus,
+
+          note:
+            audit.note,
+
+          source:
+            audit.source,
+
+          createdAt:
+            audit.createdAt
+              .toISOString(),
+        })),
     };
   }
 

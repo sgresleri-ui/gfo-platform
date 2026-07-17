@@ -68,6 +68,8 @@ model WealthPosition {
   @@index([valuationDate])
   ipsClassification       IpsPositionClassification?
   ipsClassificationAudits IpsClassificationAudit[]
+  ipsClassificationReview       IpsClassificationReview?
+  ipsClassificationReviewAudits IpsClassificationReviewAudit[]
 }
 
 model PlatformSetting {
@@ -294,5 +296,35 @@ model IpsClassificationAudit {
 
   @@index([positionId, createdAt])
   @@index([newClass])
+}
+
+model IpsClassificationReview {
+  id         Int      @id @default(autoincrement())
+  positionId Int      @unique
+  status     String
+  note       String
+  source     String   @default("USER_CONFIRMED")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  position WealthPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model IpsClassificationReviewAudit {
+  id           Int      @id @default(autoincrement())
+  positionId   Int
+  positionCode String
+  oldStatus    String?
+  newStatus    String
+  note         String
+  source       String   @default("USER_CONFIRMED")
+  createdAt    DateTime @default(now())
+
+  position WealthPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  @@index([positionId, createdAt])
+  @@index([newStatus])
 }
 
