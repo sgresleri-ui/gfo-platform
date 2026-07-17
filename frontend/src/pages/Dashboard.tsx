@@ -16,6 +16,7 @@ import KpiCard from "../components/KpiCard";
 import ExecutiveIpsPanel from "../components/ExecutiveIpsPanel";
 import ExecutiveRiskDataPanel from "../components/ExecutiveRiskDataPanel";
 import ExecutivePerformanceLiquidityPanel from "../components/ExecutivePerformanceLiquidityPanel";
+import ExecutivePropertyBudgetPlanningPanel from "../components/ExecutivePropertyBudgetPlanningPanel";
 import { getDashboard } from "../services/api";
 
 type DashboardData = {
@@ -205,6 +206,8 @@ export default function Dashboard() {
       </Box>
 
       <ExecutivePerformanceLiquidityPanel />
+
+      <ExecutivePropertyBudgetPlanningPanel />
     </Box>
   );
 }
