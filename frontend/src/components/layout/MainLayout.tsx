@@ -1,3 +1,4 @@
+import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import { useMemo, useState } from "react";
@@ -60,6 +61,12 @@ const navigation = [
     path: "/performance",
     icon: <AssessmentRoundedIcon />,
   },
+  {
+    label: "Rischio",
+    path: "/risk",
+    icon: <ShieldRoundedIcon />,
+  },
+
 
 
 

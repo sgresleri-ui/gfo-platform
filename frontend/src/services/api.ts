@@ -1222,3 +1222,120 @@ export async function getPerformanceSummary(
   );
 }
 
+export type RiskAssetClass = {
+  category: string;
+  label: string;
+  positions: number;
+  grossValue: number;
+  netContribution: number;
+  weightGrossAssets: number;
+  weightNetWorth: number;
+};
+
+export type RiskExposure = {
+  positions: number;
+  value: number;
+  weightGrossAssets: number;
+};
+
+export type RiskCountryExposure =
+  RiskExposure & {
+    country: string;
+  };
+
+export type RiskCurrencyExposure =
+  RiskExposure & {
+    currency: string;
+  };
+
+export type RiskTopPosition = {
+  id: number;
+  code: string;
+  name: string;
+  category: string;
+  categoryLabel: string;
+  subcategory: string | null;
+  country: string | null;
+  currency: string;
+  valueBase: number;
+  signedValue: number;
+  isLiability: boolean;
+  weightGrossAssets: number;
+  weightNetWorth: number;
+  source: string;
+  valuationDate: string;
+};
+
+export type RiskOverviewResponse = {
+  asOf: string;
+
+  household: {
+    id: number;
+    name: string;
+    baseCurrency: string;
+  };
+
+  summary: {
+    positions: number;
+    assetPositions: number;
+    liabilityPositions: number;
+    grossAssets: number;
+    liabilities: number;
+    netWorth: number;
+    liquidity: number;
+    investments: number;
+    marketableAssets: number;
+    realEstate: number;
+    otherAssets: number;
+  };
+
+  ratios: {
+    liquidityGrossAssets: number;
+    investmentsGrossAssets: number;
+    marketableGrossAssets: number;
+    realEstateGrossAssets: number;
+    liabilitiesGrossAssets: number;
+    liabilitiesNetWorth: number;
+    top1GrossAssets: number;
+    top5GrossAssets: number;
+    top10GrossAssets: number;
+    hhi: number;
+  };
+
+  concentration: {
+    top1Value: number;
+    top5Value: number;
+    top10Value: number;
+
+    largestPosition: {
+      code: string;
+      name: string;
+      valueBase: number;
+      weightGrossAssets: number;
+    } | null;
+
+    largestAssetClass: {
+      category: string;
+      label: string;
+      value: number;
+      weightGrossAssets: number;
+    } | null;
+  };
+
+  assetClasses: RiskAssetClass[];
+  countryExposure: RiskCountryExposure[];
+  currencyExposure: RiskCurrencyExposure[];
+  topPositions: RiskTopPosition[];
+};
+
+export async function getRiskOverview(): Promise<RiskOverviewResponse> {
+  const response = await fetch(
+    `${API_URL}/risk/overview`,
+  );
+
+  return readJson<RiskOverviewResponse>(
+    response,
+    "Unable to load wealth risk overview",
+  );
+}
+

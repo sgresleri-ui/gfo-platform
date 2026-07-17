@@ -1,3 +1,4 @@
+import { RiskModule } from './risk/risk.module';
 import { PerformanceModule } from './performance/performance.module';
 import { LedgerModule } from './ledger/ledger.module';
 import { ImportsModule } from './imports/imports.module';
@@ -18,6 +19,7 @@ import { WealthModule } from './wealth/wealth.module';
 
 @Module({
   imports: [
+    RiskModule,
     PerformanceModule,
     LedgerModule,
     ImportsModule,

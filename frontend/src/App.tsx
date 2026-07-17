@@ -1,3 +1,4 @@
+import Risk from "./pages/Risk";
 import Performance from "./pages/Performance";
 import Transactions from "./pages/Transactions";
 import WealthHistory from "./pages/WealthHistory";
@@ -41,6 +42,11 @@ function App() {
         <Route
           path="performance"
           element={<Performance />}
+        />
+
+        <Route
+          path="risk"
+          element={<Risk />}
         />
 
         <Route
