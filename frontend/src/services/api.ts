@@ -1656,6 +1656,15 @@ export type IpsClassificationItem = {
   source: string | null;
   rationale: string | null;
   updatedAt: string | null;
+
+  suggestedClass: IpsAssetClassCode | null;
+
+  suggestionConfidence:
+    | "HIGH"
+    | "MEDIUM"
+    | null;
+
+  suggestionReason: string | null;
 };
 
 export type IpsClassificationOverviewResponse = {
@@ -1670,6 +1679,7 @@ export type IpsClassificationOverviewResponse = {
     positions: number;
     classifiedPositions: number;
     unclassifiedPositions: number;
+    suggestedPositions: number;
     totalFinancialValue: number;
     classifiedValue: number;
     unclassifiedValue: number;

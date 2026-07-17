@@ -29,6 +29,7 @@ import {
 } from "@mui/material";
 
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 
@@ -90,6 +91,40 @@ function dateTimeLabel(
       minute: "2-digit",
     },
   );
+}
+
+function confidenceLabel(
+  confidence:
+    | "HIGH"
+    | "MEDIUM"
+    | null,
+): string {
+  if (confidence === "HIGH") {
+    return "Confidenza alta";
+  }
+
+  if (confidence === "MEDIUM") {
+    return "Da verificare";
+  }
+
+  return "Nessun suggerimento";
+}
+
+function confidenceColor(
+  confidence:
+    | "HIGH"
+    | "MEDIUM"
+    | null,
+): "success" | "warning" | "default" {
+  if (confidence === "HIGH") {
+    return "success";
+  }
+
+  if (confidence === "MEDIUM") {
+    return "warning";
+  }
+
+  return "default";
 }
 
 function statusLabel(
@@ -253,14 +288,22 @@ export default function IpsClassification() {
 
   function openDialog(
     item: IpsClassificationItem,
+    useSuggestion = false,
   ) {
     setSelectedItem(item);
 
     setSelectedClass(
-      item.ipsAssetClass ?? "",
+      useSuggestion
+        ? item.suggestedClass ?? ""
+        : item.ipsAssetClass ?? "",
     );
 
-    setReason("");
+    setReason(
+      useSuggestion
+        ? item.suggestionReason ?? ""
+        : "",
+    );
+
     setConfirmationStep(false);
     setNotice(null);
   }
@@ -449,6 +492,22 @@ export default function IpsClassification() {
           : `La conformità strategica resterà sospesa finché non saranno classificate le ${data.summary.unclassifiedPositions} posizioni mancanti.`}
       </Alert>
 
+      {data.summary.suggestedPositions > 0 && (
+        <Alert
+          severity="info"
+          icon={<AutoAwesomeRoundedIcon />}
+          sx={{ mb: 3 }}
+        >
+          Il motore ha individuato{" "}
+          <strong>
+            {data.summary.suggestedPositions}
+          </strong>{" "}
+          possibili classificazioni. Sono
+          indicazioni preliminari e non vengono
+          applicate automaticamente.
+        </Alert>
+      )}
+
       <Paper
         elevation={0}
         sx={{
@@ -484,7 +543,7 @@ export default function IpsClassification() {
             xs:
               "repeat(2, minmax(0, 1fr))",
             xl:
-              "repeat(6, minmax(0, 1fr))",
+              "repeat(7, minmax(0, 1fr))",
           },
           gap: 2,
           mb: 3,
@@ -506,6 +565,12 @@ export default function IpsClassification() {
             value:
               data.summary
                 .unclassifiedPositions,
+          },
+          {
+            label: "Con suggerimento",
+            value:
+              data.summary
+                .suggestedPositions,
           },
           {
             label: "Copertura",
@@ -713,6 +778,9 @@ export default function IpsClassification() {
                 Classe IPS
               </TableCell>
               <TableCell>
+                Suggerimento
+              </TableCell>
+              <TableCell>
                 Motivazione
               </TableCell>
               <TableCell align="right">
@@ -781,6 +849,38 @@ export default function IpsClassification() {
                   </TableCell>
 
                   <TableCell>
+                    {item.suggestedClass ? (
+                      <Box>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 750,
+                          }}
+                        >
+                          {classLabels.get(
+                            item.suggestedClass,
+                          ) ??
+                            item.suggestedClass}
+                        </Typography>
+
+                        <Chip
+                          size="small"
+                          color={confidenceColor(
+                            item.suggestionConfidence,
+                          )}
+                          variant="outlined"
+                          label={confidenceLabel(
+                            item.suggestionConfidence,
+                          )}
+                          sx={{ mt: 0.6 }}
+                        />
+                      </Box>
+                    ) : (
+                      "—"
+                    )}
+                  </TableCell>
+
+                  <TableCell>
                     {item.rationale ?? "—"}
                   </TableCell>
 
@@ -789,15 +889,28 @@ export default function IpsClassification() {
                       size="small"
                       variant="outlined"
                       startIcon={
-                        <EditRoundedIcon />
+                        item.suggestedClass &&
+                        !item.ipsAssetClass ? (
+                          <AutoAwesomeRoundedIcon />
+                        ) : (
+                          <EditRoundedIcon />
+                        )
                       }
                       onClick={() =>
-                        openDialog(item)
+                        openDialog(
+                          item,
+                          Boolean(
+                            item.suggestedClass &&
+                              !item.ipsAssetClass,
+                          ),
+                        )
                       }
                     >
                       {item.ipsAssetClass
                         ? "Modifica"
-                        : "Classifica"}
+                        : item.suggestedClass
+                          ? "Valuta suggerimento"
+                          : "Classifica"}
                     </Button>
                   </TableCell>
                 </TableRow>
