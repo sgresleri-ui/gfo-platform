@@ -1,3 +1,4 @@
+import IpsClassification from "../components/IpsClassification";
 import {
   useCallback,
   useEffect,
@@ -841,6 +842,8 @@ export default function Ips() {
           );
         },
       )}
+
+      <IpsClassification />
 
       <Dialog
         open={selectedLimit !== null}

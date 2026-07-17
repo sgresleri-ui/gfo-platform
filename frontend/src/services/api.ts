@@ -1617,3 +1617,139 @@ export async function updateIpsLimit(
   );
 }
 
+export type IpsAssetClassCode =
+  | "EQUITY_GLOBAL"
+  | "BONDS"
+  | "MONEY_MARKET"
+  | "GOLD"
+  | "ALTERNATIVES"
+  | "OPERATING_CASH";
+
+export type IpsAllocationStatus =
+  | "DATA_INCOMPLETE"
+  | "NOT_APPLICABLE"
+  | "COMPLIANT"
+  | "BELOW_MINIMUM"
+  | "ABOVE_MAXIMUM";
+
+export type IpsClassificationAllocation = {
+  code: IpsAssetClassCode;
+  label: string;
+  strategic: boolean;
+  target: number | null;
+  minimum: number | null;
+  maximum: number | null;
+  value: number;
+  weight: number | null;
+  status: IpsAllocationStatus;
+};
+
+export type IpsClassificationItem = {
+  positionId: number;
+  code: string;
+  name: string;
+  category: string;
+  subcategory: string | null;
+  currency: string;
+  valueBase: number;
+  ipsAssetClass: IpsAssetClassCode | null;
+  source: string | null;
+  rationale: string | null;
+  updatedAt: string | null;
+};
+
+export type IpsClassificationOverviewResponse = {
+  policy: {
+    name: string;
+    effectiveDate: string;
+    denominator: string;
+    note: string;
+  };
+
+  summary: {
+    positions: number;
+    classifiedPositions: number;
+    unclassifiedPositions: number;
+    totalFinancialValue: number;
+    classifiedValue: number;
+    unclassifiedValue: number;
+    strategicValue: number;
+    operatingCashValue: number;
+    coveragePercentage: number;
+    complianceAvailable: boolean;
+  };
+
+  allocation: IpsClassificationAllocation[];
+  items: IpsClassificationItem[];
+};
+
+export type IpsClassificationAudit = {
+  id: number;
+  positionId: number;
+  positionCode: string;
+  oldClass: IpsAssetClassCode | null;
+  newClass: IpsAssetClassCode;
+  reason: string;
+  source: string;
+  createdAt: string;
+};
+
+export type IpsClassificationAuditResponse = {
+  count: number;
+  audits: IpsClassificationAudit[];
+};
+
+export async function getIpsClassifications(): Promise<IpsClassificationOverviewResponse> {
+  const response = await fetch(
+    `${API_URL}/ips/classifications`,
+  );
+
+  return readJson<IpsClassificationOverviewResponse>(
+    response,
+    "Unable to load IPS classifications",
+  );
+}
+
+export async function getIpsClassificationAudit(): Promise<IpsClassificationAuditResponse> {
+  const response = await fetch(
+    `${API_URL}/ips/classifications/audit`,
+  );
+
+  return readJson<IpsClassificationAuditResponse>(
+    response,
+    "Unable to load IPS classification audit",
+  );
+}
+
+export async function updateIpsPositionClassification(
+  positionId: number,
+  ipsAssetClass: IpsAssetClassCode,
+  reason: string,
+): Promise<{
+  updated: boolean;
+}> {
+  const response = await fetch(
+    `${API_URL}/ips/classifications/${positionId}`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({
+        ipsAssetClass,
+        reason,
+        confirm: true,
+      }),
+    },
+  );
+
+  return readJson<{
+    updated: boolean;
+  }>(
+    response,
+    "Unable to update IPS classification",
+  );
+}
+
