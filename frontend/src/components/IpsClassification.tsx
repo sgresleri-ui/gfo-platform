@@ -16,6 +16,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  LinearProgress,
   MenuItem,
   Paper,
   Table,
@@ -514,13 +515,36 @@ export default function IpsClassification() {
     setConfirmationStep(true);
   }
 
-  async function saveClassification() {
+  async function saveClassification(
+    reviewNext = false,
+  ) {
     if (
       !selectedItem ||
       !selectedClass
     ) {
       return;
     }
+
+    const nextItem =
+      reviewNext
+        ? (
+            visibleItems.find(
+              (item) =>
+                item.positionId !==
+                  selectedItem.positionId &&
+                item.ipsAssetClass ===
+                  null,
+            ) ??
+            sortedItems.find(
+              (item) =>
+                item.positionId !==
+                  selectedItem.positionId &&
+                item.ipsAssetClass ===
+                  null,
+            ) ??
+            null
+          )
+        : null;
 
     setSaving(true);
     setNotice(null);
@@ -541,6 +565,18 @@ export default function IpsClassification() {
       });
 
       await loadData();
+
+      if (
+        reviewNext &&
+        nextItem
+      ) {
+        openDialog(
+          nextItem,
+          Boolean(
+            nextItem.suggestedClass,
+          ),
+        );
+      }
     } catch (error) {
       console.error(error);
 
@@ -582,6 +618,15 @@ export default function IpsClassification() {
       </Alert>
     );
   }
+
+  const reviewProgress =
+    data.summary.positions === 0
+      ? 0
+      : (
+          data.summary
+            .classifiedPositions /
+          data.summary.positions
+        ) * 100;
 
   return (
     <Box sx={{ mt: 5 }}>
@@ -1184,6 +1229,47 @@ export default function IpsClassification() {
           </Button>
         </Box>
 
+        <Box sx={{ mt: 2 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent:
+                "space-between",
+              alignItems: "center",
+              mb: 0.7,
+            }}
+          >
+            <Typography
+              variant="caption"
+              color="text.secondary"
+            >
+              Avanzamento revisione
+            </Typography>
+
+            <Typography
+              variant="caption"
+              sx={{ fontWeight: 750 }}
+            >
+              {
+                data.summary
+                  .classifiedPositions
+              }
+              {" / "}
+              {data.summary.positions}
+              {" posizioni"}
+            </Typography>
+          </Box>
+
+          <LinearProgress
+            variant="determinate"
+            value={reviewProgress}
+            sx={{
+              height: 7,
+              borderRadius: 5,
+            }}
+          />
+        </Box>
+
         <Typography
           variant="caption"
           color="text.secondary"
@@ -1633,18 +1719,39 @@ export default function IpsClassification() {
               Continua
             </Button>
           ) : (
-            <Button
-              variant="contained"
-              color="warning"
-              disabled={saving}
-              onClick={() =>
-                void saveClassification()
-              }
-            >
-              {saving
-                ? "Salvataggio..."
-                : "Conferma classificazione"}
-            </Button>
+            <>
+              <Button
+                variant="outlined"
+                color="warning"
+                disabled={
+                  saving ||
+                  data.summary
+                    .unclassifiedPositions <= 1
+                }
+                onClick={() =>
+                  void saveClassification(
+                    true,
+                  )
+                }
+              >
+                Conferma e prossima
+              </Button>
+
+              <Button
+                variant="contained"
+                color="warning"
+                disabled={saving}
+                onClick={() =>
+                  void saveClassification(
+                    false,
+                  )
+                }
+              >
+                {saving
+                  ? "Salvataggio..."
+                  : "Conferma classificazione"}
+              </Button>
+            </>
           )}
         </DialogActions>
       </Dialog>
