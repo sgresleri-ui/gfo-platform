@@ -1107,4 +1107,226 @@ export class RiskService
     };
   }
 
+
+  async updatePositionCountry(
+    positionId: number,
+    country: string,
+    confirmed: boolean,
+    reason?: string,
+  ) {
+    if (!confirmed) {
+      throw new BadRequestException(
+        'La correzione richiede conferma esplicita.',
+      );
+    }
+
+    if (
+      !Number.isInteger(positionId) ||
+      positionId <= 0
+    ) {
+      throw new BadRequestException(
+        'Identificativo posizione non valido.',
+      );
+    }
+
+    const normalizedCountry =
+      country?.trim();
+
+    const normalizedReason =
+      reason?.trim();
+
+    if (!normalizedCountry) {
+      throw new BadRequestException(
+        'Indicare il Paese.',
+      );
+    }
+
+    if (!normalizedReason) {
+      throw new BadRequestException(
+        'Indicare la motivazione della correzione.',
+      );
+    }
+
+    const position =
+      await this.prisma.wealthPosition.findUnique(
+        {
+          where: {
+            id: positionId,
+          },
+        },
+      );
+
+    if (!position) {
+      throw new BadRequestException(
+        'Posizione patrimoniale non trovata.',
+      );
+    }
+
+    const previousCountry =
+      position.country?.trim() || null;
+
+    if (
+      previousCountry?.toLowerCase() ===
+      normalizedCountry.toLowerCase()
+    ) {
+      throw new BadRequestException(
+        'Il Paese indicato coincide con il valore attuale.',
+      );
+    }
+
+    const result =
+      await this.prisma.$transaction(
+        async (transaction) => {
+          const updatedPosition =
+            await transaction
+              .wealthPosition
+              .update({
+                where: {
+                  id: positionId,
+                },
+
+                data: {
+                  country:
+                    normalizedCountry,
+                },
+              });
+
+          const audit =
+            await transaction
+              .dataQualityCorrection
+              .create({
+                data: {
+                  entityType:
+                    'WEALTH_POSITION',
+
+                  entityId:
+                    position.id,
+
+                  entityCode:
+                    position.code,
+
+                  fieldName:
+                    'country',
+
+                  oldValue:
+                    previousCountry,
+
+                  newValue:
+                    normalizedCountry,
+
+                  reason:
+                    normalizedReason,
+
+                  source:
+                    'USER_CONFIRMED',
+                },
+              });
+
+          return {
+            updatedPosition,
+            audit,
+          };
+        },
+      );
+
+    return {
+      corrected: true,
+
+      position: {
+        id:
+          result.updatedPosition.id,
+
+        code:
+          result.updatedPosition.code,
+
+        name:
+          result.updatedPosition.name,
+
+        previousCountry,
+
+        country:
+          result.updatedPosition.country,
+
+        source:
+          result.updatedPosition.source,
+      },
+
+      audit: {
+        id:
+          result.audit.id,
+
+        fieldName:
+          result.audit.fieldName,
+
+        oldValue:
+          result.audit.oldValue,
+
+        newValue:
+          result.audit.newValue,
+
+        reason:
+          result.audit.reason,
+
+        source:
+          result.audit.source,
+
+        createdAt:
+          result.audit.createdAt
+            .toISOString(),
+      },
+    };
+  }
+
+  async getDataQualityCorrections() {
+    const corrections =
+      await this.prisma
+        .dataQualityCorrection
+        .findMany({
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+
+    return {
+      count:
+        corrections.length,
+
+      corrections:
+        corrections.map(
+          (correction) => ({
+            id:
+              correction.id,
+
+            entityType:
+              correction.entityType,
+
+            entityId:
+              correction.entityId,
+
+            entityCode:
+              correction.entityCode,
+
+            fieldName:
+              correction.fieldName,
+
+            oldValue:
+              correction.oldValue,
+
+            newValue:
+              correction.newValue,
+
+            reason:
+              correction.reason,
+
+            source:
+              correction.source,
+
+            createdAt:
+              correction.createdAt
+                .toISOString(),
+          }),
+        ),
+    };
+  }
+
 }

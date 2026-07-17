@@ -228,3 +228,19 @@ model PositionValuation {
   @@index([valuationDate])
 }
 
+
+model DataQualityCorrection {
+  id         Int      @id @default(autoincrement())
+  entityType String
+  entityId   Int
+  entityCode String?
+  fieldName  String
+  oldValue   String?
+  newValue   String
+  reason     String
+  source     String   @default("USER_CONFIRMED")
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([fieldName, createdAt])
+}
