@@ -17,6 +17,7 @@ import ExecutiveIpsPanel from "../components/ExecutiveIpsPanel";
 import ExecutiveRiskDataPanel from "../components/ExecutiveRiskDataPanel";
 import ExecutivePerformanceLiquidityPanel from "../components/ExecutivePerformanceLiquidityPanel";
 import ExecutivePropertyBudgetPlanningPanel from "../components/ExecutivePropertyBudgetPlanningPanel";
+import ExecutiveDecisionsPanel from "../components/ExecutiveDecisionsPanel";
 import { getDashboard } from "../services/api";
 
 type DashboardData = {
@@ -198,6 +199,7 @@ export default function Dashboard() {
             lg: "1.5fr 1fr",
           },
           gap: 2.2,
+          alignItems: "stretch",
         }}
       >
         <ExecutiveRiskDataPanel />
@@ -208,6 +210,8 @@ export default function Dashboard() {
       <ExecutivePerformanceLiquidityPanel />
 
       <ExecutivePropertyBudgetPlanningPanel />
+
+      <ExecutiveDecisionsPanel />
     </Box>
   );
 }

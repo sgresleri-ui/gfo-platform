@@ -491,8 +491,10 @@ export default function ExecutiveRiskDataPanel() {
     <Paper
       elevation={0}
       sx={{
-        mt: 2.2,
         p: 3,
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
         border: "1px solid",
         borderColor: "divider",
         boxShadow:

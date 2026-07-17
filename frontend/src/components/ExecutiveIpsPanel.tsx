@@ -169,6 +169,9 @@ export default function ExecutiveIpsPanel() {
       sx={{
         p: 3,
         minHeight: 300,
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
         border: "1px solid",
         borderColor: "divider",
         boxShadow:
