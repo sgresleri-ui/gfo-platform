@@ -1423,3 +1423,83 @@ export async function getDataQuality(): Promise<DataQualityResponse> {
   );
 }
 
+
+export type DataQualityCorrectionRecord = {
+  id: number;
+  entityType: string;
+  entityId: number;
+  entityCode: string | null;
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string;
+  reason: string;
+  source: string;
+  createdAt: string;
+};
+
+export type DataQualityCorrectionsResponse = {
+  count: number;
+  corrections: DataQualityCorrectionRecord[];
+};
+
+export type UpdatePositionCountryResponse = {
+  corrected: boolean;
+
+  position: {
+    id: number;
+    code: string;
+    name: string;
+    previousCountry: string | null;
+    country: string | null;
+    source: string;
+  };
+
+  audit: {
+    id: number;
+    fieldName: string;
+    oldValue: string | null;
+    newValue: string;
+    reason: string;
+    source: string;
+    createdAt: string;
+  };
+};
+
+export async function getDataQualityCorrections(): Promise<DataQualityCorrectionsResponse> {
+  const response = await fetch(
+    `${API_URL}/risk/data-quality/corrections`,
+  );
+
+  return readJson<DataQualityCorrectionsResponse>(
+    response,
+    "Unable to load data quality corrections",
+  );
+}
+
+export async function updatePositionCountry(
+  positionId: number,
+  country: string,
+  reason: string,
+): Promise<UpdatePositionCountryResponse> {
+  const response = await fetch(
+    `${API_URL}/risk/data-quality/positions/${positionId}/country`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({
+        country,
+        reason,
+        confirm: true,
+      }),
+    },
+  );
+
+  return readJson<UpdatePositionCountryResponse>(
+    response,
+    "Unable to update position country",
+  );
+}

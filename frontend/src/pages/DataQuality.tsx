@@ -24,6 +24,8 @@ import {
 import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 
+import DataQualityCorrections from "../components/DataQualityCorrections";
+
 import {
   getDataQuality,
   type DataQualityIssue,
@@ -719,6 +721,13 @@ export default function DataQuality() {
           </Table>
         </TableContainer>
       )}
+
+      <DataQualityCorrections
+        items={data.items}
+        onCorrectionSaved={() =>
+          void loadData()
+        }
+      />
 
       <Typography
         variant="caption"
