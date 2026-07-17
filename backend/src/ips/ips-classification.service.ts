@@ -803,6 +803,7 @@ export class IpsClassificationService
 
           include: {
             ipsClassification: true,
+            ipsClassificationReview: true,
           },
         });
 
@@ -905,9 +906,52 @@ export class IpsClassificationService
                   },
                 });
 
+            const reviewResolutionAudit =
+              position
+                .ipsClassificationReview
+                ? await transaction
+                    .ipsClassificationReviewAudit
+                    .create({
+                      data: {
+                        positionId,
+
+                        positionCode:
+                          position.code,
+
+                        oldStatus:
+                          position
+                            .ipsClassificationReview
+                            .status,
+
+                        newStatus:
+                          'RESOLVED_BY_CLASSIFICATION',
+
+                        note:
+                          `Classificata come ${definition.label}. ${normalizedReason}`,
+
+                        source:
+                          'USER_CONFIRMED',
+                      },
+                    })
+                : null;
+
+            if (
+              position
+                .ipsClassificationReview
+            ) {
+              await transaction
+                .ipsClassificationReview
+                .delete({
+                  where: {
+                    positionId,
+                  },
+                });
+            }
+
             return {
               classification,
               audit,
+              reviewResolutionAudit,
             };
           },
         );
@@ -947,6 +991,31 @@ export class IpsClassificationService
           result.audit.createdAt
             .toISOString(),
       },
+
+      reviewResolution:
+        result.reviewResolutionAudit
+          ? {
+              resolved: true,
+
+              previousStatus:
+                result
+                  .reviewResolutionAudit
+                  .oldStatus,
+
+              newStatus:
+                result
+                  .reviewResolutionAudit
+                  .newStatus,
+
+              createdAt:
+                result
+                  .reviewResolutionAudit
+                  .createdAt
+                  .toISOString(),
+            }
+          : {
+              resolved: false,
+            },
     };
   }
 
