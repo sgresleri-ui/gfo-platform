@@ -728,7 +728,11 @@ export class RiskService
         {
           source: string;
           positions: number;
-          valueBase: number;
+          assetPositions: number;
+          liabilityPositions: number;
+          grossAssets: number;
+          liabilities: number;
+          netContribution: number;
         }
       >();
 
@@ -799,12 +803,36 @@ export class RiskService
               normalizedSource,
 
             positions: 0,
-            valueBase: 0,
+            assetPositions: 0,
+            liabilityPositions: 0,
+            grossAssets: 0,
+            liabilities: 0,
+            netContribution: 0,
           };
 
         sourceSummary.positions += 1;
-        sourceSummary.valueBase +=
-          valueBase;
+
+        if (position.isLiability) {
+          sourceSummary
+            .liabilityPositions += 1;
+
+          sourceSummary.liabilities +=
+            valueBase;
+
+          sourceSummary
+            .netContribution -=
+            valueBase;
+        } else {
+          sourceSummary
+            .assetPositions += 1;
+
+          sourceSummary.grossAssets +=
+            valueBase;
+
+          sourceSummary
+            .netContribution +=
+            valueBase;
+        }
 
         sourceMap.set(
           normalizedSource,
@@ -1004,15 +1032,31 @@ export class RiskService
           positions:
             source.positions,
 
-          valueBase:
+          assetPositions:
+            source.assetPositions,
+
+          liabilityPositions:
+            source.liabilityPositions,
+
+          grossAssets:
             this.roundCurrency(
-              source.valueBase,
+              source.grossAssets,
+            ),
+
+          liabilities:
+            this.roundCurrency(
+              source.liabilities,
+            ),
+
+          netContribution:
+            this.roundCurrency(
+              source.netContribution,
             ),
         }))
         .sort(
           (left, right) =>
-            right.valueBase -
-            left.valueBase,
+            right.netContribution -
+            left.netContribution,
         );
 
     return {

@@ -1,3 +1,4 @@
+import DataQuality from "./pages/DataQuality";
 import Risk from "./pages/Risk";
 import Performance from "./pages/Performance";
 import Transactions from "./pages/Transactions";
@@ -47,6 +48,11 @@ function App() {
         <Route
           path="risk"
           element={<Risk />}
+        />
+
+        <Route
+          path="data-quality"
+          element={<DataQuality />}
         />
 
         <Route

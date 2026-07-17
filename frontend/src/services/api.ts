@@ -1339,3 +1339,87 @@ export async function getRiskOverview(): Promise<RiskOverviewResponse> {
   );
 }
 
+export type DataQualityIssue = {
+  code: string;
+  severity:
+    | "ERROR"
+    | "WARNING"
+    | "INFO";
+  message: string;
+};
+
+export type DataQualityItem = {
+  id: number;
+  code: string;
+  name: string;
+  category: string;
+  subcategory: string | null;
+  country: string | null;
+  currency: string;
+  valueBase: number;
+  isLiability: boolean;
+  source: string;
+  valuationDate: string;
+  ageDays: number;
+  countryMissing: boolean;
+  currencyMissing: boolean;
+  futureValuationDate: boolean;
+  issueCount: number;
+  issues: DataQualityIssue[];
+};
+
+export type DataQualitySource = {
+  source: string;
+  positions: number;
+  assetPositions: number;
+  liabilityPositions: number;
+  grossAssets: number;
+  liabilities: number;
+  netContribution: number;
+};
+
+export type DataQualityResponse = {
+  asOf: string;
+
+  household: {
+    id: number;
+    name: string;
+    baseCurrency: string;
+  };
+
+  summary: {
+    totalPositions: number;
+    positionsWithIssues: number;
+    positionsWithoutIssues: number;
+    errorPositions: number;
+    warningPositions: number;
+    missingCountry: number;
+    missingCurrency: number;
+    futureValuationDates: number;
+    countryCompleteness: number;
+    currencyCompleteness: number;
+  };
+
+  freshness: {
+    fresh30Days: number;
+    age31To90Days: number;
+    age91To180Days: number;
+    olderThan180Days: number;
+    fresh30DaysPercentage: number;
+  };
+
+  sources: DataQualitySource[];
+  items: DataQualityItem[];
+};
+
+export async function getDataQuality(): Promise<DataQualityResponse> {
+  const response = await fetch(
+    `${API_URL}/risk/data-quality`,
+  );
+
+  return readJson<DataQualityResponse>(
+    response,
+    "Unable to load data quality analysis",
+  );
+}
+
