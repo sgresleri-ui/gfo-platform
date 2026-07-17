@@ -1625,6 +1625,11 @@ export type IpsAssetClassCode =
   | "ALTERNATIVES"
   | "OPERATING_CASH";
 
+
+export type IpsReviewStatus =
+  | "PENDING_INFORMATION"
+  | "DEFERRED";
+
 export type IpsAllocationStatus =
   | "DATA_INCOMPLETE"
   | "NOT_APPLICABLE"
@@ -1679,6 +1684,10 @@ export type IpsClassificationItem = {
     | null;
 
   suggestionReason: string | null;
+
+  reviewStatus: IpsReviewStatus | null;
+  reviewNote: string | null;
+  reviewUpdatedAt: string | null;
 };
 
 export type IpsClassificationOverviewResponse = {
@@ -1694,6 +1703,8 @@ export type IpsClassificationOverviewResponse = {
     classifiedPositions: number;
     unclassifiedPositions: number;
     suggestedPositions: number;
+    pendingInformationPositions: number;
+    deferredPositions: number;
     totalFinancialValue: number;
     classifiedValue: number;
     unclassifiedValue: number;
@@ -1775,6 +1786,38 @@ export async function updateIpsPositionClassification(
   }>(
     response,
     "Unable to update IPS classification",
+  );
+}
+
+export async function updateIpsPositionReview(
+  positionId: number,
+  status: IpsReviewStatus,
+  note: string,
+): Promise<{
+  updated: boolean;
+}> {
+  const response = await fetch(
+    `${API_URL}/ips/classifications/${positionId}/review`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({
+        status,
+        note,
+        confirm: true,
+      }),
+    },
+  );
+
+  return readJson<{
+    updated: boolean;
+  }>(
+    response,
+    "Unable to update IPS review status",
   );
 }
 

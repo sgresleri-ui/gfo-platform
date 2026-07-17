@@ -40,11 +40,13 @@ import {
   getIpsClassificationAudit,
   getIpsClassifications,
   updateIpsPositionClassification,
+  updateIpsPositionReview,
   type IpsAllocationStatus,
   type IpsAssetClassCode,
   type IpsClassificationAudit,
   type IpsClassificationItem,
   type IpsClassificationOverviewResponse,
+  type IpsReviewStatus,
 } from "../services/api";
 
 type Notice = {
@@ -293,6 +295,8 @@ export default function IpsClassification() {
       | "ALL"
       | "UNCLASSIFIED"
       | "SUGGESTED"
+      | "PENDING_INFORMATION"
+      | "DEFERRED"
       | "CLASSIFIED"
     >("UNCLASSIFIED");
 
@@ -302,6 +306,23 @@ export default function IpsClassification() {
       | "LIQUIDITY"
       | "INVESTMENT"
     >("ALL");
+
+
+  const [reviewItem, setReviewItem] =
+    useState<IpsClassificationItem | null>(
+      null,
+    );
+
+  const [reviewStatus, setReviewStatus] =
+    useState<IpsReviewStatus>(
+      "PENDING_INFORMATION",
+    );
+
+  const [reviewNote, setReviewNote] =
+    useState("");
+
+  const [reviewSaving, setReviewSaving] =
+    useState(false);
 
   const loadData = useCallback(
     async () => {
@@ -424,6 +445,22 @@ export default function IpsClassification() {
             ) ||
             (
               reviewFilter ===
+                "PENDING_INFORMATION" &&
+              item.ipsAssetClass ===
+                null &&
+              item.reviewStatus ===
+                "PENDING_INFORMATION"
+            ) ||
+            (
+              reviewFilter ===
+                "DEFERRED" &&
+              item.ipsAssetClass ===
+                null &&
+              item.reviewStatus ===
+                "DEFERRED"
+            ) ||
+            (
+              reviewFilter ===
                 "CLASSIFIED" &&
               item.ipsAssetClass !==
                 null
@@ -454,6 +491,89 @@ export default function IpsClassification() {
       ) ?? null,
     [visibleItems],
   );
+
+  function reviewStatusLabel(
+    status: IpsReviewStatus,
+  ): string {
+    return status ===
+      "PENDING_INFORMATION"
+      ? "Da approfondire"
+      : "Rinviata";
+  }
+
+  function openReviewDialog(
+    item: IpsClassificationItem,
+  ) {
+    setReviewItem(item);
+
+    setReviewStatus(
+      item.reviewStatus ??
+        "PENDING_INFORMATION",
+    );
+
+    setReviewNote(
+      item.reviewNote ?? "",
+    );
+
+    setNotice(null);
+  }
+
+  function closeReviewDialog() {
+    if (!reviewSaving) {
+      setReviewItem(null);
+      setReviewNote("");
+      setReviewStatus(
+        "PENDING_INFORMATION",
+      );
+    }
+  }
+
+  async function saveReviewStatus() {
+    if (!reviewItem) {
+      return;
+    }
+
+    if (!reviewNote.trim()) {
+      setNotice({
+        severity: "warning",
+        text:
+          "Indicare le informazioni mancanti o il motivo del rinvio.",
+      });
+
+      return;
+    }
+
+    setReviewSaving(true);
+    setNotice(null);
+
+    try {
+      await updateIpsPositionReview(
+        reviewItem.positionId,
+        reviewStatus,
+        reviewNote.trim(),
+      );
+
+      closeReviewDialog();
+
+      setNotice({
+        severity: "success",
+        text:
+          "Stato di revisione IPS salvato nell’audit trail.",
+      });
+
+      await loadData();
+    } catch (error) {
+      console.error(error);
+
+      setNotice({
+        severity: "error",
+        text:
+          "Lo stato di revisione non è stato salvato.",
+      });
+    } finally {
+      setReviewSaving(false);
+    }
+  }
 
   function openDialog(
     item: IpsClassificationItem,
@@ -1159,6 +1279,8 @@ export default function IpsClassification() {
                   | "ALL"
                   | "UNCLASSIFIED"
                   | "SUGGESTED"
+                  | "PENDING_INFORMATION"
+                  | "DEFERRED"
                   | "CLASSIFIED",
               )
             }
@@ -1173,6 +1295,14 @@ export default function IpsClassification() {
 
             <MenuItem value="SUGGESTED">
               Con suggerimento
+            </MenuItem>
+
+            <MenuItem value="PENDING_INFORMATION">
+              Da approfondire
+            </MenuItem>
+
+            <MenuItem value="DEFERRED">
+              Rinviate
             </MenuItem>
 
             <MenuItem value="CLASSIFIED">
@@ -1371,12 +1501,36 @@ export default function IpsClassification() {
                         }
                       />
                     ) : (
-                      <Chip
-                        size="small"
-                        color="warning"
-                        variant="outlined"
-                        label="Da classificare"
-                      />
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "flex-start",
+                          gap: 0.7,
+                        }}
+                      >
+                        <Chip
+                          size="small"
+                          color="warning"
+                          variant="outlined"
+                          label="Da classificare"
+                        />
+
+                        {item.reviewStatus && (
+                          <Chip
+                            size="small"
+                            color={
+                              item.reviewStatus ===
+                              "PENDING_INFORMATION"
+                                ? "info"
+                                : "default"
+                            }
+                            label={reviewStatusLabel(
+                              item.reviewStatus,
+                            )}
+                          />
+                        )}
+                      </Box>
                     )}
                   </TableCell>
 
@@ -1417,33 +1571,56 @@ export default function IpsClassification() {
                   </TableCell>
 
                   <TableCell align="right">
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={
-                        item.suggestedClass &&
-                        !item.ipsAssetClass ? (
-                          <AutoAwesomeRoundedIcon />
-                        ) : (
-                          <EditRoundedIcon />
-                        )
-                      }
-                      onClick={() =>
-                        openDialog(
-                          item,
-                          Boolean(
-                            item.suggestedClass &&
-                              !item.ipsAssetClass,
-                          ),
-                        )
-                      }
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        gap: 1,
+                        flexWrap: "wrap",
+                      }}
                     >
-                      {item.ipsAssetClass
-                        ? "Modifica"
-                        : item.suggestedClass
-                          ? "Valuta suggerimento"
-                          : "Classifica"}
-                    </Button>
+                      {!item.ipsAssetClass && (
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() =>
+                            openReviewDialog(
+                              item,
+                            )
+                          }
+                        >
+                          Approfondisci
+                        </Button>
+                      )}
+
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={
+                          item.suggestedClass &&
+                          !item.ipsAssetClass ? (
+                            <AutoAwesomeRoundedIcon />
+                          ) : (
+                            <EditRoundedIcon />
+                          )
+                        }
+                        onClick={() =>
+                          openDialog(
+                            item,
+                            Boolean(
+                              item.suggestedClass &&
+                                !item.ipsAssetClass,
+                            ),
+                          )
+                        }
+                      >
+                        {item.ipsAssetClass
+                          ? "Modifica"
+                          : item.suggestedClass
+                            ? "Valuta suggerimento"
+                            : "Classifica"}
+                      </Button>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ),
@@ -1563,6 +1740,84 @@ export default function IpsClassification() {
           </TableContainer>
         )}
       </Paper>
+
+      <Dialog
+        open={reviewItem !== null}
+        onClose={closeReviewDialog}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          Stato di revisione IPS
+        </DialogTitle>
+
+        <DialogContent>
+          <DialogContentText
+            sx={{ mb: 2 }}
+          >
+            Posizione:{" "}
+            <strong>
+              {reviewItem?.name}
+            </strong>
+          </DialogContentText>
+
+          <TextField
+            select
+            fullWidth
+            label="Stato"
+            value={reviewStatus}
+            onChange={(event) =>
+              setReviewStatus(
+                event.target
+                  .value as IpsReviewStatus,
+              )
+            }
+            sx={{ mb: 2 }}
+          >
+            <MenuItem value="PENDING_INFORMATION">
+              Da approfondire
+            </MenuItem>
+
+            <MenuItem value="DEFERRED">
+              Rinviata
+            </MenuItem>
+          </TextField>
+
+          <TextField
+            fullWidth
+            multiline
+            minRows={3}
+            label="Informazioni mancanti o motivo"
+            value={reviewNote}
+            onChange={(event) =>
+              setReviewNote(
+                event.target.value,
+              )
+            }
+          />
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            disabled={reviewSaving}
+            onClick={closeReviewDialog}
+          >
+            Annulla
+          </Button>
+
+          <Button
+            variant="contained"
+            disabled={reviewSaving}
+            onClick={() =>
+              void saveReviewStatus()
+            }
+          >
+            {reviewSaving
+              ? "Salvataggio..."
+              : "Conferma stato"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={selectedItem !== null}
