@@ -15,6 +15,7 @@ import CreditCardRoundedIcon from "@mui/icons-material/CreditCardRounded";
 import KpiCard from "../components/KpiCard";
 import ExecutiveIpsPanel from "../components/ExecutiveIpsPanel";
 import ExecutiveRiskDataPanel from "../components/ExecutiveRiskDataPanel";
+import ExecutivePerformanceLiquidityPanel from "../components/ExecutivePerformanceLiquidityPanel";
 import { getDashboard } from "../services/api";
 
 type DashboardData = {
@@ -202,6 +203,8 @@ export default function Dashboard() {
 
         <ExecutiveIpsPanel />
       </Box>
+
+      <ExecutivePerformanceLiquidityPanel />
     </Box>
   );
 }
