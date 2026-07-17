@@ -244,3 +244,22 @@ model DataQualityCorrection {
   @@index([entityType, entityId])
   @@index([fieldName, createdAt])
 }
+
+model IpsPolicyLimit {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  label       String
+  dimension   String
+  unit        String   @default("PERCENT")
+  minimum     Float?
+  maximum     Float?
+  target      Float?
+  enabled     Boolean  @default(false)
+  rationale   String?
+  source      String   @default("IPS_CONFIRMED")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([dimension, enabled])
+}
+
