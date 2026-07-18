@@ -17,6 +17,7 @@ model Household {
   wealthTransactions WealthTransaction[]
   netWorthSnapshots  NetWorthSnapshot[]
   operationalTasks   OperationalTask[]
+  documents          DocumentRecord[]
 }
 
 model Institution {
@@ -351,4 +352,52 @@ model OperationalTask {
   @@index([status])
   @@index([priority])
   @@index([category])
+}
+
+model DocumentRecord {
+  id              String    @id @default(cuid())
+  householdId     Int
+  title           String
+  category        String
+  documentType    String
+  status          String    @default("ACTIVE")
+  issuer          String?
+  country         String?
+  documentNumber  String?
+  issueDate       DateTime?
+  expiryDate      DateTime?
+  fileName        String?
+  filePath        String?
+  mimeType        String?
+  fileSize        Int?
+  checksum        String?
+  confidentiality String    @default("PRIVATE")
+  notes           String?
+  source          String    @default("MANUAL")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  household Household      @relation(fields: [householdId], references: [id])
+  links     DocumentLink[]
+
+  @@index([householdId, category])
+  @@index([status])
+  @@index([expiryDate])
+  @@index([country])
+  @@index([checksum])
+}
+
+model DocumentLink {
+  id           String   @id @default(cuid())
+  documentId   String
+  entityType   String
+  entityId     String
+  relationType String   @default("SUPPORTING")
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  document DocumentRecord @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, entityType, entityId])
+  @@index([entityType, entityId])
 }
