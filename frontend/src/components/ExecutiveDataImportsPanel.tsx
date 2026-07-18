@@ -617,7 +617,7 @@ export default function ExecutiveDataImportsPanel() {
 
                 <Button
                   component={Link}
-                  to="/import-center"
+                  to="/imports"
                   variant="outlined"
                   endIcon={
                     <ArrowForwardRoundedIcon />

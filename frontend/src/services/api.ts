@@ -1849,3 +1849,130 @@ export async function getIpsClassificationReviewAudit(): Promise<IpsClassificati
   );
 }
 
+
+export type OperationalTaskCategory =
+  | "INVESTMENT"
+  | "REBALANCING"
+  | "TRANSFER"
+  | "TAX"
+  | "INSURANCE"
+  | "PROPERTY"
+  | "SUCCESSION"
+  | "DOCUMENTATION"
+  | "BANKING"
+  | "IBKR"
+  | "FINECO"
+  | "PLATFORM";
+
+export type OperationalTaskStatus =
+  | "TODO"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "DEFERRED"
+  | "CANCELLED";
+
+export type OperationalTaskPriority =
+  | "HIGH"
+  | "MEDIUM"
+  | "LOW";
+
+export type OperationalTask = {
+  id: string;
+  householdId: number;
+  dueDate: string;
+  title: string;
+  category: OperationalTaskCategory;
+  status: OperationalTaskStatus;
+  priority: OperationalTaskPriority;
+  description: string;
+  linkedDocuments: string[];
+  amount: number | null;
+  notes: string | null;
+  source: string;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type OperationalCalendarResponse = {
+  generatedAt: string;
+
+  summary: {
+    total: number;
+    open: number;
+    inProgress: number;
+    completed: number;
+    overdue: number;
+    dueNextThirtyDays: number;
+    highPriorityOpen: number;
+  };
+
+  tasks: OperationalTask[];
+};
+
+export type CreateOperationalTaskRequest = {
+  dueDate: string;
+  title: string;
+  category: OperationalTaskCategory;
+  status?: OperationalTaskStatus;
+  priority?: OperationalTaskPriority;
+  description: string;
+  linkedDocuments?: string[];
+  amount?: number | null;
+  notes?: string | null;
+};
+
+export type UpdateOperationalTaskRequest =
+  Partial<CreateOperationalTaskRequest>;
+
+export async function getOperationalCalendar(): Promise<OperationalCalendarResponse> {
+  const response = await fetch(
+    `${API_URL}/operational-calendar`,
+  );
+
+  return readJson<OperationalCalendarResponse>(
+    response,
+    "Unable to load operational calendar",
+  );
+}
+
+export async function createOperationalTask(
+  input: CreateOperationalTaskRequest,
+): Promise<OperationalTask> {
+  const response = await fetch(
+    `${API_URL}/operational-calendar`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+
+  return readJson<OperationalTask>(
+    response,
+    "Unable to create operational task",
+  );
+}
+
+export async function updateOperationalTask(
+  id: string,
+  input: UpdateOperationalTaskRequest,
+): Promise<OperationalTask> {
+  const response = await fetch(
+    `${API_URL}/operational-calendar/${id}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+
+  return readJson<OperationalTask>(
+    response,
+    "Unable to update operational task",
+  );
+}

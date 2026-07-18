@@ -8,14 +8,15 @@ datasource db {
 }
 
 model Household {
-  id              Int              @id @default(autoincrement())
-  name            String
-  currency        String           @default("EUR")
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  wealthPositions   WealthPosition[]
+  id                 Int                 @id @default(autoincrement())
+  name               String
+  currency           String              @default("EUR")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  wealthPositions    WealthPosition[]
   wealthTransactions WealthTransaction[]
   netWorthSnapshots  NetWorthSnapshot[]
+  operationalTasks   OperationalTask[]
 }
 
 model Institution {
@@ -41,72 +42,72 @@ model Account {
 }
 
 model WealthPosition {
-  id            Int       @id @default(autoincrement())
-  householdId   Int
-  code          String    @unique
-  name          String
-  category      String
-  subcategory   String?
-  country       String?
-  currency      String    @default("EUR")
-  nativeAmount  Decimal?
-  fxRateToBase  Decimal?
-  valueBase     Decimal
-  baseCurrency  String    @default("EUR")
-  isLiability   Boolean   @default(false)
-  valuationDate DateTime
-  source        String    @default("MANUAL")
-  status        String    @default("ACTIVE")
-  notes         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  household     Household           @relation(fields: [householdId], references: [id])
-  transactions  WealthTransaction[]
-  valuations    PositionValuation[]
+  id                            Int                            @id @default(autoincrement())
+  householdId                   Int
+  code                          String                         @unique
+  name                          String
+  category                      String
+  subcategory                   String?
+  country                       String?
+  currency                      String                         @default("EUR")
+  nativeAmount                  Decimal?
+  fxRateToBase                  Decimal?
+  valueBase                     Decimal
+  baseCurrency                  String                         @default("EUR")
+  isLiability                   Boolean                        @default(false)
+  valuationDate                 DateTime
+  source                        String                         @default("MANUAL")
+  status                        String                         @default("ACTIVE")
+  notes                         String?
+  createdAt                     DateTime                       @default(now())
+  updatedAt                     DateTime                       @updatedAt
+  household                     Household                      @relation(fields: [householdId], references: [id])
+  transactions                  WealthTransaction[]
+  valuations                    PositionValuation[]
+  ipsClassification             IpsPositionClassification?
+  ipsClassificationAudits       IpsClassificationAudit[]
+  ipsClassificationReview       IpsClassificationReview?
+  ipsClassificationReviewAudits IpsClassificationReviewAudit[]
 
   @@index([householdId, category])
   @@index([valuationDate])
-  ipsClassification       IpsPositionClassification?
-  ipsClassificationAudits IpsClassificationAudit[]
-  ipsClassificationReview       IpsClassificationReview?
-  ipsClassificationReviewAudits IpsClassificationReviewAudit[]
 }
 
 model PlatformSetting {
-  id                       Int      @id @default(1)
-  householdName            String   @default("Family Office – Stefano Gresleri")
-  ownerName                String   @default("Stefano Gresleri")
-  baseCurrency             String   @default("EUR")
-  timezone                 String   @default("Europe/Madrid")
-  fiscalResidence          String   @default("Spain")
-  plannedFiscalResidence   String   @default("United Arab Emirates")
-  sourceWorkbook           String   @default("Gresleri2026.xlsm")
-  dataFolder               String   @default("/data")
-  automaticRefresh         Boolean  @default(true)
-  showArchivedPositions    Boolean  @default(false)
-  requireDecisionNotes     Boolean  @default(true)
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  id                     Int      @id @default(1)
+  householdName          String   @default("Family Office – Stefano Gresleri")
+  ownerName              String   @default("Stefano Gresleri")
+  baseCurrency           String   @default("EUR")
+  timezone               String   @default("Europe/Madrid")
+  fiscalResidence        String   @default("Spain")
+  plannedFiscalResidence String   @default("United Arab Emirates")
+  sourceWorkbook         String   @default("Gresleri2026.xlsm")
+  dataFolder             String   @default("/data")
+  automaticRefresh       Boolean  @default(true)
+  showArchivedPositions  Boolean  @default(false)
+  requireDecisionNotes   Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 }
 
 model DecisionLogEntry {
-  id                String   @id
-  decisionDate      DateTime
-  title             String
-  category          String
-  status            String
-  priority          String
-  motivation        String
-  analysisText      String
-  alternativesJson  String
-  finalDecision     String
-  impact            String
-  amount            Float?
-  resultText        String
-  lessons           String
-  source            String   @default("MANUAL")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               String   @id
+  decisionDate     DateTime
+  title            String
+  category         String
+  status           String
+  priority         String
+  motivation       String
+  analysisText     String
+  alternativesJson String
+  finalDecision    String
+  impact           String
+  amount           Float?
+  resultText       String
+  lessons          String
+  source           String   @default("MANUAL")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@index([decisionDate])
   @@index([status])
@@ -114,20 +115,20 @@ model DecisionLogEntry {
 }
 
 model ImportRun {
-  id                   String    @id @default(cuid())
-  fileName             String
-  filePath             String
-  fileHash             String
-  fileSize             Int
-  workbookModifiedAt   DateTime?
-  status               String
-  sheetCount           Int       @default(0)
-  activePositions      Int       @default(0)
-  archivedPositions    Int       @default(0)
-  previewJson          String    @default("{}")
-  errorMessage         String?
-  createdAt            DateTime  @default(now())
-  completedAt          DateTime?
+  id                 String    @id @default(cuid())
+  fileName           String
+  filePath           String
+  fileHash           String
+  fileSize           Int
+  workbookModifiedAt DateTime?
+  status             String
+  sheetCount         Int       @default(0)
+  activePositions    Int       @default(0)
+  archivedPositions  Int       @default(0)
+  previewJson        String    @default("{}")
+  errorMessage       String?
+  createdAt          DateTime  @default(now())
+  completedAt        DateTime?
 
   @@index([fileHash])
   @@index([status])
@@ -135,16 +136,16 @@ model ImportRun {
 }
 
 model WealthSnapshot {
-  id                 String    @id @default(cuid())
-  snapshotType       String
-  reason             String
-  sourceRunId        String?
-  positionsJson      String
-  activePositions    Int
-  archivedPositions  Int
-  netValue           Float
-  createdAt          DateTime  @default(now())
-  restoredAt         DateTime?
+  id                String    @id @default(cuid())
+  snapshotType      String
+  reason            String
+  sourceRunId       String?
+  positionsJson     String
+  activePositions   Int
+  archivedPositions Int
+  netValue          Float
+  createdAt         DateTime  @default(now())
+  restoredAt        DateTime?
 
   @@index([sourceRunId])
   @@index([createdAt])
@@ -187,23 +188,23 @@ model WealthTransaction {
 }
 
 model NetWorthSnapshot {
-  id               String              @id @default(cuid())
-  householdId      Int
-  snapshotDate     DateTime
-  source           String
-  importRunId      String?
-  dataHash         String              @unique
-  positionCount    Int
-  grossAssets      Decimal
-  liabilities      Decimal
-  netWorth         Decimal
-  liquidity        Decimal
-  investments      Decimal
-  realEstate       Decimal
-  otherAssets      Decimal
-  createdAt        DateTime            @default(now())
-  household        Household           @relation(fields: [householdId], references: [id])
-  valuations       PositionValuation[]
+  id            String              @id @default(cuid())
+  householdId   Int
+  snapshotDate  DateTime
+  source        String
+  importRunId   String?
+  dataHash      String              @unique
+  positionCount Int
+  grossAssets   Decimal
+  liabilities   Decimal
+  netWorth      Decimal
+  liquidity     Decimal
+  investments   Decimal
+  realEstate    Decimal
+  otherAssets   Decimal
+  createdAt     DateTime            @default(now())
+  household     Household           @relation(fields: [householdId], references: [id])
+  valuations    PositionValuation[]
 
   @@index([householdId, snapshotDate])
   @@index([snapshotDate])
@@ -232,7 +233,6 @@ model PositionValuation {
   @@index([valuationDate])
 }
 
-
 model DataQualityCorrection {
   id         Int      @id @default(autoincrement())
   entityType String
@@ -250,19 +250,19 @@ model DataQualityCorrection {
 }
 
 model IpsPolicyLimit {
-  id          Int      @id @default(autoincrement())
-  code        String   @unique
-  label       String
-  dimension   String
-  unit        String   @default("PERCENT")
-  minimum     Float?
-  maximum     Float?
-  target      Float?
-  enabled     Boolean  @default(false)
-  rationale   String?
-  source      String   @default("IPS_CONFIRMED")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  label     String
+  dimension String
+  unit      String   @default("PERCENT")
+  minimum   Float?
+  maximum   Float?
+  target    Float?
+  enabled   Boolean  @default(false)
+  rationale String?
+  source    String   @default("IPS_CONFIRMED")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([dimension, enabled])
 }
@@ -328,3 +328,27 @@ model IpsClassificationReviewAudit {
   @@index([newStatus])
 }
 
+model OperationalTask {
+  id                  String    @id @default(cuid())
+  householdId         Int
+  dueDate             DateTime
+  title               String
+  category            String
+  status              String    @default("TODO")
+  priority            String    @default("MEDIUM")
+  description         String
+  linkedDocumentsJson String    @default("[]")
+  amount              Float?
+  notes               String?
+  source              String    @default("MANUAL")
+  completedAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id])
+
+  @@index([householdId, dueDate])
+  @@index([status])
+  @@index([priority])
+  @@index([category])
+}

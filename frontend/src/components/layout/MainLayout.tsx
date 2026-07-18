@@ -27,6 +27,7 @@ import SavingsRoundedIcon from "@mui/icons-material/SavingsRounded";
 import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded";
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
 import TimelineRoundedIcon from "@mui/icons-material/TimelineRounded";
+import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
 import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import GavelRoundedIcon from "@mui/icons-material/GavelRounded";
@@ -108,6 +109,11 @@ const navigation = [
     label: "Planning",
     path: "/planning",
     icon: <TimelineRoundedIcon />,
+  },
+  {
+    label: "Calendario Operativo",
+    path: "/operational-calendar",
+    icon: <CalendarMonthRoundedIcon />,
   },
   {
     label: "Data Catalog",

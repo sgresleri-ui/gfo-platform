@@ -13,6 +13,7 @@ import DataCatalog from "./pages/DataCatalog";
 import ImportCenter from "./pages/ImportCenter";
 import Budget from "./pages/Budget";
 import Planning from "./pages/Planning";
+import OperationalCalendar from "./pages/OperationalCalendar";
 import Reports from "./pages/Reports";
 import Decisions from "./pages/Decisions";
 import Settings from "./pages/Settings";
@@ -84,6 +85,11 @@ function App() {
         <Route
           path="planning"
           element={<Planning />}
+        />
+
+        <Route
+          path="operational-calendar"
+          element={<OperationalCalendar />}
         />
 
         <Route

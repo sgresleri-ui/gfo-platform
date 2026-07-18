@@ -1,3 +1,4 @@
+import { OperationalCalendarModule } from './operational-calendar/operational-calendar.module';
 import { IpsModule } from './ips/ips.module';
 import { RiskModule } from './risk/risk.module';
 import { PerformanceModule } from './performance/performance.module';
@@ -20,6 +21,7 @@ import { WealthModule } from './wealth/wealth.module';
 
 @Module({
   imports: [
+    OperationalCalendarModule,
     IpsModule,
     RiskModule,
     PerformanceModule,
