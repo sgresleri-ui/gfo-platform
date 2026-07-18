@@ -20,6 +20,7 @@ import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 
 import KpiCard from "../components/KpiCard";
+import PlanningScenarioPanel from "../components/PlanningScenarioPanel";
 
 import {
   getBudgetOverview,
@@ -384,6 +385,8 @@ export default function Planning() {
           {error}
         </Alert>
       )}
+
+      <PlanningScenarioPanel />
 
       {budget && properties && (
         <>

@@ -2442,3 +2442,158 @@ export async function getExecutiveReportSnapshot(
     "Unable to load executive report snapshot",
   );
 }
+
+export type PlanningScenarioEventInput = {
+  year: number;
+  label: string;
+  amount: number;
+  category?: string;
+};
+
+export type SimulatePlanningScenarioInput = {
+  name?: string;
+  description?: string;
+  initialCapitalAdjustment?: number;
+  annualReturnAdjustmentPct?: number;
+  annualCostAdjustmentPct?: number;
+  annualRevenueAdjustmentPct?: number;
+  expenseInflationDeltaPct?: number;
+  events?: PlanningScenarioEventInput[];
+};
+
+export type PlanningScenarioBaselineResponse = {
+  generatedAt: string;
+  baselineType: "OFFICIAL_BUDGET";
+  immutable: boolean;
+
+  source: {
+    workbook: string;
+    asOfDate: string;
+  };
+
+  defaultAssumptions: {
+    initialCapitalAdjustment: number;
+    annualReturnAdjustmentPct: number;
+    annualCostAdjustmentPct: number;
+    annualRevenueAdjustmentPct: number;
+    expenseInflationDeltaPct: number;
+    events: PlanningScenarioEventInput[];
+  };
+
+  budget: BudgetOverviewResponse;
+};
+
+export type PlanningScenarioStatus =
+  | "SUSTAINABLE"
+  | "AT_RISK"
+  | "UNSUSTAINABLE";
+
+export type PlanningScenarioYear = {
+  year: number;
+
+  baseline: {
+    capitalStart: number | null;
+    totalCosts: number;
+    totalRevenues: number;
+    netCashFlow: number;
+    capitalEnd: number | null;
+  };
+
+  scenario: {
+    capitalStart: number;
+    totalCosts: number;
+    totalRevenues: number;
+    costImpact: number;
+    revenueImpact: number;
+    returnImpact: number;
+    eventImpact: number;
+    netCashFlow: number;
+    capitalEnd: number;
+    deltaFromBaseline: number | null;
+  };
+
+  events: PlanningScenarioEventInput[];
+};
+
+export type PlanningScenarioResponse = {
+  generatedAt: string;
+  scenarioType: "DELTA_FROM_OFFICIAL_BASELINE";
+  baselineImmutable: boolean;
+
+  baselineSource: {
+    workbook: string;
+    asOfDate: string;
+    startYear: number;
+    endYear: number;
+  };
+
+  scenario: {
+    name: string;
+    description: string;
+
+    assumptions: {
+      name: string;
+      description: string;
+      initialCapitalAdjustment: number;
+      annualReturnAdjustmentPct: number;
+      annualCostAdjustmentPct: number;
+      annualRevenueAdjustmentPct: number;
+      expenseInflationDeltaPct: number;
+      events: PlanningScenarioEventInput[];
+    };
+  };
+
+  summary: {
+    status: PlanningScenarioStatus;
+    initialCapital: number;
+    finalCapital: number;
+    minimumCapital: number;
+    minimumCapitalYear: number | null;
+    firstNegativeCapitalYear: number | null;
+    averageNetCashFlow: number;
+    maximumDrawdownPct: number | null;
+  };
+
+  comparison: {
+    baselineFinalCapital: number | null;
+    scenarioFinalCapital: number;
+    finalCapitalDelta: number | null;
+    finalCapitalDeltaPct: number | null;
+    baselineMinimumCapital: number | null;
+    scenarioMinimumCapital: number;
+  };
+
+  warnings: string[];
+  years: PlanningScenarioYear[];
+};
+
+export async function getPlanningScenarioBaseline(): Promise<PlanningScenarioBaselineResponse> {
+  const response = await fetch(
+    `${API_URL}/planning/scenarios/baseline`,
+  );
+
+  return readJson<PlanningScenarioBaselineResponse>(
+    response,
+    "Unable to load planning baseline",
+  );
+}
+
+export async function simulatePlanningScenario(
+  input: SimulatePlanningScenarioInput,
+): Promise<PlanningScenarioResponse> {
+  const response = await fetch(
+    `${API_URL}/planning/scenarios/simulate`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+
+  return readJson<PlanningScenarioResponse>(
+    response,
+    "Unable to simulate planning scenario",
+  );
+}
