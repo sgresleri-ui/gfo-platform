@@ -19,6 +19,7 @@ model Household {
   operationalTasks         OperationalTask[]
   documents                DocumentRecord[]
   executiveReportSnapshots ExecutiveReportSnapshot[]
+  planningScenarios        PlanningScenario[]
 }
 
 model Institution {
@@ -433,4 +434,35 @@ model ExecutiveReportSnapshot {
   @@index([generatedAt])
   @@index([status])
   @@index([reportType])
+}
+
+model PlanningScenario {
+  id                       String    @id @default(cuid())
+  householdId              Int
+  name                     String
+  description              String?
+  status                   String    @default("ACTIVE")
+  assumptionsJson          String
+  lastResultJson           String?
+  baselineWorkbook         String?
+  baselineAsOfDate         String?
+  baselineStartYear        Int?
+  baselineEndYear          Int?
+  sustainabilityStatus     String?
+  initialCapital           Decimal?
+  finalCapital             Decimal?
+  minimumCapital           Decimal?
+  minimumCapitalYear       Int?
+  firstNegativeCapitalYear Int?
+  finalCapitalDelta        Decimal?
+  finalCapitalDeltaPct     Float?
+  lastSimulatedAt          DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id])
+
+  @@index([householdId, status])
+  @@index([householdId, updatedAt])
+  @@index([sustainabilityStatus])
 }
