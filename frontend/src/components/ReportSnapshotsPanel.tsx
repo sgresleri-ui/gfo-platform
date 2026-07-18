@@ -20,6 +20,7 @@ import {
 
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
+import PrintRoundedIcon from "@mui/icons-material/PrintRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import VerifiedRoundedIcon from "@mui/icons-material/VerifiedRounded";
 
@@ -407,6 +408,23 @@ export default function ReportSnapshotsPanel() {
                       }
                       variant="outlined"
                     />
+
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={
+                        <PrintRoundedIcon />
+                      }
+                      onClick={() => {
+                        window.open(
+                          `/reports/snapshots/${snapshot.id}/print`,
+                          "_blank",
+                          "noopener,noreferrer",
+                        );
+                      }}
+                    >
+                      PDF
+                    </Button>
 
                     <Button
                       size="small"

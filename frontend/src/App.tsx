@@ -15,6 +15,7 @@ import Budget from "./pages/Budget";
 import Planning from "./pages/Planning";
 import OperationalCalendar from "./pages/OperationalCalendar";
 import Reports from "./pages/Reports";
+import ReportSnapshotPrint from "./pages/ReportSnapshotPrint";
 import Decisions from "./pages/Decisions";
 import Documents from "./pages/Documents";
 import Settings from "./pages/Settings";
@@ -123,6 +124,11 @@ function App() {
           element={<Settings />}
         />
       </Route>
+
+      <Route
+        path="/reports/snapshots/:id/print"
+        element={<ReportSnapshotPrint />}
+      />
 
       <Route
         path="*"
