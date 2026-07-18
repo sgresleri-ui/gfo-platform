@@ -2172,3 +2172,49 @@ export function getDocumentFileUrl(
   return `${API_URL}/documents/${documentId}/file`;
 }
 
+export type DocumentFileRemovalResponse = {
+  id: string;
+  fileRemoved: boolean;
+  physicalFileDeleted: boolean;
+  updatedAt: string;
+};
+
+export type DeleteDocumentResponse = {
+  id: string;
+  deleted: boolean;
+  physicalFileDeleted: boolean;
+  warning: string | null;
+};
+
+export async function removeDocumentFile(
+  documentId: string,
+): Promise<DocumentFileRemovalResponse> {
+  const response = await fetch(
+    `${API_URL}/documents/${documentId}/file`,
+    {
+      method: "DELETE",
+    },
+  );
+
+  return readJson<DocumentFileRemovalResponse>(
+    response,
+    "Unable to remove document file",
+  );
+}
+
+export async function deleteDocumentRecord(
+  documentId: string,
+): Promise<DeleteDocumentResponse> {
+  const response = await fetch(
+    `${API_URL}/documents/${documentId}`,
+    {
+      method: "DELETE",
+    },
+  );
+
+  return readJson<DeleteDocumentResponse>(
+    response,
+    "Unable to delete document",
+  );
+}
+

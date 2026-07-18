@@ -346,4 +346,146 @@ export class DocumentFilesService {
         fileStats.size,
     };
   }
+
+  async removeFile(
+    documentId: string,
+  ) {
+    const document =
+      await this.prisma.documentRecord.findUnique(
+        {
+          where: {
+            id: documentId,
+          },
+        },
+      );
+
+    if (!document) {
+      throw new NotFoundException(
+        'Documento non trovato.',
+      );
+    }
+
+    const hadFile =
+      Boolean(
+        document.fileName ||
+        document.filePath,
+      );
+
+    let physicalFileDeleted = false;
+
+    if (
+      document.filePath &&
+      this.isManagedPath(
+        document.filePath,
+      )
+    ) {
+      try {
+        await unlink(
+          document.filePath,
+        );
+
+        physicalFileDeleted = true;
+      } catch (error) {
+        const errorCode =
+          (
+            error as NodeJS.ErrnoException
+          ).code;
+
+        if (errorCode !== 'ENOENT') {
+          throw error;
+        }
+      }
+    }
+
+    const updated =
+      await this.prisma.documentRecord.update(
+        {
+          where: {
+            id: documentId,
+          },
+          data: {
+            fileName: null,
+            filePath: null,
+            mimeType: null,
+            fileSize: null,
+            checksum: null,
+          },
+        },
+      );
+
+    return {
+      id: updated.id,
+      fileRemoved: hadFile,
+      physicalFileDeleted,
+      updatedAt:
+        updated.updatedAt.toISOString(),
+    };
+  }
+
+  async deleteDocument(
+    documentId: string,
+  ) {
+    const document =
+      await this.prisma.documentRecord.findUnique(
+        {
+          where: {
+            id: documentId,
+          },
+        },
+      );
+
+    if (!document) {
+      throw new NotFoundException(
+        'Documento non trovato.',
+      );
+    }
+
+    await this.prisma.documentRecord.delete(
+      {
+        where: {
+          id: documentId,
+        },
+      },
+    );
+
+    let physicalFileDeleted = false;
+    let warning: string | null = null;
+
+    if (document.filePath) {
+      if (
+        this.isManagedPath(
+          document.filePath,
+        )
+      ) {
+        try {
+          await unlink(
+            document.filePath,
+          );
+
+          physicalFileDeleted = true;
+        } catch (error) {
+          const errorCode =
+            (
+              error as NodeJS.ErrnoException
+            ).code;
+
+          if (errorCode !== 'ENOENT') {
+            warning =
+              'Record eliminato, ma il file fisico non è stato cancellato.';
+          }
+        }
+      } else {
+        warning =
+          'Record eliminato. Il percorso esterno non è stato cancellato.';
+      }
+    }
+
+    return {
+      id: documentId,
+      deleted: true,
+      physicalFileDeleted,
+      warning,
+    };
+  }
+
 }

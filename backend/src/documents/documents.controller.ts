@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -98,6 +99,25 @@ export class DocumentsController {
         disposition:
           `inline; filename*=UTF-8''${encodedFileName}`,
       },
+    );
+  }
+
+
+  @Delete(':id/file')
+  removeFile(
+    @Param('id') id: string,
+  ) {
+    return this.documentFilesService.removeFile(
+      id,
+    );
+  }
+
+  @Delete(':id')
+  deleteDocument(
+    @Param('id') id: string,
+  ) {
+    return this.documentFilesService.deleteDocument(
+      id,
     );
   }
 

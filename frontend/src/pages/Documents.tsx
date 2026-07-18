@@ -24,6 +24,8 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import ArchiveRoundedIcon from "@mui/icons-material/ArchiveRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
+import DeleteForeverRoundedIcon from "@mui/icons-material/DeleteForeverRounded";
+import RemoveCircleOutlineRoundedIcon from "@mui/icons-material/RemoveCircleOutlineRounded";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import LinkRoundedIcon from "@mui/icons-material/LinkRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
@@ -36,7 +38,9 @@ import KpiCard from "../components/KpiCard";
 import {
   createDocument,
   getDocumentFileUrl,
+  deleteDocumentRecord,
   getDocumentsOverview,
+  removeDocumentFile,
   updateDocument,
   uploadDocumentFile,
   type CreateDocumentRequest,
@@ -251,6 +255,11 @@ export default function Documents() {
     setUploadingDocumentId,
   ] = useState<string | null>(null);
 
+  const [
+    deletingDocumentId,
+    setDeletingDocumentId,
+  ] = useState<string | null>(null);
+
   const [dialogOpen, setDialogOpen] =
     useState(false);
 
@@ -429,6 +438,81 @@ export default function Documents() {
       );
     } finally {
       setUploadingDocumentId(null);
+    }
+  }
+
+  async function removeAttachedFile(
+    document: DocumentRecord,
+  ) {
+    const confirmed = window.confirm(
+      `Rimuovere definitivamente il file associato a “${document.title}”? Il record documentale resterà disponibile.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingDocumentId(document.id);
+    setError("");
+    setSuccess("");
+
+    try {
+      await removeDocumentFile(
+        document.id,
+      );
+
+      setSuccess(
+        "Allegato rimosso definitivamente.",
+      );
+
+      await loadDocuments();
+    } catch (requestError) {
+      console.error(requestError);
+
+      setError(
+        "Impossibile rimuovere l’allegato.",
+      );
+    } finally {
+      setDeletingDocumentId(null);
+    }
+  }
+
+  async function deleteDocumentPermanently(
+    document: DocumentRecord,
+  ) {
+    const confirmed = window.confirm(
+      `Eliminare definitivamente “${document.title}”? Verranno cancellati il record, i collegamenti e l’eventuale file fisico. L’operazione non può essere annullata.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingDocumentId(document.id);
+    setError("");
+    setSuccess("");
+
+    try {
+      const result =
+        await deleteDocumentRecord(
+          document.id,
+        );
+
+      setSuccess(
+        result.warning
+          ? result.warning
+          : "Documento eliminato definitivamente.",
+      );
+
+      await loadDocuments();
+    } catch (requestError) {
+      console.error(requestError);
+
+      setError(
+        "Impossibile eliminare il documento.",
+      );
+    } finally {
+      setDeletingDocumentId(null);
     }
   }
 
@@ -1062,6 +1146,59 @@ export default function Documents() {
                           Apri file
                         </Button>
                       )}
+
+                      {document.fileName && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="warning"
+                          startIcon={
+                            <RemoveCircleOutlineRoundedIcon />
+                          }
+                          disabled={
+                            deletingDocumentId ===
+                            document.id
+                          }
+                          onClick={() =>
+                            void removeAttachedFile(
+                              document,
+                            )
+                          }
+                        >
+                          Rimuovi file
+                        </Button>
+                      )}
+
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        startIcon={
+                          deletingDocumentId ===
+                          document.id ? (
+                            <CircularProgress
+                              size={16}
+                              color="inherit"
+                            />
+                          ) : (
+                            <DeleteForeverRoundedIcon />
+                          )
+                        }
+                        disabled={
+                          deletingDocumentId ===
+                          document.id
+                        }
+                        onClick={() =>
+                          void deleteDocumentPermanently(
+                            document,
+                          )
+                        }
+                      >
+                        {deletingDocumentId ===
+                        document.id
+                          ? "Eliminazione..."
+                          : "Elimina"}
+                      </Button>
 
                       {document.status !==
                       "ARCHIVED" ? (
