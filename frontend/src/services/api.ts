@@ -1976,3 +1976,159 @@ export async function updateOperationalTask(
     "Unable to update operational task",
   );
 }
+
+export type DocumentCategory =
+  | "BANKING"
+  | "INVESTMENT"
+  | "PROPERTY"
+  | "TAX"
+  | "INSURANCE"
+  | "SUCCESSION"
+  | "IDENTITY"
+  | "CORPORATE"
+  | "CONTRACT"
+  | "PLATFORM"
+  | "OTHER";
+
+export type DocumentStatus =
+  | "ACTIVE"
+  | "DRAFT"
+  | "EXPIRED"
+  | "ARCHIVED";
+
+export type DocumentConfidentiality =
+  | "FAMILY"
+  | "PRIVATE"
+  | "RESTRICTED";
+
+export type DocumentLink = {
+  id: string;
+  entityType: string;
+  entityId: string;
+  relationType: string;
+  notes: string | null;
+  createdAt: string;
+};
+
+export type DocumentRecord = {
+  id: string;
+  householdId: number;
+  title: string;
+  category: DocumentCategory;
+  documentType: string;
+  status: DocumentStatus;
+  issuer: string | null;
+  country: string | null;
+  documentNumber: string | null;
+  issueDate: string | null;
+  expiryDate: string | null;
+  fileName: string | null;
+  filePath: string | null;
+  mimeType: string | null;
+  fileSize: number | null;
+  checksum: string | null;
+  confidentiality: DocumentConfidentiality;
+  notes: string | null;
+  source: string;
+  createdAt: string;
+  updatedAt: string;
+  links: DocumentLink[];
+};
+
+export type DocumentsOverviewResponse = {
+  generatedAt: string;
+
+  summary: {
+    total: number;
+    active: number;
+    draft: number;
+    archived: number;
+    expired: number;
+    expiringWithinNinetyDays: number;
+    missingFile: number;
+    restricted: number;
+    linked: number;
+  };
+
+  categories: Array<{
+    name: string;
+    count: number;
+  }>;
+
+  documents: DocumentRecord[];
+};
+
+export type CreateDocumentRequest = {
+  title: string;
+  category: DocumentCategory;
+  documentType: string;
+  status?: DocumentStatus;
+  issuer?: string | null;
+  country?: string | null;
+  documentNumber?: string | null;
+  issueDate?: string | null;
+  expiryDate?: string | null;
+  fileName?: string | null;
+  filePath?: string | null;
+  mimeType?: string | null;
+  fileSize?: number | null;
+  checksum?: string | null;
+  confidentiality?: DocumentConfidentiality;
+  notes?: string | null;
+};
+
+export type UpdateDocumentRequest =
+  Partial<CreateDocumentRequest>;
+
+export async function getDocumentsOverview(): Promise<DocumentsOverviewResponse> {
+  const response = await fetch(
+    `${API_URL}/documents`,
+  );
+
+  return readJson<DocumentsOverviewResponse>(
+    response,
+    "Unable to load documents",
+  );
+}
+
+export async function createDocument(
+  input: CreateDocumentRequest,
+): Promise<DocumentRecord> {
+  const response = await fetch(
+    `${API_URL}/documents`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+
+  return readJson<DocumentRecord>(
+    response,
+    "Unable to create document",
+  );
+}
+
+export async function updateDocument(
+  id: string,
+  input: UpdateDocumentRequest,
+): Promise<DocumentRecord> {
+  const response = await fetch(
+    `${API_URL}/documents/${id}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+
+  return readJson<DocumentRecord>(
+    response,
+    "Unable to update document",
+  );
+}
+

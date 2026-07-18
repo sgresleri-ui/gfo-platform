@@ -16,6 +16,7 @@ import Planning from "./pages/Planning";
 import OperationalCalendar from "./pages/OperationalCalendar";
 import Reports from "./pages/Reports";
 import Decisions from "./pages/Decisions";
+import Documents from "./pages/Documents";
 import Settings from "./pages/Settings";
 import Investments from "./pages/Investments";
 import Liquidity from "./pages/Liquidity";
@@ -105,6 +106,11 @@ function App() {
         <Route
           path="reports"
           element={<Reports />}
+        />
+
+        <Route
+          path="documents"
+          element={<Documents />}
         />
 
         <Route

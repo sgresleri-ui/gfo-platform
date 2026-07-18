@@ -20,6 +20,7 @@ import ExecutivePropertyBudgetPlanningPanel from "../components/ExecutivePropert
 import ExecutiveDecisionsPanel from "../components/ExecutiveDecisionsPanel";
 import ExecutiveDataImportsPanel from "../components/ExecutiveDataImportsPanel";
 import ExecutiveOperationalCalendarPanel from "../components/ExecutiveOperationalCalendarPanel";
+import ExecutiveDocumentsPanel from "../components/ExecutiveDocumentsPanel";
 import { getDashboard } from "../services/api";
 
 type DashboardData = {
@@ -218,6 +219,8 @@ export default function Dashboard() {
       <ExecutiveDataImportsPanel />
 
       <ExecutiveOperationalCalendarPanel />
+
+      <ExecutiveDocumentsPanel />
     </Box>
   );
 }

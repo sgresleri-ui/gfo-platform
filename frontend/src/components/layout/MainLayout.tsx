@@ -30,6 +30,7 @@ import TimelineRoundedIcon from "@mui/icons-material/TimelineRounded";
 import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
 import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
+import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import GavelRoundedIcon from "@mui/icons-material/GavelRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
@@ -130,6 +131,11 @@ const navigation = [
     label: "Report",
     path: "/reports",
     icon: <DescriptionRoundedIcon />,
+  },
+  {
+    label: "Document Center",
+    path: "/documents",
+    icon: <FolderRoundedIcon />,
   },
   {
     label: "Decisioni",
