@@ -19,6 +19,8 @@ import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
 
+import PlanningScenarioComparison from "./PlanningScenarioComparison";
+
 import {
   archiveStoredPlanningScenario,
   createStoredPlanningScenario,
@@ -590,6 +592,12 @@ export default function PlanningScenarioArchive({
           )}
         </Box>
       )}
+      {!loading && (
+        <PlanningScenarioComparison
+          scenarios={scenarios}
+        />
+      )}
+
     </Paper>
   );
 }
