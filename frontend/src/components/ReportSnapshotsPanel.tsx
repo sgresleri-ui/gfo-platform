@@ -23,6 +23,8 @@ import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import VerifiedRoundedIcon from "@mui/icons-material/VerifiedRounded";
 
+import ReportSnapshotComparison from "./ReportSnapshotComparison";
+
 import {
   createExecutiveReportSnapshot,
   getExecutiveReportSnapshot,
@@ -284,6 +286,12 @@ export default function ReportSnapshotsPanel() {
           >
             {error}
           </Alert>
+        )}
+
+        {!loading && (
+          <ReportSnapshotComparison
+            snapshots={snapshots}
+          />
         )}
 
         {loading ? (
