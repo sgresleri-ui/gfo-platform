@@ -15,3 +15,10 @@ node_modules/
 wealth.json
 *.log
 /generated/prisma
+# Local Prisma databases and backups
+backend/prisma/*.db
+backend/prisma/*.db-journal
+backend/prisma/*.db-shm
+backend/prisma/*.db-wal
+backend/prisma/*.backup*
+backend/prisma/schema.prisma.backup*
