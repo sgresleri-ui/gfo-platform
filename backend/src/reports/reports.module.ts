@@ -7,6 +7,7 @@ import { InvestmentsModule } from '../investments/investments.module';
 import { LiquidityModule } from '../liquidity/liquidity.module';
 import { OperationalCalendarModule } from '../operational-calendar/operational-calendar.module';
 import { PerformanceModule } from '../performance/performance.module';
+import { PrismaModule } from '../prisma/prisma.module';
 import { PropertiesModule } from '../properties/properties.module';
 import { RiskModule } from '../risk/risk.module';
 import { WealthModule } from '../wealth/wealth.module';
@@ -16,6 +17,7 @@ import { ReportsService } from './reports.service';
 
 @Module({
   imports: [
+    PrismaModule,
     WealthModule,
     InvestmentsModule,
     LiquidityModule,
@@ -27,7 +29,11 @@ import { ReportsService } from './reports.service';
     DocumentsModule,
     DataCatalogModule,
   ],
-  controllers: [ReportsController],
-  providers: [ReportsService],
+  controllers: [
+    ReportsController,
+  ],
+  providers: [
+    ReportsService,
+  ],
 })
 export class ReportsModule {}

@@ -8,16 +8,17 @@ datasource db {
 }
 
 model Household {
-  id                 Int                 @id @default(autoincrement())
-  name               String
-  currency           String              @default("EUR")
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  wealthPositions    WealthPosition[]
-  wealthTransactions WealthTransaction[]
-  netWorthSnapshots  NetWorthSnapshot[]
-  operationalTasks   OperationalTask[]
-  documents          DocumentRecord[]
+  id                       Int                       @id @default(autoincrement())
+  name                     String
+  currency                 String                    @default("EUR")
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  wealthPositions          WealthPosition[]
+  wealthTransactions       WealthTransaction[]
+  netWorthSnapshots        NetWorthSnapshot[]
+  operationalTasks         OperationalTask[]
+  documents                DocumentRecord[]
+  executiveReportSnapshots ExecutiveReportSnapshot[]
 }
 
 model Institution {
@@ -400,4 +401,36 @@ model DocumentLink {
 
   @@unique([documentId, entityType, entityId])
   @@index([entityType, entityId])
+}
+
+model ExecutiveReportSnapshot {
+  id                     String   @id @default(cuid())
+  householdId            Int
+  reportType             String
+  version                String
+  status                 String
+  generatedAt            DateTime
+  completenessPercentage Float
+  totalSections          Int
+  availableSections      Int
+  unavailableSections    Int
+  netWorth               Decimal?
+  grossAssets            Decimal?
+  liabilities            Decimal?
+  liquidity              Decimal?
+  investments            Decimal?
+  realEstate             Decimal?
+  otherAssets            Decimal?
+  currency               String   @default("EUR")
+  payloadJson            String
+  checksum               String   @unique
+  source                 String   @default("REPORTING_ENGINE")
+  createdAt              DateTime @default(now())
+
+  household Household @relation(fields: [householdId], references: [id])
+
+  @@index([householdId, createdAt])
+  @@index([generatedAt])
+  @@index([status])
+  @@index([reportType])
 }
