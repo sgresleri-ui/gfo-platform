@@ -38,6 +38,7 @@ import {
 } from "recharts";
 
 import PlanningScenarioArchive from "./PlanningScenarioArchive";
+import PlanningScenarioPresets from "./PlanningScenarioPresets";
 
 import {
   getPlanningScenarioBaseline,
@@ -417,6 +418,82 @@ export default function PlanningScenarioPanel() {
   }
 
 
+
+  function applyScenarioPreset(
+    assumptions:
+      SimulatePlanningScenarioInput,
+  ) {
+    setForm({
+      name:
+        assumptions.name ??
+        "Scenario personalizzato",
+
+      description:
+        assumptions.description ??
+        "",
+
+      initialCapitalAdjustment:
+        String(
+          assumptions
+            .initialCapitalAdjustment ??
+            0,
+        ),
+
+      annualReturnAdjustmentPct:
+        String(
+          assumptions
+            .annualReturnAdjustmentPct ??
+            0,
+        ),
+
+      annualCostAdjustmentPct:
+        String(
+          assumptions
+            .annualCostAdjustmentPct ??
+            0,
+        ),
+
+      annualRevenueAdjustmentPct:
+        String(
+          assumptions
+            .annualRevenueAdjustmentPct ??
+            0,
+        ),
+
+      expenseInflationDeltaPct:
+        String(
+          assumptions
+            .expenseInflationDeltaPct ??
+            0,
+        ),
+    });
+
+    setEvents(
+      (assumptions.events ?? []).map(
+        (event, index) => ({
+          id:
+            `preset-${Date.now()}-${index}`,
+
+          year:
+            String(event.year),
+
+          label:
+            event.label,
+
+          amount:
+            String(event.amount),
+
+          category:
+            event.category ??
+            "EXTRAORDINARY",
+        }),
+      ),
+    );
+
+    setResult(null);
+    setError("");
+  }
+
   function loadStoredScenario(
     assumptions:
       SimulatePlanningScenarioInput,
@@ -628,6 +705,17 @@ export default function PlanningScenarioPanel() {
           Excel o database.
         </Alert>
       )}
+
+
+      <PlanningScenarioPresets
+        startYear={
+          baseline?.budget.longTerm
+            .startYear ?? null
+        }
+        onApplyPreset={
+          applyScenarioPreset
+        }
+      />
 
       {error && (
         <Alert
