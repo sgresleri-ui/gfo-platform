@@ -24,6 +24,7 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import ArchiveRoundedIcon from "@mui/icons-material/ArchiveRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
+import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import DeleteForeverRoundedIcon from "@mui/icons-material/DeleteForeverRounded";
 import RemoveCircleOutlineRoundedIcon from "@mui/icons-material/RemoveCircleOutlineRounded";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
@@ -34,6 +35,7 @@ import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 
 import KpiCard from "../components/KpiCard";
+import DocumentLinksManager from "../components/DocumentLinksManager";
 
 import {
   createDocument,
@@ -82,6 +84,40 @@ function createEmptyForm(): DocumentForm {
     fileName: "",
     filePath: "",
     notes: "",
+  };
+}
+
+
+function createFormFromDocument(
+  document: DocumentRecord,
+): DocumentForm {
+  return {
+    title: document.title,
+    category: document.category,
+    documentType:
+      document.documentType,
+    status: document.status,
+    issuer: document.issuer ?? "",
+    country: document.country ?? "",
+    documentNumber:
+      document.documentNumber ?? "",
+    issueDate:
+      document.issueDate?.slice(
+        0,
+        10,
+      ) ?? "",
+    expiryDate:
+      document.expiryDate?.slice(
+        0,
+        10,
+      ) ?? "",
+    confidentiality:
+      document.confidentiality,
+    fileName:
+      document.fileName ?? "",
+    filePath:
+      document.filePath ?? "",
+    notes: document.notes ?? "",
   };
 }
 
@@ -263,6 +299,13 @@ export default function Documents() {
   const [dialogOpen, setDialogOpen] =
     useState(false);
 
+  const [
+    editingDocument,
+    setEditingDocument,
+  ] = useState<DocumentRecord | null>(
+    null,
+  );
+
   const [error, setError] =
     useState("");
 
@@ -340,6 +383,39 @@ export default function Documents() {
     }));
   }
 
+
+  function openCreateDialog() {
+    setEditingDocument(null);
+    setForm(createEmptyForm());
+    setError("");
+    setSuccess("");
+    setDialogOpen(true);
+  }
+
+  function openEditDialog(
+    document: DocumentRecord,
+  ) {
+    setEditingDocument(document);
+    setForm(
+      createFormFromDocument(
+        document,
+      ),
+    );
+    setError("");
+    setSuccess("");
+    setDialogOpen(true);
+  }
+
+  function closeDocumentDialog() {
+    if (saving) {
+      return;
+    }
+
+    setDialogOpen(false);
+    setEditingDocument(null);
+    setForm(createEmptyForm());
+  }
+
   async function submitDocument() {
     if (
       !form.title.trim() ||
@@ -385,13 +461,23 @@ export default function Documents() {
     setSuccess("");
 
     try {
-      await createDocument(input);
+      if (editingDocument) {
+        await updateDocument(
+          editingDocument.id,
+          input,
+        );
+      } else {
+        await createDocument(input);
+      }
 
       setDialogOpen(false);
+      setEditingDocument(null);
       setForm(createEmptyForm());
 
       setSuccess(
-        "Documento registrato nel Document Center.",
+        editingDocument
+          ? "Documento aggiornato."
+          : "Documento registrato nel Document Center.",
       );
 
       await loadDocuments();
@@ -645,10 +731,7 @@ export default function Documents() {
             startIcon={
               <AddRoundedIcon />
             }
-            onClick={() => {
-              setForm(createEmptyForm());
-              setDialogOpen(true);
-            }}
+            onClick={openCreateDialog}
           >
             Nuovo documento
           </Button>
@@ -1076,6 +1159,21 @@ export default function Documents() {
                       }}
                     >
                       <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={
+                          <EditRoundedIcon />
+                        }
+                        onClick={() =>
+                          openEditDialog(
+                            document,
+                          )
+                        }
+                      >
+                        Modifica
+                      </Button>
+
+                      <Button
                         component="label"
                         size="small"
                         variant={
@@ -1240,15 +1338,14 @@ export default function Documents() {
 
       <Dialog
         open={dialogOpen}
-        onClose={() =>
-          !saving &&
-          setDialogOpen(false)
-        }
+        onClose={closeDocumentDialog}
         fullWidth
         maxWidth="md"
       >
         <DialogTitle>
-          Nuovo documento
+          {editingDocument
+            ? "Modifica documento"
+            : "Nuovo documento"}
         </DialogTitle>
 
         <DialogContent>
@@ -1436,29 +1533,19 @@ export default function Documents() {
               }}
             />
 
-            <TextField
-              label="Nome file"
-              value={form.fileName}
-              onChange={(event) =>
-                updateForm(
-                  "fileName",
-                  event.target.value,
-                )
-              }
-              placeholder="Documento.pdf"
-            />
-
-            <TextField
-              label="Percorso file"
-              value={form.filePath}
-              onChange={(event) =>
-                updateForm(
-                  "filePath",
-                  event.target.value,
-                )
-              }
-              placeholder="/documents/Documento.pdf"
-            />
+            <Alert
+              severity="info"
+              sx={{
+                gridColumn: {
+                  sm: "1 / -1",
+                },
+              }}
+            >
+              Il file e il percorso di
+              archiviazione sono gestiti
+              automaticamente tramite il
+              pulsante “Carica file”.
+            </Alert>
 
             <TextField
               label="Note"
@@ -1478,13 +1565,18 @@ export default function Documents() {
               }}
             />
           </Box>
+
+          {editingDocument && (
+            <DocumentLinksManager
+              document={editingDocument}
+              onChanged={loadDocuments}
+            />
+          )}
         </DialogContent>
 
         <DialogActions>
           <Button
-            onClick={() =>
-              setDialogOpen(false)
-            }
+            onClick={closeDocumentDialog}
             disabled={saving}
           >
             Annulla
@@ -1499,7 +1591,9 @@ export default function Documents() {
           >
             {saving
               ? "Salvataggio..."
-              : "Registra documento"}
+              : editingDocument
+                ? "Salva modifiche"
+                : "Registra documento"}
           </Button>
         </DialogActions>
       </Dialog>
