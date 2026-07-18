@@ -1,3 +1,4 @@
+import { PlanningScenariosModule } from './planning-scenarios/planning-scenarios.module';
 import { ReportsModule } from './reports/reports.module';
 import { DocumentsModule } from './documents/documents.module';
 import { OperationalCalendarModule } from './operational-calendar/operational-calendar.module';
@@ -23,6 +24,7 @@ import { WealthModule } from './wealth/wealth.module';
 
 @Module({
   imports: [
+    PlanningScenariosModule,
     ReportsModule,
     DocumentsModule,
     OperationalCalendarModule,
