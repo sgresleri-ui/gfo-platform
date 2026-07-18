@@ -132,6 +132,18 @@ export class DocumentsController {
     );
   }
 
+
+  @Delete(':id/links/:linkId')
+  deleteLink(
+    @Param('id') id: string,
+    @Param('linkId') linkId: string,
+  ) {
+    return this.documentsService.deleteLink(
+      id,
+      linkId,
+    );
+  }
+
   @Post(':id/links')
   createLink(
     @Param('id') id: string,

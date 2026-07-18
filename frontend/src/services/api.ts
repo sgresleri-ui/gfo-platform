@@ -2218,3 +2218,67 @@ export async function deleteDocumentRecord(
   );
 }
 
+export type DocumentLinkEntityType =
+  | "HOUSEHOLD"
+  | "OPERATIONAL_TASK"
+  | "DECISION"
+  | "PROPERTY"
+  | "ACCOUNT"
+  | "POSITION";
+
+export type DocumentLinkRelationType =
+  | "PRIMARY"
+  | "SUPPORTING"
+  | "REFERENCE";
+
+export type CreateDocumentLinkRequest = {
+  entityType: DocumentLinkEntityType;
+  entityId: string;
+  relationType?: DocumentLinkRelationType;
+  notes?: string | null;
+};
+
+export type DeleteDocumentLinkResponse = {
+  id: string;
+  documentId: string;
+  deleted: boolean;
+};
+
+export async function createDocumentLink(
+  documentId: string,
+  input: CreateDocumentLinkRequest,
+): Promise<DocumentLink> {
+  const response = await fetch(
+    `${API_URL}/documents/${documentId}/links`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+
+  return readJson<DocumentLink>(
+    response,
+    "Unable to create document link",
+  );
+}
+
+export async function deleteDocumentLink(
+  documentId: string,
+  linkId: string,
+): Promise<DeleteDocumentLinkResponse> {
+  const response = await fetch(
+    `${API_URL}/documents/${documentId}/links/${linkId}`,
+    {
+      method: "DELETE",
+    },
+  );
+
+  return readJson<DeleteDocumentLinkResponse>(
+    response,
+    "Unable to delete document link",
+  );
+}
+
