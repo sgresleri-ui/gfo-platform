@@ -7,5 +7,6 @@ import { LiquidityService } from './liquidity.service';
   imports: [PrismaModule],
   controllers: [LiquidityController],
   providers: [LiquidityService],
+  exports: [LiquidityService],
 })
 export class LiquidityModule {}

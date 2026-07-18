@@ -7,5 +7,6 @@ import { PropertiesService } from './properties.service';
   imports: [PrismaModule],
   controllers: [PropertiesController],
   providers: [PropertiesService],
+  exports: [PropertiesService],
 })
 export class PropertiesModule {}

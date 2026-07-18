@@ -5,12 +5,11 @@ import { DocumentsController } from './documents.controller';
 import { DocumentsService } from './documents.service';
 
 @Module({
-  controllers: [
-    DocumentsController,
-  ],
+  controllers: [DocumentsController],
   providers: [
     DocumentsService,
     DocumentFilesService,
   ],
+  exports: [DocumentsService],
 })
 export class DocumentsModule {}

@@ -4,11 +4,8 @@ import { OperationalCalendarController } from './operational-calendar.controller
 import { OperationalCalendarService } from './operational-calendar.service';
 
 @Module({
-  controllers: [
-    OperationalCalendarController,
-  ],
-  providers: [
-    OperationalCalendarService,
-  ],
+  controllers: [OperationalCalendarController],
+  providers: [OperationalCalendarService],
+  exports: [OperationalCalendarService],
 })
 export class OperationalCalendarModule {}

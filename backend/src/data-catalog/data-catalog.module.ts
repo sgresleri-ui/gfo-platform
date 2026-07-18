@@ -6,5 +6,6 @@ import { DataCatalogService } from './data-catalog.service';
 @Module({
   controllers: [DataCatalogController],
   providers: [DataCatalogService],
+  exports: [DataCatalogService],
 })
 export class DataCatalogModule {}

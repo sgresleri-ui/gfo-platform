@@ -1,3 +1,4 @@
+import { ReportsModule } from './reports/reports.module';
 import { DocumentsModule } from './documents/documents.module';
 import { OperationalCalendarModule } from './operational-calendar/operational-calendar.module';
 import { IpsModule } from './ips/ips.module';
@@ -22,6 +23,7 @@ import { WealthModule } from './wealth/wealth.module';
 
 @Module({
   imports: [
+    ReportsModule,
     DocumentsModule,
     OperationalCalendarModule,
     IpsModule,
