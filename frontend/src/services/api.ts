@@ -2362,3 +2362,83 @@ export async function getExecutiveReport(): Promise<ExecutiveReportResponse> {
     "Unable to load executive report",
   );
 }
+
+export type ExecutiveReportSnapshotSummary = {
+  id: string;
+  householdId: number;
+  reportType: string;
+  version: string;
+  status: "COMPLETE" | "PARTIAL";
+  generatedAt: string;
+  completenessPercentage: number;
+  totalSections: number;
+  availableSections: number;
+  unavailableSections: number;
+  netWorth: number | null;
+  grossAssets: number | null;
+  liabilities: number | null;
+  liquidity: number | null;
+  investments: number | null;
+  realEstate: number | null;
+  otherAssets: number | null;
+  currency: string;
+  checksum: string;
+  source: string;
+  createdAt: string;
+};
+
+export type CreateExecutiveReportSnapshotResponse = {
+  created: boolean;
+  duplicate: boolean;
+  snapshot: ExecutiveReportSnapshotSummary;
+};
+
+export type ExecutiveReportSnapshotsResponse = {
+  generatedAt: string;
+  count: number;
+  snapshots: ExecutiveReportSnapshotSummary[];
+};
+
+export type ExecutiveReportSnapshotDetail =
+  ExecutiveReportSnapshotSummary & {
+    checksumVerified: boolean;
+    payload: ExecutiveReportResponse | null;
+  };
+
+export async function createExecutiveReportSnapshot(): Promise<CreateExecutiveReportSnapshotResponse> {
+  const response = await fetch(
+    `${API_URL}/reports/executive/snapshots`,
+    {
+      method: "POST",
+    },
+  );
+
+  return readJson<CreateExecutiveReportSnapshotResponse>(
+    response,
+    "Unable to save executive report snapshot",
+  );
+}
+
+export async function getExecutiveReportSnapshots(): Promise<ExecutiveReportSnapshotsResponse> {
+  const response = await fetch(
+    `${API_URL}/reports/executive/snapshots`,
+  );
+
+  return readJson<ExecutiveReportSnapshotsResponse>(
+    response,
+    "Unable to load executive report snapshots",
+  );
+}
+
+export async function getExecutiveReportSnapshot(
+  id: string,
+): Promise<ExecutiveReportSnapshotDetail> {
+  const response = await fetch(
+    `${API_URL}/reports/executive/snapshots/${id}`,
+  );
+
+  return readJson<ExecutiveReportSnapshotDetail>(
+    response,
+    "Unable to load executive report snapshot",
+  );
+}

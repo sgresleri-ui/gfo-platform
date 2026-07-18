@@ -23,6 +23,7 @@ import EventNoteRoundedIcon from "@mui/icons-material/EventNoteRounded";
 import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded";
 
 import KpiCard from "../components/KpiCard";
+import ReportSnapshotsPanel from "../components/ReportSnapshotsPanel";
 
 import {
   getExecutiveReport,
@@ -666,6 +667,8 @@ export default function Reports() {
           {partialWarning}
         </Alert>
       )}
+
+      <ReportSnapshotsPanel />
 
       {report && (
         <Paper
