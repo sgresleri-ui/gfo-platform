@@ -37,6 +37,8 @@ import {
   YAxis,
 } from "recharts";
 
+import PlanningScenarioArchive from "./PlanningScenarioArchive";
+
 import {
   getPlanningScenarioBaseline,
   simulatePlanningScenario,
@@ -412,6 +414,84 @@ export default function PlanningScenarioPanel() {
     } finally {
       setSimulating(false);
     }
+  }
+
+
+  function loadStoredScenario(
+    assumptions:
+      SimulatePlanningScenarioInput,
+    storedResult:
+      PlanningScenarioResponse | null,
+  ) {
+    setForm({
+      name:
+        assumptions.name ??
+        "Scenario personalizzato",
+
+      description:
+        assumptions.description ??
+        "",
+
+      initialCapitalAdjustment:
+        String(
+          assumptions
+            .initialCapitalAdjustment ??
+            0,
+        ),
+
+      annualReturnAdjustmentPct:
+        String(
+          assumptions
+            .annualReturnAdjustmentPct ??
+            0,
+        ),
+
+      annualCostAdjustmentPct:
+        String(
+          assumptions
+            .annualCostAdjustmentPct ??
+            0,
+        ),
+
+      annualRevenueAdjustmentPct:
+        String(
+          assumptions
+            .annualRevenueAdjustmentPct ??
+            0,
+        ),
+
+      expenseInflationDeltaPct:
+        String(
+          assumptions
+            .expenseInflationDeltaPct ??
+            0,
+        ),
+    });
+
+    setEvents(
+      (assumptions.events ?? []).map(
+        (event, index) => ({
+          id:
+            `stored-${Date.now()}-${index}`,
+
+          year:
+            String(event.year),
+
+          label:
+            event.label,
+
+          amount:
+            String(event.amount),
+
+          category:
+            event.category ??
+            "EXTRAORDINARY",
+        }),
+      ),
+    );
+
+    setResult(storedResult);
+    setError("");
   }
 
   const statusColor =
@@ -1251,6 +1331,14 @@ export default function PlanningScenarioPanel() {
           </Paper>
         </>
       )}
+
+      <PlanningScenarioArchive
+        currentResult={result}
+        onLoadScenario={
+          loadStoredScenario
+        }
+      />
+
     </Paper>
   );
 }

@@ -2597,3 +2597,143 @@ export async function simulatePlanningScenario(
     "Unable to simulate planning scenario",
   );
 }
+
+export type StoredPlanningScenarioSummary = {
+  id: string;
+  householdId: number;
+  name: string;
+  description: string | null;
+  status: string;
+
+  baseline: {
+    workbook: string | null;
+    asOfDate: string | null;
+    startYear: number | null;
+    endYear: number | null;
+  };
+
+  sustainabilityStatus:
+    | PlanningScenarioStatus
+    | null;
+
+  initialCapital: number | null;
+  finalCapital: number | null;
+  minimumCapital: number | null;
+  minimumCapitalYear: number | null;
+  firstNegativeCapitalYear: number | null;
+  finalCapitalDelta: number | null;
+  finalCapitalDeltaPct: number | null;
+  lastSimulatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+
+  assumptions:
+    SimulatePlanningScenarioInput | null;
+};
+
+export type StoredPlanningScenarioDetail =
+  StoredPlanningScenarioSummary & {
+    lastResult:
+      PlanningScenarioResponse | null;
+  };
+
+export type StoredPlanningScenariosResponse = {
+  generatedAt: string;
+  count: number;
+  scenarios:
+    StoredPlanningScenarioSummary[];
+};
+
+export type CreateStoredPlanningScenarioResponse = {
+  created: boolean;
+  scenario:
+    StoredPlanningScenarioDetail;
+};
+
+export type RerunStoredPlanningScenarioResponse = {
+  recalculated: boolean;
+  scenario:
+    StoredPlanningScenarioDetail;
+};
+
+export type ArchiveStoredPlanningScenarioResponse = {
+  archived: boolean;
+  scenario:
+    StoredPlanningScenarioSummary;
+};
+
+export async function getStoredPlanningScenarios(): Promise<StoredPlanningScenariosResponse> {
+  const response = await fetch(
+    `${API_URL}/planning/scenarios`,
+  );
+
+  return readJson<StoredPlanningScenariosResponse>(
+    response,
+    "Unable to load stored planning scenarios",
+  );
+}
+
+export async function createStoredPlanningScenario(
+  input: SimulatePlanningScenarioInput,
+): Promise<CreateStoredPlanningScenarioResponse> {
+  const response = await fetch(
+    `${API_URL}/planning/scenarios`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+
+  return readJson<CreateStoredPlanningScenarioResponse>(
+    response,
+    "Unable to save planning scenario",
+  );
+}
+
+export async function getStoredPlanningScenario(
+  id: string,
+): Promise<StoredPlanningScenarioDetail> {
+  const response = await fetch(
+    `${API_URL}/planning/scenarios/${id}`,
+  );
+
+  return readJson<StoredPlanningScenarioDetail>(
+    response,
+    "Unable to load planning scenario",
+  );
+}
+
+export async function rerunStoredPlanningScenario(
+  id: string,
+): Promise<RerunStoredPlanningScenarioResponse> {
+  const response = await fetch(
+    `${API_URL}/planning/scenarios/${id}/simulate`,
+    {
+      method: "POST",
+    },
+  );
+
+  return readJson<RerunStoredPlanningScenarioResponse>(
+    response,
+    "Unable to recalculate planning scenario",
+  );
+}
+
+export async function archiveStoredPlanningScenario(
+  id: string,
+): Promise<ArchiveStoredPlanningScenarioResponse> {
+  const response = await fetch(
+    `${API_URL}/planning/scenarios/${id}/archive`,
+    {
+      method: "POST",
+    },
+  );
+
+  return readJson<ArchiveStoredPlanningScenarioResponse>(
+    response,
+    "Unable to archive planning scenario",
+  );
+}
