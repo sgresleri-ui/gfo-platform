@@ -26,6 +26,8 @@ import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import FolderRoundedIcon from "@mui/icons-material/FolderRounded";
 import LinkRoundedIcon from "@mui/icons-material/LinkRounded";
+import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
+import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 
@@ -33,8 +35,10 @@ import KpiCard from "../components/KpiCard";
 
 import {
   createDocument,
+  getDocumentFileUrl,
   getDocumentsOverview,
   updateDocument,
+  uploadDocumentFile,
   type CreateDocumentRequest,
   type DocumentCategory,
   type DocumentConfidentiality,
@@ -242,6 +246,11 @@ export default function Documents() {
   const [saving, setSaving] =
     useState(false);
 
+  const [
+    uploadingDocumentId,
+    setUploadingDocumentId,
+  ] = useState<string | null>(null);
+
   const [dialogOpen, setDialogOpen] =
     useState(false);
 
@@ -385,6 +394,41 @@ export default function Documents() {
       );
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function uploadFile(
+    document: DocumentRecord,
+    file: File,
+  ) {
+    setUploadingDocumentId(
+      document.id,
+    );
+
+    setError("");
+    setSuccess("");
+
+    try {
+      await uploadDocumentFile(
+        document.id,
+        file,
+      );
+
+      setSuccess(
+        document.fileName
+          ? "File del documento sostituito."
+          : "File caricato nel Document Center.",
+      );
+
+      await loadDocuments();
+    } catch (requestError) {
+      console.error(requestError);
+
+      setError(
+        "Impossibile caricare il file.",
+      );
+    } finally {
+      setUploadingDocumentId(null);
     }
   }
 
@@ -947,6 +991,78 @@ export default function Documents() {
                         flexWrap: "wrap",
                       }}
                     >
+                      <Button
+                        component="label"
+                        size="small"
+                        variant={
+                          document.fileName
+                            ? "outlined"
+                            : "contained"
+                        }
+                        startIcon={
+                          uploadingDocumentId ===
+                          document.id ? (
+                            <CircularProgress
+                              size={16}
+                              color="inherit"
+                            />
+                          ) : (
+                            <UploadFileRoundedIcon />
+                          )
+                        }
+                        disabled={
+                          uploadingDocumentId ===
+                          document.id
+                        }
+                      >
+                        {uploadingDocumentId ===
+                        document.id
+                          ? "Caricamento..."
+                          : document.fileName
+                            ? "Sostituisci file"
+                            : "Carica file"}
+
+                        <input
+                          hidden
+                          type="file"
+                          accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                          onChange={(event) => {
+                            const file =
+                              event.target.files?.[0];
+
+                            event.target.value = "";
+
+                            if (file) {
+                              void uploadFile(
+                                document,
+                                file,
+                              );
+                            }
+                          }}
+                        />
+                      </Button>
+
+                      {document.fileName && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={
+                            <OpenInNewRoundedIcon />
+                          }
+                          onClick={() => {
+                            window.open(
+                              getDocumentFileUrl(
+                                document.id,
+                              ),
+                              "_blank",
+                              "noopener,noreferrer",
+                            );
+                          }}
+                        >
+                          Apri file
+                        </Button>
+                      )}
+
                       {document.status !==
                       "ARCHIVED" ? (
                         <Button

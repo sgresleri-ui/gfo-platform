@@ -2132,3 +2132,43 @@ export async function updateDocument(
   );
 }
 
+export type DocumentFileUploadResponse = {
+  id: string;
+  fileName: string | null;
+  mimeType: string | null;
+  fileSize: number | null;
+  checksum: string | null;
+  updatedAt: string;
+};
+
+export async function uploadDocumentFile(
+  documentId: string,
+  file: File,
+): Promise<DocumentFileUploadResponse> {
+  const formData = new FormData();
+
+  formData.append(
+    "file",
+    file,
+  );
+
+  const response = await fetch(
+    `${API_URL}/documents/${documentId}/file`,
+    {
+      method: "POST",
+      body: formData,
+    },
+  );
+
+  return readJson<DocumentFileUploadResponse>(
+    response,
+    "Unable to upload document file",
+  );
+}
+
+export function getDocumentFileUrl(
+  documentId: string,
+): string {
+  return `${API_URL}/documents/${documentId}/file`;
+}
+
