@@ -25,10 +25,8 @@ import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded";
 import KpiCard from "../components/KpiCard";
 
 import {
-  getBudgetOverview,
-  getPropertiesOverview,
-  type BudgetOverviewResponse,
-  type PropertiesOverviewResponse,
+  getExecutiveReport,
+  type ExecutiveReportResponse,
 } from "../services/api";
 
 type AssetAllocationItem = {
@@ -44,9 +42,34 @@ type OperationalAction = {
   date: string;
 };
 
-const API_URL =
-  import.meta.env.VITE_API_URL ??
-  "http://localhost:3000";
+
+const REPORT_SECTION_LABELS:
+  Record<string, string> = {
+    wealthSummary:
+      "Sintesi patrimoniale",
+    wealthRegistry:
+      "Registro patrimoniale",
+    investments:
+      "Investimenti",
+    liquidity:
+      "Liquidità",
+    properties:
+      "Immobili",
+    budget:
+      "Budget e planning",
+    performance:
+      "Performance",
+    risk:
+      "Rischio",
+    dataQuality:
+      "Qualità dei dati",
+    operationalCalendar:
+      "Calendario operativo",
+    documents:
+      "Document Center",
+    dataCatalog:
+      "Catalogo dati",
+  };
 
 function isRecord(
   value: unknown,
@@ -176,134 +199,86 @@ function categoryValueBase(
   return found ? total : null;
 }
 
-async function fetchFirstAvailable(
-  paths: string[],
-): Promise<unknown> {
-  let lastError = "Endpoint non disponibile";
-
-  for (const path of paths) {
-    try {
-      const response = await fetch(
-        `${API_URL}${path}`,
-      );
-
-      if (response.ok) {
-        return response.json();
-      }
-
-      lastError = `${path}: HTTP ${response.status}`;
-    } catch (error) {
-      lastError =
-        error instanceof Error
-          ? error.message
-          : "Errore di rete";
-    }
-  }
-
-  throw new Error(lastError);
-}
-
 export default function Reports() {
-  const [budget, setBudget] =
-    useState<BudgetOverviewResponse | null>(null);
-
-  const [properties, setProperties] =
-    useState<PropertiesOverviewResponse | null>(
+  const [report, setReport] =
+    useState<ExecutiveReportResponse | null>(
       null,
     );
 
-  const [wealth, setWealth] =
-    useState<unknown>(null);
+  const [loading, setLoading] =
+    useState(true);
 
-  const [investments, setInvestments] =
-    useState<unknown>(null);
+  const [error, setError] =
+    useState("");
 
-  const [liquidity, setLiquidity] =
-    useState<unknown>(null);
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [partialWarning, setPartialWarning] =
     useState("");
+
+  const budget =
+    report?.sections.budget.data ??
+    null;
+
+  const properties =
+    report?.sections.properties.data ??
+    null;
+
+  const investments =
+    report?.sections.investments.data ??
+    null;
+
+  const liquidity =
+    report?.sections.liquidity.data ??
+    null;
+
+  const wealth = useMemo(() => {
+    const summary =
+      report?.sections.wealthSummary
+        .data ?? null;
+
+    const registry =
+      report?.sections.wealthRegistry
+        .data ?? null;
+
+    if (!summary && !registry) {
+      return null;
+    }
+
+    return {
+      summary,
+      household:
+        registry?.household ?? null,
+      positions:
+        registry?.positions ?? [],
+      count:
+        registry?.count ?? 0,
+    };
+  }, [report]);
 
   async function loadReport() {
     setLoading(true);
     setError("");
     setPartialWarning("");
 
-    const results = await Promise.allSettled([
-      getBudgetOverview(),
-      getPropertiesOverview(),
-      fetchFirstAvailable([
-        "/wealth",
-        "/wealth/overview",
-      ]),
-      fetchFirstAvailable([
-        "/investments",
-        "/investments/overview",
-      ]),
-      fetchFirstAvailable([
-        "/liquidity",
-        "/liquidity/overview",
-      ]),
-    ]);
+    try {
+      const result =
+        await getExecutiveReport();
 
-    const [
-      budgetResult,
-      propertiesResult,
-      wealthResult,
-      investmentsResult,
-      liquidityResult,
-    ] = results;
+      setReport(result);
 
-    if (
-      budgetResult.status === "rejected" ||
-      propertiesResult.status === "rejected"
-    ) {
+      if (result.status === "PARTIAL") {
+        setPartialWarning(
+          `Report parziale: ${result.completeness.availableSections} sezioni disponibili su ${result.completeness.totalSections}.`,
+        );
+      }
+    } catch (requestError) {
+      console.error(requestError);
+
       setError(
-        "Impossibile generare il report: Budget o Immobili non sono disponibili.",
+        "Impossibile caricare il report executive consolidato.",
       );
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setBudget(budgetResult.value);
-    setProperties(propertiesResult.value);
-
-    const unavailableSections: string[] = [];
-
-    if (wealthResult.status === "fulfilled") {
-      setWealth(wealthResult.value);
-    } else {
-      setWealth(null);
-      unavailableSections.push("Patrimonio");
-    }
-
-    if (
-      investmentsResult.status === "fulfilled"
-    ) {
-      setInvestments(investmentsResult.value);
-    } else {
-      setInvestments(null);
-      unavailableSections.push("Investimenti");
-    }
-
-    if (liquidityResult.status === "fulfilled") {
-      setLiquidity(liquidityResult.value);
-    } else {
-      setLiquidity(null);
-      unavailableSections.push("Liquidità");
-    }
-
-    if (unavailableSections.length > 0) {
-      setPartialWarning(
-        `Report generato parzialmente. Sezioni API non disponibili: ${unavailableSections.join(
-          ", ",
-        )}.`,
-      );
-    }
-
-    setLoading(false);
   }
 
   useEffect(() => {
@@ -346,14 +321,33 @@ export default function Reports() {
     })}%`;
   };
 
-  const reportDate = new Date().toLocaleDateString(
-    "it-IT",
-    {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    },
-  );
+  const reportDate = report
+    ? new Date(
+        report.generatedAt,
+      ).toLocaleDateString(
+        "it-IT",
+        {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        },
+      )
+    : "—";
+
+  const reportDateTime = report
+    ? new Date(
+        report.generatedAt,
+      ).toLocaleString(
+        "it-IT",
+        {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        },
+      )
+    : "—";
 
   const liquidityValue =
     nestedNumber(liquidity, [
@@ -444,7 +438,9 @@ export default function Reports() {
 
   const foreignCurrencyExposure =
     nestedNumber(liquidity, [
+      ["summary", "foreignCurrencyWeight"],
       ["summary", "foreignCurrencyExposure"],
+      ["foreignCurrencyWeight"],
       ["foreignCurrencyExposure"],
     ]);
 
@@ -669,6 +665,169 @@ export default function Reports() {
         >
           {partialWarning}
         </Alert>
+      )}
+
+      {report && (
+        <Paper
+          className="report-section"
+          elevation={0}
+          sx={{
+            p: 2.5,
+            mb: 3,
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent:
+                "space-between",
+              alignItems: {
+                xs: "flex-start",
+                md: "center",
+              },
+              flexDirection: {
+                xs: "column",
+                md: "row",
+              },
+              gap: 2,
+              mb: 2,
+            }}
+          >
+            <Box>
+              <Typography
+                variant="subtitle1"
+                sx={{ fontWeight: 800 }}
+              >
+                Stato del report consolidato
+              </Typography>
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 0.4 }}
+              >
+                Generato il {reportDateTime}
+              </Typography>
+            </Box>
+
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                flexWrap: "wrap",
+              }}
+            >
+              <Chip
+                label={
+                  report.status ===
+                  "COMPLETE"
+                    ? "Report completo"
+                    : "Report parziale"
+                }
+                color={
+                  report.status ===
+                  "COMPLETE"
+                    ? "success"
+                    : "warning"
+                }
+              />
+
+              <Chip
+                label={`${report.completeness.percentage.toLocaleString(
+                  "it-IT",
+                  {
+                    maximumFractionDigits: 2,
+                  },
+                )}% · ${report.completeness.availableSections}/${report.completeness.totalSections} sezioni`}
+                variant="outlined"
+              />
+            </Box>
+          </Box>
+
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm:
+                  "repeat(2, minmax(0, 1fr))",
+                xl:
+                  "repeat(3, minmax(0, 1fr))",
+              },
+              gap: 1.2,
+            }}
+          >
+            {Object.entries(
+              report.sections,
+            ).map(
+              ([name, section]) => (
+                <Box
+                  key={name}
+                  sx={{
+                    p: 1.4,
+                    border: "1px solid",
+                    borderColor:
+                      "divider",
+                    borderRadius: 1.5,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent:
+                        "space-between",
+                      alignItems: "center",
+                      gap: 1,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 750,
+                      }}
+                    >
+                      {REPORT_SECTION_LABELS[
+                        name
+                      ] ?? name}
+                    </Typography>
+
+                    <Chip
+                      size="small"
+                      label={
+                        section.status ===
+                        "AVAILABLE"
+                          ? "OK"
+                          : "Non disponibile"
+                      }
+                      color={
+                        section.status ===
+                        "AVAILABLE"
+                          ? "success"
+                          : "error"
+                      }
+                      variant="outlined"
+                    />
+                  </Box>
+
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{
+                      display: "block",
+                      mt: 0.6,
+                      overflowWrap:
+                        "anywhere",
+                    }}
+                  >
+                    {section.source}
+                  </Typography>
+                </Box>
+              ),
+            )}
+          </Box>
+        </Paper>
       )}
 
       {budget && properties && (
@@ -1045,7 +1204,7 @@ export default function Reports() {
                       variant="body2"
                       sx={{ fontWeight: 700 }}
                     >
-                      Concentrazione Top 5
+                      Top 5 investimenti finanziari
                     </Typography>
 
                     <Typography
@@ -1071,7 +1230,7 @@ export default function Reports() {
                       variant="body2"
                       sx={{ fontWeight: 700 }}
                     >
-                      Esposizione valutaria
+                      Liquidità in valuta estera
                     </Typography>
 
                     <Typography

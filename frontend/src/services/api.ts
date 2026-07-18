@@ -2282,3 +2282,83 @@ export async function deleteDocumentLink(
   );
 }
 
+
+export type ExecutiveReportSectionStatus =
+  | "AVAILABLE"
+  | "UNAVAILABLE";
+
+export type ExecutiveReportSection<T> = {
+  status: ExecutiveReportSectionStatus;
+  source: string;
+  data: T | null;
+  error: string | null;
+};
+
+export type ExecutiveReportResponse = {
+  generatedAt: string;
+  reportType: "FAMILY_OFFICE_EXECUTIVE";
+  version: string;
+  status: "COMPLETE" | "PARTIAL";
+
+  completeness: {
+    totalSections: number;
+    availableSections: number;
+    unavailableSections: number;
+    percentage: number;
+  };
+
+  unavailableSectionNames: string[];
+
+  sections: {
+    wealthSummary:
+      ExecutiveReportSection<DashboardSummary>;
+
+    wealthRegistry:
+      ExecutiveReportSection<WealthRegistryResponse>;
+
+    investments:
+      ExecutiveReportSection<InvestmentPortfolioResponse>;
+
+    liquidity:
+      ExecutiveReportSection<LiquidityOverviewResponse>;
+
+    properties:
+      ExecutiveReportSection<PropertiesOverviewResponse>;
+
+    budget:
+      ExecutiveReportSection<BudgetOverviewResponse>;
+
+    performance:
+      ExecutiveReportSection<PerformanceSummaryResponse>;
+
+    risk:
+      ExecutiveReportSection<RiskOverviewResponse>;
+
+    dataQuality:
+      ExecutiveReportSection<
+        Record<string, unknown>
+      >;
+
+    operationalCalendar:
+      ExecutiveReportSection<OperationalCalendarResponse>;
+
+    documents:
+      ExecutiveReportSection<DocumentsOverviewResponse>;
+
+    dataCatalog:
+      ExecutiveReportSection<
+        Record<string, unknown>
+      >;
+  };
+};
+
+export async function getExecutiveReport(): Promise<ExecutiveReportResponse> {
+  const response = await fetch(
+    `${API_URL}/reports/executive`,
+  );
+
+  return readJson<ExecutiveReportResponse>(
+    response,
+    "Unable to load executive report",
+  );
+}
