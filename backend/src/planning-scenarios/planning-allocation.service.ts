@@ -25,6 +25,10 @@ export type PlanningAllocationTransferInput = {
   from: PlanningAssetClass;
   to: PlanningAssetClass;
   amount: number;
+
+  timing?:
+    | 'BEFORE_OPERATING_CASH_FLOW'
+    | 'END_OF_YEAR';
 };
 
 export type PlanningAllocationAssumptionsInput = {
@@ -806,6 +810,21 @@ export class PlanningAllocationService {
               `Destinazione trasferimento ${index + 1}`,
             );
 
+          const timing =
+            transfer.timing ??
+            'BEFORE_OPERATING_CASH_FLOW';
+
+          if (
+            timing !==
+              'BEFORE_OPERATING_CASH_FLOW' &&
+            timing !==
+              'END_OF_YEAR'
+          ) {
+            throw new BadRequestException(
+              `Momento trasferimento ${index + 1} non valido.`,
+            );
+          }
+
           if (from === to) {
             throw new BadRequestException(
               `Il trasferimento ${index + 1} deve usare asset class differenti.`,
@@ -823,6 +842,7 @@ export class PlanningAllocationService {
 
             from,
             to,
+            timing,
 
             amount:
               this.roundMoney(
@@ -1122,9 +1142,23 @@ export class PlanningAllocationService {
                 budgetYear.year,
             );
 
+          const beforeCashFlowTransfers =
+            manualYearTransfers.filter(
+              (transfer) =>
+                transfer.timing !==
+                'END_OF_YEAR',
+            );
+
+          const endOfYearTransfers =
+            manualYearTransfers.filter(
+              (transfer) =>
+                transfer.timing ===
+                'END_OF_YEAR',
+            );
+
           for (
             const transfer
-            of manualYearTransfers
+            of beforeCashFlowTransfers
           ) {
             this.applyInternalTransfer(
               balances,
@@ -1193,6 +1227,18 @@ export class PlanningAllocationService {
               positiveDestination,
               fundingOrder,
             );
+
+          for (
+            const transfer
+            of endOfYearTransfers
+          ) {
+            this.applyInternalTransfer(
+              balances,
+              transfer.from,
+              transfer.to,
+              transfer.amount,
+            );
+          }
 
           const totalReturnImpact =
             this.totalBalances(
@@ -1852,6 +1898,185 @@ export class PlanningAllocationService {
             ? 'ATTENTION'
             : 'COMPLIANT';
 
+    const remediationPlans: Array<{
+      code: string;
+      year: number;
+
+      source:
+        PlanningAssetClass;
+
+      destination:
+        PlanningAssetClass;
+
+      timing:
+        'END_OF_YEAR';
+
+      currentAmount: number;
+      currentWeight: number;
+
+      minimumWeight:
+        number | null;
+
+      targetWeight:
+        number | null;
+
+      amountToMinimum: number;
+      amountToTarget: number;
+      recommendedAmount: number;
+
+      sourceAvailable: number;
+      fullyFundable: boolean;
+
+      label: string;
+      note: string;
+    }> = [];
+
+    const liquidityLimitResult =
+      projectedLimitResults.find(
+        (result) =>
+          result.code ===
+          'LIQUIDITY_GROSS_ASSETS',
+      );
+
+    const remediationYearNumber =
+      liquidityLimitResult
+        ?.firstBreachYear ??
+      liquidityLimitResult
+        ?.firstTargetAttentionYear ??
+      null;
+
+    if (
+      liquidityLimitResult &&
+      remediationYearNumber !== null
+    ) {
+      const remediationYear =
+        years.find(
+          (year) =>
+            year.year ===
+            remediationYearNumber,
+        );
+
+      if (remediationYear) {
+        const currentAmount =
+          remediationYear.end
+            .LIQUIDITY;
+
+        const currentWeight =
+          remediationYear.weights
+            .LIQUIDITY ?? 0;
+
+        const minimumWeight =
+          liquidityLimitResult
+            .minimum;
+
+        const targetWeight =
+          liquidityLimitResult
+            .target;
+
+        const amountToMinimum =
+          minimumWeight === null
+            ? 0
+            : this.roundMoney(
+                Math.max(
+                  0,
+                  (
+                    remediationYear
+                      .endTotal *
+                    minimumWeight /
+                    100
+                  ) -
+                  currentAmount,
+                ),
+              );
+
+        const amountToTarget =
+          targetWeight === null
+            ? amountToMinimum
+            : this.roundMoney(
+                Math.max(
+                  0,
+                  (
+                    remediationYear
+                      .endTotal *
+                    targetWeight /
+                    100
+                  ) -
+                  currentAmount,
+                ),
+              );
+
+        const sourceAvailable =
+          remediationYear.end
+            .INVESTMENTS;
+
+        const requiredAmount =
+          amountToTarget > 0
+            ? amountToTarget
+            : amountToMinimum;
+
+        const recommendedAmount =
+          this.roundMoney(
+            Math.min(
+              requiredAmount,
+              sourceAvailable,
+            ),
+          );
+
+        if (recommendedAmount > 0) {
+          remediationPlans.push({
+            code:
+              'LIQUIDITY_REBALANCING',
+
+            year:
+              remediationYear.year,
+
+            source:
+              'INVESTMENTS',
+
+            destination:
+              'LIQUIDITY',
+
+            timing:
+              'END_OF_YEAR',
+
+            currentAmount:
+              this.roundMoney(
+                currentAmount,
+              ),
+
+            currentWeight:
+              this.roundPercentage(
+                currentWeight,
+              ),
+
+            minimumWeight,
+            targetWeight,
+
+            amountToMinimum,
+            amountToTarget,
+            recommendedAmount,
+
+            sourceAvailable:
+              this.roundMoney(
+                sourceAvailable,
+              ),
+
+            fullyFundable:
+              sourceAvailable >=
+              requiredAmount,
+
+            label:
+              'Ribilanciamento IPS liquidità',
+
+            note:
+              targetWeight !== null
+                ? `Trasferire investimenti verso liquidità per raggiungere il target IPS del ${targetWeight}%.`
+                : `Trasferire investimenti verso liquidità per rispettare il minimo IPS del ${minimumWeight}%.`,
+          });
+        }
+      }
+    }
+
     return {
       generatedAt:
         new Date().toISOString(),
@@ -2091,6 +2316,8 @@ export class PlanningAllocationService {
 
         firstAttentionYear:
           firstProjectedAttentionYear,
+
+        remediationPlans,
 
         unsupportedLimits,
 

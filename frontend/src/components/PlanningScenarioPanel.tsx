@@ -48,6 +48,7 @@ import {
   assessPlanningScenario,
   simulatePlanningScenarioAllocation,
   type PlanningAllocationResponse,
+  type PlanningAllocationTransfer,
   type PlanningScenarioBaselineResponse,
   type PlanningScenarioAssessmentResponse,
   type PlanningScenarioResponse,
@@ -214,6 +215,13 @@ export default function PlanningScenarioPanel() {
     PlanningAllocationResponse | null
   >(null);
 
+  const [
+    allocationTransfers,
+    setAllocationTransfers,
+  ] = useState<
+    PlanningAllocationTransfer[]
+  >([]);
+
   const [form, setForm] =
     useState<ScenarioForm>(
       DEFAULT_FORM,
@@ -368,10 +376,14 @@ export default function PlanningScenarioPanel() {
     setResult(null);
     setAssessment(null);
     setAllocationResult(null);
+    setAllocationTransfers([]);
     setError("");
   }
 
-  async function runScenario() {
+  async function runScenario(
+    transfersOverride?:
+      PlanningAllocationTransfer[],
+  ) {
     setSimulating(true);
     setError("");
     setAllocationResult(null);
@@ -452,6 +464,10 @@ export default function PlanningScenarioPanel() {
           ),
         };
 
+      const effectiveTransfers =
+        transfersOverride ??
+        allocationTransfers;
+
       const [
         response,
         allocationResponse,
@@ -494,7 +510,8 @@ export default function PlanningScenarioPanel() {
               "REAL_ESTATE",
             ],
 
-            transfers: [],
+            transfers:
+              effectiveTransfers,
           },
         }),
       ]);
@@ -508,6 +525,10 @@ export default function PlanningScenarioPanel() {
       setAllocationResult(
         allocationResponse,
       );
+
+      setAllocationTransfers(
+        effectiveTransfers,
+      );
     } catch (requestError) {
       console.error(requestError);
 
@@ -520,6 +541,180 @@ export default function PlanningScenarioPanel() {
   }
 
 
+
+  async function applyIpsRemediation() {
+    const plan =
+      allocationResult
+        ?.ipsProjection
+        .remediationPlans[0];
+
+    if (
+      !plan ||
+      plan.recommendedAmount <= 0
+    ) {
+      return;
+    }
+
+    const transfer:
+      PlanningAllocationTransfer = {
+        year:
+          plan.year,
+
+        label:
+          `${plan.label} ${plan.year}`,
+
+        from:
+          plan.source,
+
+        to:
+          plan.destination,
+
+        amount:
+          plan.recommendedAmount,
+
+        timing:
+          plan.timing,
+      };
+
+    /*
+     * Mantiene i ribilanciamenti
+     * degli anni precedenti.
+     * Sostituisce soltanto un eventuale
+     * trasferimento dello stesso anno
+     * e tra le stesse asset class.
+     */
+    const nextTransfers = [
+      ...allocationTransfers.filter(
+        (item) =>
+          !(
+            item.year ===
+              transfer.year &&
+            item.from ===
+              transfer.from &&
+            item.to ===
+              transfer.to &&
+            item.timing ===
+              transfer.timing
+          ),
+      ),
+
+      transfer,
+    ];
+
+    setSimulating(true);
+    setError("");
+
+    try {
+      const input:
+        SimulatePlanningScenarioInput = {
+          name:
+            form.name.trim() ||
+            "Scenario personalizzato",
+
+          description:
+            form.description.trim(),
+
+          initialCapitalAdjustment:
+            parseNumber(
+              form.initialCapitalAdjustment,
+            ),
+
+          annualReturnAdjustmentPct:
+            parseNumber(
+              form.annualReturnAdjustmentPct,
+            ),
+
+          annualCostAdjustmentPct:
+            parseNumber(
+              form.annualCostAdjustmentPct,
+            ),
+
+          annualRevenueAdjustmentPct:
+            parseNumber(
+              form.annualRevenueAdjustmentPct,
+            ),
+
+          expenseInflationDeltaPct:
+            parseNumber(
+              form.expenseInflationDeltaPct,
+            ),
+
+          events: events.map(
+            (event) => ({
+              year:
+                Number(event.year),
+
+              label:
+                event.label.trim(),
+
+              amount:
+                parseNumber(
+                  event.amount,
+                ),
+
+              category:
+                event.category,
+            }),
+          ),
+        };
+
+      const allocationResponse =
+        await simulatePlanningScenarioAllocation({
+          ...input,
+
+          allocation: {
+            liquidityReturnDeltaPct:
+              parseNumber(
+                form.liquidityReturnDeltaPct,
+              ),
+
+            investmentsReturnDeltaPct:
+              parseNumber(
+                form.investmentsReturnDeltaPct,
+              ),
+
+            realEstateReturnDeltaPct:
+              parseNumber(
+                form.realEstateReturnDeltaPct,
+              ),
+
+            otherAssetsReturnDeltaPct:
+              parseNumber(
+                form.otherAssetsReturnDeltaPct,
+              ),
+
+            positiveCashFlowDestination:
+              "LIQUIDITY",
+
+            deficitFundingOrder: [
+              "LIQUIDITY",
+              "INVESTMENTS",
+              "OTHER_ASSETS",
+              "REAL_ESTATE",
+            ],
+
+            transfers:
+              nextTransfers,
+          },
+        });
+
+      setAllocationTransfers(
+        nextTransfers,
+      );
+
+      setAllocationResult(
+        allocationResponse,
+      );
+    } catch (requestError) {
+      console.error(requestError);
+
+      setError(
+        "Impossibile applicare il ribilanciamento IPS.",
+      );
+    } finally {
+      setSimulating(false);
+    }
+  }
 
   function applyScenarioPreset(
     assumptions:
@@ -607,6 +802,7 @@ export default function PlanningScenarioPanel() {
     setResult(null);
     setAssessment(null);
     setAllocationResult(null);
+    setAllocationTransfers([]);
     setError("");
   }
 
@@ -698,6 +894,7 @@ export default function PlanningScenarioPanel() {
     setResult(storedResult);
     setAssessment(null);
     setAllocationResult(null);
+    setAllocationTransfers([]);
     setError("");
   }
 
@@ -1792,6 +1989,164 @@ export default function PlanningScenarioPanel() {
                   </Typography>
                 )}
               </Alert>
+
+              {allocationResult
+                .ipsProjection
+                .remediationPlans[0] && (
+                <Paper
+                  elevation={0}
+                  sx={{
+                    mb: 2,
+                    p: 2,
+                    border:
+                      "1px solid",
+                    borderColor:
+                      "warning.main",
+                    backgroundColor:
+                      "rgba(237, 108, 2, 0.04)",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent:
+                        "space-between",
+                      alignItems: {
+                        xs: "flex-start",
+                        md: "center",
+                      },
+                      flexDirection: {
+                        xs: "column",
+                        md: "row",
+                      },
+                      gap: 1.5,
+                    }}
+                  >
+                    <Box>
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
+                          fontWeight: 800,
+                        }}
+                      >
+                        Ribilanciamento IPS
+                        suggerito
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mt: 0.3 }}
+                      >
+                        {
+                          allocationResult
+                            .ipsProjection
+                            .remediationPlans[0]
+                            .note
+                        }
+                      </Typography>
+                    </Box>
+
+                    <Button
+                      variant="contained"
+                      color="warning"
+                      disabled={simulating}
+                      onClick={() =>
+                        void applyIpsRemediation()
+                      }
+                    >
+                      Applica ribilanciamento IPS
+                    </Button>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "1fr",
+                        sm:
+                          "repeat(2, minmax(0, 1fr))",
+                        lg:
+                          "repeat(4, minmax(0, 1fr))",
+                      },
+                      gap: 1.2,
+                      mt: 1.8,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                    >
+                      Anno:{" "}
+                      <strong>
+                        {
+                          allocationResult
+                            .ipsProjection
+                            .remediationPlans[0]
+                            .year
+                        }
+                      </strong>
+                    </Typography>
+
+                    <Typography
+                      variant="body2"
+                    >
+                      Per il minimo IPS:{" "}
+                      <strong>
+                        {formatCurrency(
+                          allocationResult
+                            .ipsProjection
+                            .remediationPlans[0]
+                            .amountToMinimum,
+                        )}
+                      </strong>
+                    </Typography>
+
+                    <Typography
+                      variant="body2"
+                    >
+                      Per il target IPS:{" "}
+                      <strong>
+                        {formatCurrency(
+                          allocationResult
+                            .ipsProjection
+                            .remediationPlans[0]
+                            .amountToTarget,
+                        )}
+                      </strong>
+                    </Typography>
+
+                    <Typography
+                      variant="body2"
+                    >
+                      Importo consigliato:{" "}
+                      <strong>
+                        {formatCurrency(
+                          allocationResult
+                            .ipsProjection
+                            .remediationPlans[0]
+                            .recommendedAmount,
+                        )}
+                      </strong>
+                    </Typography>
+                  </Box>
+
+                  {!allocationResult
+                    .ipsProjection
+                    .remediationPlans[0]
+                    .fullyFundable && (
+                    <Alert
+                      severity="warning"
+                      sx={{ mt: 1.5 }}
+                    >
+                      Gli investimenti
+                      disponibili non sono
+                      sufficienti per
+                      raggiungere integralmente
+                      il target.
+                    </Alert>
+                  )}
+                </Paper>
+              )}
 
               {allocationResult.summary
                 .minimumLiquidity <= 0 && (

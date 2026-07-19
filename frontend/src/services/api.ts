@@ -2861,6 +2861,10 @@ export type PlanningAllocationTransfer = {
     PlanningAllocationAssetClass;
   amount: number;
   label?: string;
+
+  timing?:
+    | "BEFORE_OPERATING_CASH_FLOW"
+    | "END_OF_YEAR";
 };
 
 export type PlanningAllocationSettings = {
@@ -3048,6 +3052,39 @@ export type PlanningIpsForwardLimit = {
     PlanningIpsForwardTargetAttention[];
 };
 
+export type PlanningIpsRemediationPlan = {
+  code: string;
+  year: number;
+
+  source:
+    PlanningAllocationAssetClass;
+
+  destination:
+    PlanningAllocationAssetClass;
+
+  timing:
+    "END_OF_YEAR";
+
+  currentAmount: number;
+  currentWeight: number;
+
+  minimumWeight:
+    number | null;
+
+  targetWeight:
+    number | null;
+
+  amountToMinimum: number;
+  amountToTarget: number;
+  recommendedAmount: number;
+
+  sourceAvailable: number;
+  fullyFundable: boolean;
+
+  label: string;
+  note: string;
+};
+
 export type PlanningAllocationResponse = {
   allocation: {
     initial:
@@ -3107,6 +3144,9 @@ export type PlanningAllocationResponse = {
 
     firstAttentionYear:
       number | null;
+
+    remediationPlans:
+      PlanningIpsRemediationPlan[];
 
     unsupportedLimits: Array<{
       code: string;
