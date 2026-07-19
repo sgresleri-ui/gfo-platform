@@ -3274,6 +3274,113 @@ export type PlanningAutomaticIpsRebalancingResponse = {
     PlanningIntegratedScenarioAssessmentResponse;
 };
 
+export type PlanningOptimizedIpsIntervention = {
+  iteration: number;
+  year: number;
+
+  source:
+    PlanningAllocationAssetClass;
+
+  destination:
+    PlanningAllocationAssetClass;
+
+  amount: number;
+
+  desiredWeight: number;
+  weightBefore: number;
+  weightAfter: number;
+
+  fullyFundable: boolean;
+};
+
+export type PlanningOptimizedIpsStrategyResult = {
+  strategy:
+    | "MINIMUM_COMPLIANCE"
+    | "TARGET_OPTIMIZED";
+
+  label: string;
+  description: string;
+
+  minimumWeight: number;
+  targetWeight: number;
+
+  interventions: number;
+
+  grossTransferred: number;
+  totalToLiquidity: number;
+  totalToInvestments: number;
+  netToLiquidity: number;
+
+  fullyFunded: boolean;
+
+  finalStatus:
+    PlanningIpsForwardStatus;
+
+  criticalCompliant: boolean;
+  targetCompliant: boolean;
+
+  finalBreaches: number;
+  finalTargetAttentions: number;
+
+  finalLiquidity: number;
+  finalInvestments: number;
+
+  finalLiquidityWeight: number;
+  finalInvestmentsWeight: number;
+
+  finalNetWorth: number;
+
+  minimumLiquidity: number;
+
+  minimumLiquidityYear:
+    number | null;
+
+  averageTargetDeviation: number;
+
+  interventionDetails:
+    PlanningOptimizedIpsIntervention[];
+
+  finalTransfers:
+    PlanningAllocationTransfer[];
+
+  finalAssessment:
+    PlanningIntegratedScenarioAssessmentResponse;
+};
+
+export type PlanningOptimizedIpsComparisonResponse = {
+  generatedAt: string;
+
+  comparisonType:
+    "OPTIMIZED_IPS_REBALANCING";
+
+  liquidityPolicy: {
+    minimumWeight: number;
+    targetWeight: number;
+  };
+
+  baseline: {
+    status:
+      PlanningIpsForwardStatus;
+
+    breaches: number;
+    targetAttentions: number;
+
+    finalLiquidityWeight: number;
+    finalNetWorth: number;
+  };
+
+  minimumCompliance:
+    PlanningOptimizedIpsStrategyResult;
+
+  targetOptimized:
+    PlanningOptimizedIpsStrategyResult;
+
+  recommendedStrategy:
+    "TARGET_OPTIMIZED";
+
+  rationale: string;
+};
+
 export async function simulatePlanningScenarioAllocation(
   input:
     SimulatePlanningAllocationInput,
@@ -3352,5 +3459,33 @@ export async function applyAutomaticIpsRebalancingPlan(
   return readJson<PlanningAutomaticIpsRebalancingResponse>(
     response,
     "Unable to build automatic IPS rebalancing plan",
+  );
+}
+
+
+export async function compareOptimizedIpsRebalancingStrategies(
+  input:
+    SimulatePlanningAllocationInput,
+): Promise<PlanningOptimizedIpsComparisonResponse> {
+  const response = await fetch(
+    `${API_URL}/planning/scenarios/assess-allocation/compare-optimized`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+
+      body:
+        JSON.stringify({
+          input,
+        }),
+    },
+  );
+
+  return readJson<PlanningOptimizedIpsComparisonResponse>(
+    response,
+    "Unable to compare optimized IPS strategies",
   );
 }

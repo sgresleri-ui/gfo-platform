@@ -47,9 +47,12 @@ import {
   getPlanningScenarioBaseline,
   assessPlanningAllocationScenario,
   applyAutomaticIpsRebalancingPlan,
+  compareOptimizedIpsRebalancingStrategies,
   type PlanningAllocationResponse,
   type PlanningAllocationTransfer,
   type PlanningAutomaticIpsRebalancingResponse,
+  type PlanningOptimizedIpsComparisonResponse,
+  type PlanningOptimizedIpsStrategyResult,
   type PlanningScenarioBaselineResponse,
   type PlanningScenarioAssessmentResponse,
   type PlanningScenarioResponse,
@@ -230,6 +233,13 @@ export default function PlanningScenarioPanel() {
     PlanningAutomaticIpsRebalancingResponse | null
   >(null);
 
+  const [
+    optimizedIpsComparison,
+    setOptimizedIpsComparison,
+  ] = useState<
+    PlanningOptimizedIpsComparisonResponse | null
+  >(null);
+
   const [form, setForm] =
     useState<ScenarioForm>(
       DEFAULT_FORM,
@@ -384,6 +394,7 @@ export default function PlanningScenarioPanel() {
     setResult(null);
     setAssessment(null);
     setAllocationResult(null);
+    setOptimizedIpsComparison(null);
     setAutomaticIpsPlan(null);
     setAllocationTransfers([]);
     setError("");
@@ -396,6 +407,7 @@ export default function PlanningScenarioPanel() {
     setSimulating(true);
     setError("");
     setAllocationResult(null);
+    setOptimizedIpsComparison(null);
     setAutomaticIpsPlan(null);
 
     try {
@@ -865,6 +877,146 @@ export default function PlanningScenarioPanel() {
     }
   }
 
+  async function compareOptimizedIpsStrategies() {
+    setSimulating(true);
+    setError("");
+    setOptimizedIpsComparison(null);
+
+    try {
+      const input:
+        SimulatePlanningScenarioInput = {
+          name:
+            form.name.trim() ||
+            "Scenario personalizzato",
+
+          description:
+            form.description.trim(),
+
+          initialCapitalAdjustment:
+            parseNumber(
+              form.initialCapitalAdjustment,
+            ),
+
+          annualReturnAdjustmentPct:
+            parseNumber(
+              form.annualReturnAdjustmentPct,
+            ),
+
+          annualCostAdjustmentPct:
+            parseNumber(
+              form.annualCostAdjustmentPct,
+            ),
+
+          annualRevenueAdjustmentPct:
+            parseNumber(
+              form.annualRevenueAdjustmentPct,
+            ),
+
+          expenseInflationDeltaPct:
+            parseNumber(
+              form.expenseInflationDeltaPct,
+            ),
+
+          events: events.map(
+            (event) => ({
+              year:
+                Number(event.year),
+
+              label:
+                event.label.trim(),
+
+              amount:
+                parseNumber(
+                  event.amount,
+                ),
+
+              category:
+                event.category,
+            }),
+          ),
+        };
+
+      const comparison =
+        await compareOptimizedIpsRebalancingStrategies({
+          ...input,
+
+          allocation: {
+            liquidityReturnDeltaPct:
+              parseNumber(
+                form.liquidityReturnDeltaPct,
+              ),
+
+            investmentsReturnDeltaPct:
+              parseNumber(
+                form.investmentsReturnDeltaPct,
+              ),
+
+            realEstateReturnDeltaPct:
+              parseNumber(
+                form.realEstateReturnDeltaPct,
+              ),
+
+            otherAssetsReturnDeltaPct:
+              parseNumber(
+                form.otherAssetsReturnDeltaPct,
+              ),
+
+            positiveCashFlowDestination:
+              "LIQUIDITY",
+
+            deficitFundingOrder: [
+              "LIQUIDITY",
+              "INVESTMENTS",
+              "OTHER_ASSETS",
+              "REAL_ESTATE",
+            ],
+
+            transfers:
+              allocationTransfers,
+          },
+        });
+
+      setOptimizedIpsComparison(
+        comparison,
+      );
+    } catch (requestError) {
+      console.error(requestError);
+
+      setError(
+        "Impossibile confrontare le strategie IPS ottimizzate.",
+      );
+    } finally {
+      setSimulating(false);
+    }
+  }
+
+  function applyOptimizedIpsStrategy(
+    strategy:
+      PlanningOptimizedIpsStrategyResult,
+  ) {
+    setAllocationTransfers(
+      strategy.finalTransfers,
+    );
+
+    setResult(
+      strategy
+        .finalAssessment
+        .scenario,
+    );
+
+    setAssessment(
+      strategy.finalAssessment,
+    );
+
+    setAllocationResult(
+      strategy
+        .finalAssessment
+        .allocation,
+    );
+
+    setAutomaticIpsPlan(null);
+  }
+
   function applyScenarioPreset(
     assumptions:
       SimulatePlanningScenarioInput,
@@ -951,6 +1103,7 @@ export default function PlanningScenarioPanel() {
     setResult(null);
     setAssessment(null);
     setAllocationResult(null);
+    setOptimizedIpsComparison(null);
     setAutomaticIpsPlan(null);
     setAllocationTransfers([]);
     setError("");
@@ -1044,6 +1197,7 @@ export default function PlanningScenarioPanel() {
     setResult(storedResult);
     setAssessment(null);
     setAllocationResult(null);
+    setOptimizedIpsComparison(null);
     setAutomaticIpsPlan(null);
     setAllocationTransfers([]);
     setError("");
@@ -2226,6 +2380,16 @@ export default function PlanningScenarioPanel() {
                       >
                         Applica piano IPS completo
                       </Button>
+
+                      <Button
+                        variant="outlined"
+                        disabled={simulating}
+                        onClick={() =>
+                          void compareOptimizedIpsStrategies()
+                        }
+                      >
+                        Confronta strategie
+                      </Button>
                     </Box>
                   </Box>
 
@@ -2315,6 +2479,227 @@ export default function PlanningScenarioPanel() {
                       il target.
                     </Alert>
                   )}
+                </Paper>
+              )}
+
+              {optimizedIpsComparison && (
+                <Paper
+                  elevation={0}
+                  sx={{
+                    mb: 2,
+                    p: 2,
+                    border: "1px solid",
+                    borderColor:
+                      "primary.main",
+                    backgroundColor:
+                      "rgba(25, 118, 210, 0.035)",
+                  }}
+                >
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 800,
+                    }}
+                  >
+                    Confronto strategie IPS
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      mt: 0.4,
+                      mb: 1.8,
+                    }}
+                  >
+                    {
+                      optimizedIpsComparison
+                        .rationale
+                    }
+                  </Typography>
+
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "1fr",
+                        lg:
+                          "repeat(2, minmax(0, 1fr))",
+                      },
+                      gap: 1.5,
+                    }}
+                  >
+                    {[
+                      optimizedIpsComparison
+                        .minimumCompliance,
+                      optimizedIpsComparison
+                        .targetOptimized,
+                    ].map(
+                      (strategy) => (
+                        <Paper
+                          key={
+                            strategy.strategy
+                          }
+                          elevation={0}
+                          sx={{
+                            p: 1.8,
+                            border:
+                              "1px solid",
+                            borderColor:
+                              strategy.strategy ===
+                              "TARGET_OPTIMIZED"
+                                ? "success.main"
+                                : "divider",
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent:
+                                "space-between",
+                              gap: 1,
+                              alignItems:
+                                "flex-start",
+                            }}
+                          >
+                            <Box>
+                              <Typography
+                                variant="subtitle1"
+                                sx={{
+                                  fontWeight: 800,
+                                }}
+                              >
+                                {
+                                  strategy.label
+                                }
+                              </Typography>
+
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{
+                                  mt: 0.3,
+                                }}
+                              >
+                                {
+                                  strategy.description
+                                }
+                              </Typography>
+                            </Box>
+
+                            {strategy.strategy ===
+                              "TARGET_OPTIMIZED" && (
+                              <Chip
+                                size="small"
+                                color="success"
+                                label="Consigliata"
+                              />
+                            )}
+                          </Box>
+
+                          <Box
+                            sx={{
+                              display: "grid",
+                              gridTemplateColumns:
+                                "repeat(2, minmax(0, 1fr))",
+                              gap: 1,
+                              mt: 1.5,
+                            }}
+                          >
+                            <Typography
+                              variant="body2"
+                            >
+                              Interventi:{" "}
+                              <strong>
+                                {
+                                  strategy.interventions
+                                }
+                              </strong>
+                            </Typography>
+
+                            <Typography
+                              variant="body2"
+                            >
+                              Stato finale:{" "}
+                              <strong>
+                                {
+                                  strategy.finalStatus
+                                }
+                              </strong>
+                            </Typography>
+
+                            <Typography
+                              variant="body2"
+                            >
+                              Liquidità finale:{" "}
+                              <strong>
+                                {formatPercentage(
+                                  strategy.finalLiquidityWeight,
+                                )}
+                              </strong>
+                            </Typography>
+
+                            <Typography
+                              variant="body2"
+                            >
+                              Investimenti finali:{" "}
+                              <strong>
+                                {formatPercentage(
+                                  strategy.finalInvestmentsWeight,
+                                )}
+                              </strong>
+                            </Typography>
+
+                            <Typography
+                              variant="body2"
+                            >
+                              Movimenti lordi:{" "}
+                              <strong>
+                                {formatCurrency(
+                                  strategy.grossTransferred,
+                                )}
+                              </strong>
+                            </Typography>
+
+                            <Typography
+                              variant="body2"
+                            >
+                              Netto verso liquidità:{" "}
+                              <strong>
+                                {formatCurrency(
+                                  strategy.netToLiquidity,
+                                )}
+                              </strong>
+                            </Typography>
+                          </Box>
+
+                          <Button
+                            fullWidth
+                            sx={{ mt: 1.7 }}
+                            variant={
+                              strategy.strategy ===
+                              "TARGET_OPTIMIZED"
+                                ? "contained"
+                                : "outlined"
+                            }
+                            color={
+                              strategy.strategy ===
+                              "TARGET_OPTIMIZED"
+                                ? "success"
+                                : "primary"
+                            }
+                            onClick={() =>
+                              applyOptimizedIpsStrategy(
+                                strategy,
+                              )
+                            }
+                          >
+                            Applica questa strategia
+                          </Button>
+                        </Paper>
+                      ),
+                    )}
+                  </Box>
                 </Paper>
               )}
 

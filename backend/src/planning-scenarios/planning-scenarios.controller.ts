@@ -59,6 +59,20 @@ export class PlanningScenariosController {
       .assessScenario(input);
   }
 
+  @Post('assess-allocation/compare-optimized')
+  compareOptimizedRebalancingStrategies(
+    @Body()
+    body: {
+      input?:
+        SimulatePlanningAllocationInput;
+    },
+  ) {
+    return this.assessmentService
+      .compareOptimizedRebalancingStrategies(
+        body.input,
+      );
+  }
+
   @Post('assess-allocation/auto-remediate')
   buildAutomaticRebalancingPlan(
     @Body()

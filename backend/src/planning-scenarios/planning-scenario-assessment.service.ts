@@ -1,4 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+} from '@nestjs/common';
 
 import { IpsService } from '../ips/ips.service';
 import { PropertiesService } from '../properties/properties.service';
@@ -1809,6 +1812,1071 @@ export class PlanningScenarioAssessmentService {
 
       finalAssessment:
         currentAssessment,
+    };
+  }
+
+
+  async compareOptimizedRebalancingStrategies(
+    input:
+      | SimulatePlanningAllocationInput
+      | undefined,
+  ) {
+    type StrategyCode =
+      | 'MINIMUM_COMPLIANCE'
+      | 'TARGET_OPTIMIZED';
+
+    type StrategyIntervention = {
+      iteration: number;
+      year: number;
+
+      source:
+        | 'LIQUIDITY'
+        | 'INVESTMENTS';
+
+      destination:
+        | 'LIQUIDITY'
+        | 'INVESTMENTS';
+
+      amount: number;
+
+      desiredWeight: number;
+      weightBefore: number;
+      weightAfter: number;
+
+      fullyFundable: boolean;
+
+      interventionType:
+        | 'MINIMUM_PROTECTION'
+        | 'PREFUNDING'
+        | 'SAFE_SWEEP';
+    };
+
+    const upperTrigger =
+      12.5;
+
+    const minimumTrade =
+      25000;
+
+    const roundMoney = (
+      value: number,
+    ): number =>
+      Math.round(
+        (
+          value +
+          Number.EPSILON
+        ) * 100,
+      ) / 100;
+
+    const roundPercentage = (
+      value: number,
+    ): number =>
+      Math.round(
+        (
+          value +
+          Number.EPSILON
+        ) * 10000,
+      ) / 10000;
+
+    const baseInput:
+      SimulatePlanningAllocationInput =
+      input ?? {};
+
+    const baseAllocation =
+      baseInput.allocation ??
+      {};
+
+    /*
+     * Rimuove solamente le correzioni
+     * IPS generate dai precedenti piani.
+     * Conserva gli altri trasferimenti
+     * manuali inseriti dall'utente.
+     */
+    const baseTransfers =
+      (
+        baseAllocation.transfers ??
+        []
+      ).filter(
+        (transfer) => {
+          const label =
+            String(
+              transfer.label ??
+              '',
+            )
+              .trim()
+              .toLowerCase();
+
+          return (
+            !label.startsWith(
+              'ribilanciamento ips',
+            ) &&
+            !label.startsWith(
+              'piano ips',
+            ) &&
+            !label.startsWith(
+              'reinvestimento ips',
+            )
+          );
+        },
+      );
+
+    const buildInput = (
+      transfers:
+        PlanningAllocationTransferInput[],
+    ):
+      SimulatePlanningAllocationInput => ({
+        ...baseInput,
+
+        allocation: {
+          ...baseAllocation,
+
+          transfers,
+        },
+      });
+
+    const initialAllocation =
+      await this.allocationEngine
+        .simulateAllocation(
+          buildInput(
+            baseTransfers,
+          ),
+        );
+
+    const liquidityLimit =
+      initialAllocation
+        .ipsProjection
+        .limits
+        .find(
+          (limit) =>
+            limit.code ===
+            'LIQUIDITY_GROSS_ASSETS',
+        );
+
+    if (
+      !liquidityLimit ||
+      liquidityLimit.minimum ===
+        null ||
+      liquidityLimit.target ===
+        null
+    ) {
+      throw new BadRequestException(
+        'Le soglie IPS di liquidità minima e target devono essere configurate.',
+      );
+    }
+
+    const minimumWeight =
+      liquidityLimit.minimum;
+
+    const targetWeight =
+      liquidityLimit.target;
+
+    const targetAmount = (
+      year: {
+        endTotal: number;
+      },
+    ): number =>
+      roundMoney(
+        year.endTotal *
+        targetWeight /
+        100,
+      );
+
+    const addTransfer = (
+      transfers:
+        PlanningAllocationTransferInput[],
+
+      transfer:
+        PlanningAllocationTransferInput,
+    ):
+      PlanningAllocationTransferInput[] =>
+      [
+        ...transfers,
+        transfer,
+      ].sort(
+        (first, second) =>
+          first.year -
+          second.year,
+      );
+
+    const finalizeStrategy =
+      async (
+        strategy:
+          StrategyCode,
+
+        label: string,
+
+        description: string,
+
+        transfers:
+          PlanningAllocationTransferInput[],
+
+        interventions:
+          StrategyIntervention[],
+      ) => {
+        const finalAssessment =
+          await this
+            .assessAllocationScenario(
+              buildInput(
+                transfers,
+              ),
+            );
+
+        const finalAllocation =
+          finalAssessment
+            .allocation;
+
+        const finalProjection =
+          finalAllocation
+            .ipsProjection;
+
+        const totalToLiquidity =
+          roundMoney(
+            interventions
+              .filter(
+                (item) =>
+                  item.destination ===
+                  'LIQUIDITY',
+              )
+              .reduce(
+                (total, item) =>
+                  total +
+                  item.amount,
+                0,
+              ),
+          );
+
+        const totalToInvestments =
+          roundMoney(
+            interventions
+              .filter(
+                (item) =>
+                  item.destination ===
+                  'INVESTMENTS',
+              )
+              .reduce(
+                (total, item) =>
+                  total +
+                  item.amount,
+                0,
+              ),
+          );
+
+        const liquidityWeights =
+          finalAllocation
+            .years
+            .map(
+              (year) =>
+                year.weights
+                  .LIQUIDITY ??
+                0,
+            );
+
+        const averageTargetDeviation =
+          liquidityWeights.length ===
+          0
+            ? 0
+            : roundPercentage(
+                liquidityWeights.reduce(
+                  (total, weight) =>
+                    total +
+                    Math.abs(
+                      weight -
+                      targetWeight,
+                    ),
+                  0,
+                ) /
+                liquidityWeights.length,
+              );
+
+        return {
+          strategy,
+          label,
+          description,
+
+          minimumWeight,
+          targetWeight,
+
+          operationalPolicy: {
+            upperTrigger:
+              strategy ===
+              'TARGET_OPTIMIZED'
+                ? upperTrigger
+                : null,
+
+            minimumTrade:
+              strategy ===
+              'TARGET_OPTIMIZED'
+                ? minimumTrade
+                : null,
+          },
+
+          interventions:
+            interventions.length,
+
+          grossTransferred:
+            roundMoney(
+              totalToLiquidity +
+              totalToInvestments,
+            ),
+
+          totalToLiquidity,
+          totalToInvestments,
+
+          netToLiquidity:
+            roundMoney(
+              totalToLiquidity -
+              totalToInvestments,
+            ),
+
+          fullyFunded:
+            interventions.every(
+              (item) =>
+                item.fullyFundable,
+            ),
+
+          finalStatus:
+            finalProjection.status,
+
+          criticalCompliant:
+            finalProjection
+              .projectedBreaches ===
+            0,
+
+          targetCompliant:
+            finalProjection
+              .projectedTargetAttentions ===
+            0,
+
+          finalBreaches:
+            finalProjection
+              .projectedBreaches,
+
+          finalTargetAttentions:
+            finalProjection
+              .projectedTargetAttentions,
+
+          finalLiquidity:
+            finalAllocation
+              .allocation
+              .final
+              .LIQUIDITY,
+
+          finalInvestments:
+            finalAllocation
+              .allocation
+              .final
+              .INVESTMENTS,
+
+          finalLiquidityWeight:
+            finalAllocation
+              .allocation
+              .finalWeights
+              .LIQUIDITY,
+
+          finalInvestmentsWeight:
+            finalAllocation
+              .allocation
+              .finalWeights
+              .INVESTMENTS,
+
+          finalNetWorth:
+            finalAllocation
+              .summary
+              .finalNetWorth,
+
+          minimumLiquidity:
+            finalAllocation
+              .summary
+              .minimumLiquidity,
+
+          minimumLiquidityYear:
+            finalAllocation
+              .summary
+              .minimumLiquidityYear,
+
+          averageTargetDeviation,
+
+          interventionDetails:
+            interventions,
+
+          finalTransfers:
+            transfers,
+
+          finalAssessment,
+        };
+      };
+
+    /*
+     * STRATEGIA 1
+     * Protezione minima:
+     * interviene soltanto quando il peso
+     * scende sotto il minimo critico.
+     */
+    let minimumTransfers = [
+      ...baseTransfers,
+    ];
+
+    let minimumAllocation =
+      initialAllocation;
+
+    const minimumInterventions:
+      StrategyIntervention[] = [];
+
+    const yearNumbers =
+      initialAllocation
+        .years
+        .map(
+          (year) =>
+            year.year,
+        );
+
+    for (
+      const yearNumber of
+      yearNumbers
+    ) {
+      const year =
+        minimumAllocation
+          .years
+          .find(
+            (item) =>
+              item.year ===
+              yearNumber,
+          );
+
+      if (!year) {
+        continue;
+      }
+
+      const currentWeight =
+        year.weights
+          .LIQUIDITY ??
+        0;
+
+      if (
+        currentWeight >=
+        minimumWeight
+      ) {
+        continue;
+      }
+
+      const desiredAmount =
+        roundMoney(
+          year.endTotal *
+          minimumWeight /
+          100,
+        );
+
+      const requiredAmount =
+        roundMoney(
+          Math.max(
+            0,
+            desiredAmount -
+            year.end.LIQUIDITY,
+          ),
+        );
+
+      const available =
+        Math.max(
+          0,
+          year.end
+            .INVESTMENTS,
+        );
+
+      const amount =
+        roundMoney(
+          Math.min(
+            requiredAmount,
+            available,
+          ),
+        );
+
+      if (amount <= 0) {
+        continue;
+      }
+
+      const fullyFundable =
+        available + 0.01 >=
+        requiredAmount;
+
+      const transfer:
+        PlanningAllocationTransferInput =
+        {
+          year:
+            year.year,
+
+          label:
+            `Piano IPS minimo ${year.year}`,
+
+          from:
+            'INVESTMENTS',
+
+          to:
+            'LIQUIDITY',
+
+          amount,
+
+          timing:
+            'END_OF_YEAR',
+        };
+
+      const nextTransfers =
+        addTransfer(
+          minimumTransfers,
+          transfer,
+        );
+
+      const nextAllocation =
+        await this
+          .allocationEngine
+          .simulateAllocation(
+            buildInput(
+              nextTransfers,
+            ),
+          );
+
+      const nextYear =
+        nextAllocation
+          .years
+          .find(
+            (item) =>
+              item.year ===
+              year.year,
+          );
+
+      minimumInterventions.push({
+        iteration:
+          minimumInterventions
+            .length + 1,
+
+        year:
+          year.year,
+
+        source:
+          'INVESTMENTS',
+
+        destination:
+          'LIQUIDITY',
+
+        amount,
+
+        desiredWeight:
+          roundPercentage(
+            minimumWeight,
+          ),
+
+        weightBefore:
+          roundPercentage(
+            currentWeight,
+          ),
+
+        weightAfter:
+          roundPercentage(
+            nextYear?.weights
+              .LIQUIDITY ??
+            currentWeight,
+          ),
+
+        fullyFundable,
+
+        interventionType:
+          'MINIMUM_PROTECTION',
+      });
+
+      minimumTransfers =
+        nextTransfers;
+
+      minimumAllocation =
+        nextAllocation;
+    }
+
+    const minimumCompliance =
+      await finalizeStrategy(
+        'MINIMUM_COMPLIANCE',
+
+        'Protezione minima',
+
+        `Interviene soltanto quando la liquidità scende sotto il minimo critico del ${minimumWeight}%.`,
+
+        minimumTransfers,
+        minimumInterventions,
+      );
+
+    /*
+     * STRATEGIA 2
+     * Target consolidato:
+     * prefinanzia i periodi di carenza
+     * e reinveste solamente l'eccedenza
+     * che resta sicura in tutti gli anni
+     * successivi.
+     */
+    let targetTransfers = [
+      ...baseTransfers,
+    ];
+
+    let targetAllocation =
+      initialAllocation;
+
+    const targetInterventions:
+      StrategyIntervention[] = [];
+
+    for (
+      let iteration = 0;
+      iteration <
+        initialAllocation
+          .years.length;
+      iteration += 1
+    ) {
+      const deficientYears =
+        targetAllocation
+          .years
+          .filter(
+            (year) =>
+              (
+                year.weights
+                  .LIQUIDITY ??
+                0
+              ) <
+              targetWeight,
+          );
+
+      if (
+        deficientYears.length ===
+        0
+      ) {
+        break;
+      }
+
+      const firstDeficientYear =
+        deficientYears[0];
+
+      const futureDeficits =
+        targetAllocation
+          .years
+          .filter(
+            (year) =>
+              year.year >=
+              firstDeficientYear
+                .year,
+          )
+          .map(
+            (year) =>
+              roundMoney(
+                targetAmount(
+                  year,
+                ) -
+                year.end
+                  .LIQUIDITY,
+              ),
+          );
+
+      const requiredAmount =
+        roundMoney(
+          Math.max(
+            0,
+            ...futureDeficits,
+          ),
+        );
+
+      const available =
+        Math.max(
+          0,
+          firstDeficientYear
+            .end
+            .INVESTMENTS,
+        );
+
+      const amount =
+        roundMoney(
+          Math.min(
+            requiredAmount,
+            available,
+          ),
+        );
+
+      if (amount <= 0) {
+        break;
+      }
+
+      const fullyFundable =
+        available + 0.01 >=
+        requiredAmount;
+
+      const currentWeight =
+        firstDeficientYear
+          .weights
+          .LIQUIDITY ??
+        0;
+
+      const transfer:
+        PlanningAllocationTransferInput =
+        {
+          year:
+            firstDeficientYear
+              .year,
+
+          label:
+            `Piano IPS consolidato ${firstDeficientYear.year}`,
+
+          from:
+            'INVESTMENTS',
+
+          to:
+            'LIQUIDITY',
+
+          amount,
+
+          timing:
+            'END_OF_YEAR',
+        };
+
+      const nextTransfers =
+        addTransfer(
+          targetTransfers,
+          transfer,
+        );
+
+      const nextAllocation =
+        await this
+          .allocationEngine
+          .simulateAllocation(
+            buildInput(
+              nextTransfers,
+            ),
+          );
+
+      const nextYear =
+        nextAllocation
+          .years
+          .find(
+            (year) =>
+              year.year ===
+              firstDeficientYear
+                .year,
+          );
+
+      targetInterventions.push({
+        iteration:
+          targetInterventions
+            .length + 1,
+
+        year:
+          firstDeficientYear
+            .year,
+
+        source:
+          'INVESTMENTS',
+
+        destination:
+          'LIQUIDITY',
+
+        amount,
+
+        desiredWeight:
+          roundPercentage(
+            targetWeight,
+          ),
+
+        weightBefore:
+          roundPercentage(
+            currentWeight,
+          ),
+
+        weightAfter:
+          roundPercentage(
+            nextYear?.weights
+              .LIQUIDITY ??
+            currentWeight,
+          ),
+
+        fullyFundable,
+
+        interventionType:
+          'PREFUNDING',
+      });
+
+      targetTransfers =
+        nextTransfers;
+
+      targetAllocation =
+        nextAllocation;
+
+      if (!fullyFundable) {
+        break;
+      }
+    }
+
+    for (
+      const yearNumber of
+      yearNumbers
+    ) {
+      const year =
+        targetAllocation
+          .years
+          .find(
+            (item) =>
+              item.year ===
+              yearNumber,
+          );
+
+      if (!year) {
+        continue;
+      }
+
+      const currentWeight =
+        year.weights
+          .LIQUIDITY ??
+        0;
+
+      if (
+        currentWeight <=
+        upperTrigger
+      ) {
+        continue;
+      }
+
+      const futureYears =
+        targetAllocation
+          .years
+          .filter(
+            (item) =>
+              item.year >=
+              yearNumber,
+          );
+
+      const futureSurpluses =
+        futureYears.map(
+          (item) =>
+            roundMoney(
+              item.end
+                .LIQUIDITY -
+              targetAmount(
+                item,
+              ),
+            ),
+        );
+
+      const safeRemovable =
+        roundMoney(
+          Math.max(
+            0,
+            Math.min(
+              ...futureSurpluses,
+            ),
+          ),
+        );
+
+      const currentExcess =
+        roundMoney(
+          Math.max(
+            0,
+            year.end
+              .LIQUIDITY -
+            targetAmount(
+              year,
+            ),
+          ),
+        );
+
+      const requiredAmount =
+        roundMoney(
+          Math.min(
+            safeRemovable,
+            currentExcess,
+          ),
+        );
+
+      if (
+        requiredAmount <
+        minimumTrade
+      ) {
+        continue;
+      }
+
+      const available =
+        Math.max(
+          0,
+          year.end
+            .LIQUIDITY,
+        );
+
+      const amount =
+        roundMoney(
+          Math.min(
+            requiredAmount,
+            available,
+          ),
+        );
+
+      if (amount <= 0) {
+        continue;
+      }
+
+      const fullyFundable =
+        available + 0.01 >=
+        requiredAmount;
+
+      const transfer:
+        PlanningAllocationTransferInput =
+        {
+          year:
+            year.year,
+
+          label:
+            `Reinvestimento IPS sicuro ${year.year}`,
+
+          from:
+            'LIQUIDITY',
+
+          to:
+            'INVESTMENTS',
+
+          amount,
+
+          timing:
+            'END_OF_YEAR',
+        };
+
+      const nextTransfers =
+        addTransfer(
+          targetTransfers,
+          transfer,
+        );
+
+      const nextAllocation =
+        await this
+          .allocationEngine
+          .simulateAllocation(
+            buildInput(
+              nextTransfers,
+            ),
+          );
+
+      const nextYear =
+        nextAllocation
+          .years
+          .find(
+            (item) =>
+              item.year ===
+              year.year,
+          );
+
+      targetInterventions.push({
+        iteration:
+          targetInterventions
+            .length + 1,
+
+        year:
+          year.year,
+
+        source:
+          'LIQUIDITY',
+
+        destination:
+          'INVESTMENTS',
+
+        amount,
+
+        desiredWeight:
+          roundPercentage(
+            targetWeight,
+          ),
+
+        weightBefore:
+          roundPercentage(
+            currentWeight,
+          ),
+
+        weightAfter:
+          roundPercentage(
+            nextYear?.weights
+              .LIQUIDITY ??
+            currentWeight,
+          ),
+
+        fullyFundable,
+
+        interventionType:
+          'SAFE_SWEEP',
+      });
+
+      targetTransfers =
+        nextTransfers;
+
+      targetAllocation =
+        nextAllocation;
+    }
+
+    const targetOptimized =
+      await finalizeStrategy(
+        'TARGET_OPTIMIZED',
+
+        'Target consolidato',
+
+        `Prefinanzia i periodi di carenza e reinveste soltanto l’eccedenza sicura oltre il ${upperTrigger}%, con operazione minima di ${minimumTrade.toLocaleString(
+          'it-IT',
+          {
+            style:
+              'currency',
+            currency:
+              'EUR',
+            maximumFractionDigits:
+              0,
+          },
+        )}.`,
+
+        targetTransfers,
+        targetInterventions,
+      );
+
+    return {
+      generatedAt:
+        new Date().toISOString(),
+
+      comparisonType:
+        'OPTIMIZED_IPS_REBALANCING',
+
+      liquidityPolicy: {
+        minimumWeight,
+        targetWeight,
+        upperTrigger,
+        minimumTrade,
+      },
+
+      baseline: {
+        status:
+          initialAllocation
+            .ipsProjection
+            .status,
+
+        breaches:
+          initialAllocation
+            .ipsProjection
+            .projectedBreaches,
+
+        targetAttentions:
+          initialAllocation
+            .ipsProjection
+            .projectedTargetAttentions,
+
+        finalLiquidityWeight:
+          initialAllocation
+            .allocation
+            .finalWeights
+            .LIQUIDITY,
+
+        finalNetWorth:
+          initialAllocation
+            .summary
+            .finalNetWorth,
+      },
+
+      minimumCompliance,
+      targetOptimized,
+
+      recommendedStrategy:
+        'TARGET_OPTIMIZED',
+
+      rationale:
+        'Il target consolidato raggiunge la conformità con meno interventi rispetto al ribilanciamento annuale e reinveste soltanto la liquidità che non serve nei periodi successivi.',
     };
   }
 
