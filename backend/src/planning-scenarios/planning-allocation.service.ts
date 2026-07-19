@@ -37,6 +37,16 @@ export type PlanningAllocationAssumptionsInput = {
   realEstateReturnDeltaPct?: number;
   otherAssetsReturnDeltaPct?: number;
 
+  /*
+   * Aliquota fiscale effettiva applicata
+   * ai soli rendimenti annuali positivi.
+   */
+  liquidityTaxRatePct?: number;
+  investmentsTaxRatePct?: number;
+
+  rebalancingCostRatePct?: number;
+  rebalancingMinimumCost?: number;
+
   positiveCashFlowDestination?:
     PlanningAssetClass;
 
@@ -339,24 +349,47 @@ export class PlanningAllocationService {
     from: PlanningAssetClass,
     to: PlanningAssetClass,
     amount: number,
-  ) {
+    costRatePct: number,
+    minimumCost: number,
+  ): number {
     if (amount <= 0) {
-      return;
+      return 0;
     }
+
+    const proportionalCost =
+      this.roundMoney(
+        amount *
+        costRatePct /
+        100,
+      );
+
+    const transferCost =
+      this.roundMoney(
+        Math.max(
+          proportionalCost,
+          minimumCost,
+        ),
+      );
+
+    const totalDebit =
+      this.roundMoney(
+        amount +
+        transferCost,
+      );
 
     if (
       balances[from] + 0.01 <
-      amount
+      totalDebit
     ) {
       throw new BadRequestException(
-        `Il trasferimento da ${from} a ${to} supera il valore disponibile.`,
+        `Il trasferimento da ${from} a ${to}, inclusi i costi, supera il valore disponibile.`,
       );
     }
 
     balances[from] =
       this.roundMoney(
         balances[from] -
-        amount,
+        totalDebit,
       );
 
     balances[to] =
@@ -364,6 +397,8 @@ export class PlanningAllocationService {
         balances[to] +
         amount,
       );
+
+    return transferCost;
   }
 
   private fundPropertyPurchase(
@@ -715,6 +750,53 @@ export class PlanningAllocationService {
         ),
     };
 
+    const taxRatesPct = {
+      LIQUIDITY:
+        this.validateNumber(
+          allocation
+            ?.liquidityTaxRatePct,
+          0,
+          'Aliquota fiscale liquidità',
+          0,
+          100,
+        ),
+
+      INVESTMENTS:
+        this.validateNumber(
+          allocation
+            ?.investmentsTaxRatePct,
+          0,
+          'Aliquota fiscale investimenti',
+          0,
+          100,
+        ),
+
+      REAL_ESTATE: 0,
+      OTHER_ASSETS: 0,
+    };
+
+    const transferCostSettings = {
+      ratePct:
+        this.validateNumber(
+          allocation
+            ?.rebalancingCostRatePct,
+          0,
+          'Costo percentuale ribilanciamento',
+          0,
+          10,
+        ),
+
+      minimumCost:
+        this.validateNumber(
+          allocation
+            ?.rebalancingMinimumCost,
+          0,
+          'Costo minimo ribilanciamento',
+          0,
+          100000,
+        ),
+    };
+
     const positiveDestination =
       allocation
         ?.positiveCashFlowDestination
@@ -888,7 +970,7 @@ export class PlanningAllocationService {
               start,
             );
 
-          const returns:
+          const grossReturns:
             AllocationBalances = {
             LIQUIDITY:
               this.roundMoney(
@@ -921,6 +1003,55 @@ export class PlanningAllocationService {
                   .OTHER_ASSETS /
                 100,
               ),
+          };
+
+          const returnTaxes:
+            AllocationBalances = {
+            LIQUIDITY:
+              grossReturns.LIQUIDITY > 0
+                ? this.roundMoney(
+                    grossReturns
+                      .LIQUIDITY *
+                    taxRatesPct
+                      .LIQUIDITY /
+                    100,
+                  )
+                : 0,
+
+            INVESTMENTS:
+              grossReturns.INVESTMENTS > 0
+                ? this.roundMoney(
+                    grossReturns
+                      .INVESTMENTS *
+                    taxRatesPct
+                      .INVESTMENTS /
+                    100,
+                  )
+                : 0,
+
+            REAL_ESTATE: 0,
+            OTHER_ASSETS: 0,
+          };
+
+          const returns:
+            AllocationBalances = {
+            LIQUIDITY:
+              this.roundMoney(
+                grossReturns.LIQUIDITY -
+                returnTaxes.LIQUIDITY,
+              ),
+
+            INVESTMENTS:
+              this.roundMoney(
+                grossReturns.INVESTMENTS -
+                returnTaxes.INVESTMENTS,
+              ),
+
+            REAL_ESTATE:
+              grossReturns.REAL_ESTATE,
+
+            OTHER_ASSETS:
+              grossReturns.OTHER_ASSETS,
           };
 
           for (
@@ -1156,16 +1287,26 @@ export class PlanningAllocationService {
                 'END_OF_YEAR',
             );
 
+          let totalTransferCosts = 0;
+
           for (
             const transfer
             of beforeCashFlowTransfers
           ) {
-            this.applyInternalTransfer(
-              balances,
-              transfer.from,
-              transfer.to,
-              transfer.amount,
-            );
+            totalTransferCosts =
+              this.roundMoney(
+                totalTransferCosts +
+                this.applyInternalTransfer(
+                  balances,
+                  transfer.from,
+                  transfer.to,
+                  transfer.amount,
+                  transferCostSettings
+                    .ratePct,
+                  transferCostSettings
+                    .minimumCost,
+                ),
+              );
           }
 
           const costMultiplier =
@@ -1232,12 +1373,20 @@ export class PlanningAllocationService {
             const transfer
             of endOfYearTransfers
           ) {
-            this.applyInternalTransfer(
-              balances,
-              transfer.from,
-              transfer.to,
-              transfer.amount,
-            );
+            totalTransferCosts =
+              this.roundMoney(
+                totalTransferCosts +
+                this.applyInternalTransfer(
+                  balances,
+                  transfer.from,
+                  transfer.to,
+                  transfer.amount,
+                  transferCostSettings
+                    .ratePct,
+                  transferCostSettings
+                    .minimumCost,
+                ),
+              );
           }
 
           const totalReturnImpact =
@@ -1270,7 +1419,8 @@ export class PlanningAllocationService {
               startTotal +
               totalReturnImpact +
               operatingNetCashFlow +
-              propertySaleGainLoss,
+              propertySaleGainLoss -
+              totalTransferCosts,
             );
 
           return {
@@ -1280,9 +1430,17 @@ export class PlanningAllocationService {
             start,
             startTotal,
 
+            grossReturns,
+            returnTaxes,
             returns,
+
             effectiveReturnsPct,
+            taxRatesPct,
+
             totalReturnImpact,
+
+            transferCostSettings,
+            totalTransferCosts,
 
             budget: {
               ordinaryExpenses:
