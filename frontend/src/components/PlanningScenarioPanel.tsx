@@ -2885,6 +2885,39 @@ export default function PlanningScenarioPanel() {
                                 )}
                               </strong>
                             </Typography>
+
+                            <Typography
+                              variant="body2"
+                            >
+                              Imposte sui rendimenti:{" "}
+                              <strong>
+                                {formatCurrency(
+                                  strategy.totalReturnTaxes,
+                                )}
+                              </strong>
+                            </Typography>
+
+                            <Typography
+                              variant="body2"
+                            >
+                              Costi ribilanciamento:{" "}
+                              <strong>
+                                {formatCurrency(
+                                  strategy.totalRebalancingCosts,
+                                )}
+                              </strong>
+                            </Typography>
+
+                            <Typography
+                              variant="body2"
+                            >
+                              Oneri economici totali:{" "}
+                              <strong>
+                                {formatCurrency(
+                                  strategy.totalEconomicCharges,
+                                )}
+                              </strong>
+                            </Typography>
                           </Box>
 
                           <Button

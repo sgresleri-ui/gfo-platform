@@ -3358,6 +3358,10 @@ export type PlanningOptimizedIpsStrategyResult = {
 
   averageTargetDeviation: number;
 
+  totalReturnTaxes: number;
+  totalRebalancingCosts: number;
+  totalEconomicCharges: number;
+
   interventionDetails:
     PlanningOptimizedIpsIntervention[];
 

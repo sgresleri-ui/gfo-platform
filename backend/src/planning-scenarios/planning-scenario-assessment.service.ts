@@ -2089,6 +2089,27 @@ export class PlanningScenarioAssessmentService {
                 liquidityWeights.length,
               );
 
+        const totalReturnTaxes =
+          roundMoney(
+            finalAllocation.years.reduce(
+              (total, year) =>
+                total +
+                year.returnTaxes.LIQUIDITY +
+                year.returnTaxes.INVESTMENTS,
+              0,
+            ),
+          );
+
+        const totalRebalancingCosts =
+          roundMoney(
+            finalAllocation.years.reduce(
+              (total, year) =>
+                total +
+                year.totalTransferCosts,
+              0,
+            ),
+          );
+
         return {
           strategy,
           label,
@@ -2196,6 +2217,15 @@ export class PlanningScenarioAssessmentService {
               .minimumLiquidityYear,
 
           averageTargetDeviation,
+
+          totalReturnTaxes,
+          totalRebalancingCosts,
+
+          totalEconomicCharges:
+            roundMoney(
+              totalReturnTaxes +
+              totalRebalancingCosts,
+            ),
 
           interventionDetails:
             interventions,
@@ -3145,27 +3175,142 @@ export class PlanningScenarioAssessmentService {
         strategy.criticalCompliant,
     );
 
-    const recommendedStrategyResult =
+    const maximumFinalNetWorth =
       eligibleStrategies.length > 0
-        ? eligibleStrategies.reduce(
-            (best, current) =>
-              current.finalNetWorth >
-              best.finalNetWorth
-                ? current
-                : best,
+        ? Math.max(
+            ...eligibleStrategies.map(
+              (strategy) =>
+                strategy.finalNetWorth,
+            ),
+          )
+        : targetOptimized
+            .finalNetWorth;
+
+    /*
+     * Differenze inferiori allo 0,10%
+     * del patrimonio finale sono trattate
+     * come economicamente non materiali.
+     */
+    const materialityTolerancePct =
+      0.1;
+
+    const materialityToleranceAmount =
+      roundMoney(
+        maximumFinalNetWorth *
+        materialityTolerancePct /
+        100,
+      );
+
+    const materiallyEquivalentStrategies =
+      eligibleStrategies.filter(
+        (strategy) =>
+          maximumFinalNetWorth -
+            strategy.finalNetWorth <=
+          materialityToleranceAmount,
+      );
+
+    const statusPriority = {
+      COMPLIANT: 4,
+      ATTENTION: 3,
+      NON_COMPLIANT: 2,
+      NOT_ASSESSED: 1,
+    };
+
+    const recommendationCandidates =
+      materiallyEquivalentStrategies
+        .length > 0
+        ? materiallyEquivalentStrategies
+        : eligibleStrategies;
+
+    const recommendedStrategyResult =
+      recommendationCandidates.length > 0
+        ? recommendationCandidates.reduce(
+            (best, current) => {
+              const bestStatus =
+                statusPriority[
+                  best.finalStatus
+                ] ?? 0;
+
+              const currentStatus =
+                statusPriority[
+                  current.finalStatus
+                ] ?? 0;
+
+              if (
+                currentStatus !==
+                bestStatus
+              ) {
+                return currentStatus >
+                  bestStatus
+                    ? current
+                    : best;
+              }
+
+              if (
+                current.finalBreaches !==
+                best.finalBreaches
+              ) {
+                return current
+                  .finalBreaches <
+                  best.finalBreaches
+                    ? current
+                    : best;
+              }
+
+              if (
+                current
+                  .finalTargetAttentions !==
+                best
+                  .finalTargetAttentions
+              ) {
+                return current
+                  .finalTargetAttentions <
+                  best
+                    .finalTargetAttentions
+                    ? current
+                    : best;
+              }
+
+              if (
+                current
+                  .totalRebalancingCosts !==
+                best
+                  .totalRebalancingCosts
+              ) {
+                return current
+                  .totalRebalancingCosts <
+                  best
+                    .totalRebalancingCosts
+                    ? current
+                    : best;
+              }
+
+              return current
+                .finalNetWorth >
+                best.finalNetWorth
+                  ? current
+                  : best;
+            },
           )
         : targetOptimized;
 
+    const wealthSacrifice =
+      roundMoney(
+        maximumFinalNetWorth -
+        recommendedStrategyResult
+          .finalNetWorth,
+      );
+
     const recommendationRationale =
-      recommendedStrategyResult
-        .strategy ===
-      'ECONOMIC_BALANCED'
-        ? 'La strategia bilanciata economica produce il patrimonio finale netto più elevato tra le alternative senza violazioni critiche.'
-        : recommendedStrategyResult
-              .strategy ===
-            'MINIMUM_COMPLIANCE'
-          ? 'La protezione minima produce il patrimonio finale netto più elevato tra le alternative senza violazioni critiche.'
-          : 'Il target consolidato offre il miglior risultato economico tra le alternative senza violazioni critiche.';
+      wealthSacrifice <= 0
+        ? `${recommendedStrategyResult.label} produce il patrimonio finale netto più elevato tra le alternative senza violazioni critiche.`
+        : `${recommendedStrategyResult.label} è preferita perché migliora la coerenza IPS rinunciando soltanto a ${wealthSacrifice.toLocaleString(
+            'it-IT',
+            {
+              style: 'currency',
+              currency: 'EUR',
+            },
+          )}, differenza inferiore alla soglia di materialità dello ${materialityTolerancePct}%.`;
 
     return {
       generatedAt:
