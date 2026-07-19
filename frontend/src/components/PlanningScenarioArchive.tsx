@@ -473,6 +473,43 @@ export default function PlanningScenarioArchive({
                           .lastSimulatedAt,
                       )}
                     </Typography>
+
+                    <Box
+                      sx={{
+                        mt: 1,
+                        display: "flex",
+                        flexWrap: "wrap",
+                        alignItems: "center",
+                        gap: 0.8,
+                      }}
+                    >
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={
+                          scenario
+                            .economicProfile
+                            ?.name ??
+                          "Ipotesi economiche non tracciate"
+                        }
+                      />
+
+                      {scenario
+                        .economicProfile
+                        ?.capturedAt ? (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                        >
+                          Snapshot:{" "}
+                          {formatDateTime(
+                            scenario
+                              .economicProfile
+                              .capturedAt,
+                          )}
+                        </Typography>
+                      ) : null}
+                    </Box>
                   </Box>
 
                   <Box>
