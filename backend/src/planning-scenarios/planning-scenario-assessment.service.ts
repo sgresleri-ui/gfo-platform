@@ -11,6 +11,7 @@ import {
 
 import {
   PlanningAllocationService,
+  type PlanningAllocationTransferInput,
   type SimulatePlanningAllocationInput,
 } from './planning-allocation.service';
 
@@ -1392,6 +1393,422 @@ export class PlanningScenarioAssessmentService {
             actions.values(),
           ),
       },
+    };
+  }
+
+
+  async buildAutomaticRebalancingPlan(
+    input:
+      | SimulatePlanningAllocationInput
+      | undefined,
+
+    requestedMaxIterations = 40,
+  ) {
+    type StopReason =
+      | 'COMPLIANT'
+      | 'NO_REMEDIATION_AVAILABLE'
+      | 'NO_PROGRESS'
+      | 'MAX_ITERATIONS';
+
+    const parsedMaxIterations =
+      Number(
+        requestedMaxIterations,
+      );
+
+    const maxIterations =
+      Number.isFinite(
+        parsedMaxIterations,
+      )
+        ? Math.max(
+            1,
+            Math.min(
+              40,
+              Math.trunc(
+                parsedMaxIterations,
+              ),
+            ),
+          )
+        : 40;
+
+    const baseInput:
+      SimulatePlanningAllocationInput =
+      input ?? {};
+
+    const baseAllocation =
+      baseInput.allocation ??
+      {};
+
+    let transfers:
+      PlanningAllocationTransferInput[] =
+      (
+        baseAllocation.transfers ??
+        []
+      ).map(
+        (transfer) => ({
+          ...transfer,
+        }),
+      );
+
+    const buildInput = (
+      nextTransfers:
+        PlanningAllocationTransferInput[],
+    ):
+      SimulatePlanningAllocationInput => ({
+        ...baseInput,
+
+        allocation: {
+          ...baseAllocation,
+
+          transfers:
+            nextTransfers,
+        },
+      });
+
+    let currentAssessment =
+      await this
+        .assessAllocationScenario(
+          buildInput(
+            transfers,
+          ),
+        );
+
+    const initialStatus =
+      currentAssessment
+        .allocation
+        .ipsProjection
+        .status;
+
+    const initialBreaches =
+      currentAssessment
+        .allocation
+        .ipsProjection
+        .projectedBreaches;
+
+    const initialTargetAttentions =
+      currentAssessment
+        .allocation
+        .ipsProjection
+        .projectedTargetAttentions;
+
+    const interventions: Array<{
+      iteration: number;
+      year: number;
+      label: string;
+
+      source:
+        string;
+
+      destination:
+        string;
+
+      timing:
+        string;
+
+      amount: number;
+      fullyFundable: boolean;
+
+      statusBefore:
+        string;
+
+      statusAfter:
+        string;
+
+      breachesBefore: number;
+      breachesAfter: number;
+
+      targetAttentionsBefore:
+        number;
+
+      targetAttentionsAfter:
+        number;
+    }> = [];
+
+    let totalTransferred = 0;
+
+    let stopReason:
+      StopReason | null =
+      null;
+
+    for (
+      let iteration = 1;
+      iteration <=
+        maxIterations;
+      iteration += 1
+    ) {
+      const projection =
+        currentAssessment
+          .allocation
+          .ipsProjection;
+
+      if (
+        projection.status ===
+        'COMPLIANT'
+      ) {
+        stopReason =
+          'COMPLIANT';
+
+        break;
+      }
+
+      const plan =
+        projection
+          .remediationPlans[0];
+
+      if (
+        !plan ||
+        !Number.isFinite(
+          plan.recommendedAmount,
+        ) ||
+        plan.recommendedAmount <= 0
+      ) {
+        stopReason =
+          'NO_REMEDIATION_AVAILABLE';
+
+        break;
+      }
+
+      const transfer:
+        PlanningAllocationTransferInput =
+        {
+          year:
+            plan.year,
+
+          label:
+            `${plan.label} ${plan.year}`,
+
+          from:
+            plan.source,
+
+          to:
+            plan.destination,
+
+          amount:
+            plan.recommendedAmount,
+
+          timing:
+            plan.timing,
+        };
+
+      const existingTransfer =
+        transfers.find(
+          (item) =>
+            item.year ===
+              transfer.year &&
+            item.from ===
+              transfer.from &&
+            item.to ===
+              transfer.to &&
+            (
+              item.timing ??
+              'BEFORE_OPERATING_CASH_FLOW'
+            ) ===
+              transfer.timing,
+        );
+
+      if (
+        existingTransfer &&
+        Math.abs(
+          existingTransfer.amount -
+            transfer.amount,
+        ) < 0.01
+      ) {
+        stopReason =
+          'NO_PROGRESS';
+
+        break;
+      }
+
+      const nextTransfers = [
+        ...transfers.filter(
+          (item) =>
+            !(
+              item.year ===
+                transfer.year &&
+              item.from ===
+                transfer.from &&
+              item.to ===
+                transfer.to &&
+              (
+                item.timing ??
+                'BEFORE_OPERATING_CASH_FLOW'
+              ) ===
+                transfer.timing
+            ),
+        ),
+
+        transfer,
+      ].sort(
+        (first, second) =>
+          first.year -
+          second.year,
+      );
+
+      const statusBefore =
+        projection.status;
+
+      const breachesBefore =
+        projection
+          .projectedBreaches;
+
+      const targetAttentionsBefore =
+        projection
+          .projectedTargetAttentions;
+
+      const nextAssessment =
+        await this
+          .assessAllocationScenario(
+            buildInput(
+              nextTransfers,
+            ),
+          );
+
+      const nextProjection =
+        nextAssessment
+          .allocation
+          .ipsProjection;
+
+      const improved =
+        nextProjection
+          .projectedBreaches <
+          breachesBefore ||
+        (
+          nextProjection
+            .projectedBreaches ===
+            breachesBefore &&
+          nextProjection
+            .projectedTargetAttentions <
+            targetAttentionsBefore
+        ) ||
+        nextProjection.status !==
+          statusBefore;
+
+      interventions.push({
+        iteration,
+
+        year:
+          plan.year,
+
+        label:
+          transfer.label ??
+          plan.label,
+
+        source:
+          transfer.from,
+
+        destination:
+          transfer.to,
+
+        timing:
+          transfer.timing ??
+          'END_OF_YEAR',
+
+        amount:
+          transfer.amount,
+
+        fullyFundable:
+          plan.fullyFundable,
+
+        statusBefore,
+
+        statusAfter:
+          nextProjection.status,
+
+        breachesBefore,
+
+        breachesAfter:
+          nextProjection
+            .projectedBreaches,
+
+        targetAttentionsBefore,
+
+        targetAttentionsAfter:
+          nextProjection
+            .projectedTargetAttentions,
+      });
+
+      totalTransferred =
+        Math.round(
+          (
+            totalTransferred +
+            transfer.amount +
+            Number.EPSILON
+          ) * 100,
+        ) / 100;
+
+      transfers =
+        nextTransfers;
+
+      currentAssessment =
+        nextAssessment;
+
+      if (!improved) {
+        stopReason =
+          'NO_PROGRESS';
+
+        break;
+      }
+    }
+
+    if (stopReason === null) {
+      stopReason =
+        currentAssessment
+          .allocation
+          .ipsProjection
+          .status ===
+          'COMPLIANT'
+            ? 'COMPLIANT'
+            : 'MAX_ITERATIONS';
+    }
+
+    const finalProjection =
+      currentAssessment
+        .allocation
+        .ipsProjection;
+
+    return {
+      generatedAt:
+        new Date().toISOString(),
+
+      planType:
+        'AUTOMATIC_IPS_REBALANCING',
+
+      maxIterations,
+
+      iterations:
+        interventions.length,
+
+      stopReason,
+
+      fullyResolved:
+        finalProjection.status ===
+        'COMPLIANT',
+
+      initialStatus,
+
+      finalStatus:
+        finalProjection.status,
+
+      initialBreaches,
+
+      finalBreaches:
+        finalProjection
+          .projectedBreaches,
+
+      initialTargetAttentions,
+
+      finalTargetAttentions:
+        finalProjection
+          .projectedTargetAttentions,
+
+      totalTransferred,
+
+      interventions,
+
+      finalTransfers:
+        transfers,
+
+      finalAssessment:
+        currentAssessment,
     };
   }
 

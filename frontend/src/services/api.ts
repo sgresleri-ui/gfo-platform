@@ -3199,6 +3199,81 @@ export type PlanningIntegratedScenarioAssessmentResponse =
   };
 
 
+export type PlanningAutomaticIpsStopReason =
+  | "COMPLIANT"
+  | "NO_REMEDIATION_AVAILABLE"
+  | "NO_PROGRESS"
+  | "MAX_ITERATIONS";
+
+export type PlanningAutomaticIpsIntervention = {
+  iteration: number;
+  year: number;
+  label: string;
+
+  source: string;
+  destination: string;
+  timing: string;
+
+  amount: number;
+  fullyFundable: boolean;
+
+  statusBefore:
+    PlanningIpsForwardStatus;
+
+  statusAfter:
+    PlanningIpsForwardStatus;
+
+  breachesBefore: number;
+  breachesAfter: number;
+
+  targetAttentionsBefore:
+    number;
+
+  targetAttentionsAfter:
+    number;
+};
+
+export type PlanningAutomaticIpsRebalancingResponse = {
+  generatedAt: string;
+
+  planType:
+    "AUTOMATIC_IPS_REBALANCING";
+
+  maxIterations: number;
+  iterations: number;
+
+  stopReason:
+    PlanningAutomaticIpsStopReason;
+
+  fullyResolved: boolean;
+
+  initialStatus:
+    PlanningIpsForwardStatus;
+
+  finalStatus:
+    PlanningIpsForwardStatus;
+
+  initialBreaches: number;
+  finalBreaches: number;
+
+  initialTargetAttentions:
+    number;
+
+  finalTargetAttentions:
+    number;
+
+  totalTransferred: number;
+
+  interventions:
+    PlanningAutomaticIpsIntervention[];
+
+  finalTransfers:
+    PlanningAllocationTransfer[];
+
+  finalAssessment:
+    PlanningIntegratedScenarioAssessmentResponse;
+};
+
 export async function simulatePlanningScenarioAllocation(
   input:
     SimulatePlanningAllocationInput,
@@ -3246,5 +3321,36 @@ export async function assessPlanningAllocationScenario(
   return readJson<PlanningIntegratedScenarioAssessmentResponse>(
     response,
     "Unable to assess scenario asset allocation",
+  );
+}
+
+
+export async function applyAutomaticIpsRebalancingPlan(
+  input:
+    SimulatePlanningAllocationInput,
+
+  maxIterations = 40,
+): Promise<PlanningAutomaticIpsRebalancingResponse> {
+  const response = await fetch(
+    `${API_URL}/planning/scenarios/assess-allocation/auto-remediate`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+
+      body:
+        JSON.stringify({
+          input,
+          maxIterations,
+        }),
+    },
+  );
+
+  return readJson<PlanningAutomaticIpsRebalancingResponse>(
+    response,
+    "Unable to build automatic IPS rebalancing plan",
   );
 }

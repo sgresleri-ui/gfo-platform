@@ -59,6 +59,25 @@ export class PlanningScenariosController {
       .assessScenario(input);
   }
 
+  @Post('assess-allocation/auto-remediate')
+  buildAutomaticRebalancingPlan(
+    @Body()
+    body: {
+      input?:
+        SimulatePlanningAllocationInput;
+
+      maxIterations?:
+        number;
+    },
+  ) {
+    return this.assessmentService
+      .buildAutomaticRebalancingPlan(
+        body.input,
+
+        body.maxIterations,
+      );
+  }
+
   @Post('assess-allocation')
   assessAllocationScenario(
     @Body()

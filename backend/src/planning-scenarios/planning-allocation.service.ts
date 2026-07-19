@@ -1938,12 +1938,31 @@ export class PlanningAllocationService {
           'LIQUIDITY_GROSS_ASSETS',
       );
 
+    /*
+     * Interviene sempre sul primo anno
+     * problematico in ordine cronologico,
+     * indipendentemente dal fatto che sia
+     * una violazione critica o un valore
+     * soltanto fuori target.
+     */
+    const remediationIssueYears = [
+      liquidityLimitResult
+        ?.firstBreachYear,
+
+      liquidityLimitResult
+        ?.firstTargetAttentionYear,
+    ].filter(
+      (year): year is number =>
+        year !== null &&
+        year !== undefined,
+    );
+
     const remediationYearNumber =
-      liquidityLimitResult
-        ?.firstBreachYear ??
-      liquidityLimitResult
-        ?.firstTargetAttentionYear ??
-      null;
+      remediationIssueYears.length > 0
+        ? Math.min(
+            ...remediationIssueYears,
+          )
+        : null;
 
     if (
       liquidityLimitResult &&

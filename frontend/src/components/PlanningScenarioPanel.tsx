@@ -46,8 +46,10 @@ import PlanningScenarioPresets from "./PlanningScenarioPresets";
 import {
   getPlanningScenarioBaseline,
   assessPlanningAllocationScenario,
+  applyAutomaticIpsRebalancingPlan,
   type PlanningAllocationResponse,
   type PlanningAllocationTransfer,
+  type PlanningAutomaticIpsRebalancingResponse,
   type PlanningScenarioBaselineResponse,
   type PlanningScenarioAssessmentResponse,
   type PlanningScenarioResponse,
@@ -221,6 +223,13 @@ export default function PlanningScenarioPanel() {
     PlanningAllocationTransfer[]
   >([]);
 
+  const [
+    automaticIpsPlan,
+    setAutomaticIpsPlan,
+  ] = useState<
+    PlanningAutomaticIpsRebalancingResponse | null
+  >(null);
+
   const [form, setForm] =
     useState<ScenarioForm>(
       DEFAULT_FORM,
@@ -375,6 +384,7 @@ export default function PlanningScenarioPanel() {
     setResult(null);
     setAssessment(null);
     setAllocationResult(null);
+    setAutomaticIpsPlan(null);
     setAllocationTransfers([]);
     setError("");
   }
@@ -386,6 +396,7 @@ export default function PlanningScenarioPanel() {
     setSimulating(true);
     setError("");
     setAllocationResult(null);
+    setAutomaticIpsPlan(null);
 
     try {
       const invalidEvent =
@@ -592,6 +603,7 @@ export default function PlanningScenarioPanel() {
       transfer,
     ];
 
+    setAutomaticIpsPlan(null);
     setSimulating(true);
     setError("");
 
@@ -715,6 +727,144 @@ export default function PlanningScenarioPanel() {
     }
   }
 
+  async function applyFullIpsPlan() {
+    setSimulating(true);
+    setError("");
+    setAutomaticIpsPlan(null);
+
+    try {
+      const input:
+        SimulatePlanningScenarioInput = {
+          name:
+            form.name.trim() ||
+            "Scenario personalizzato",
+
+          description:
+            form.description.trim(),
+
+          initialCapitalAdjustment:
+            parseNumber(
+              form.initialCapitalAdjustment,
+            ),
+
+          annualReturnAdjustmentPct:
+            parseNumber(
+              form.annualReturnAdjustmentPct,
+            ),
+
+          annualCostAdjustmentPct:
+            parseNumber(
+              form.annualCostAdjustmentPct,
+            ),
+
+          annualRevenueAdjustmentPct:
+            parseNumber(
+              form.annualRevenueAdjustmentPct,
+            ),
+
+          expenseInflationDeltaPct:
+            parseNumber(
+              form.expenseInflationDeltaPct,
+            ),
+
+          events: events.map(
+            (event) => ({
+              year:
+                Number(event.year),
+
+              label:
+                event.label.trim(),
+
+              amount:
+                parseNumber(
+                  event.amount,
+                ),
+
+              category:
+                event.category,
+            }),
+          ),
+        };
+
+      const automaticResponse =
+        await applyAutomaticIpsRebalancingPlan(
+          {
+            ...input,
+
+            allocation: {
+              liquidityReturnDeltaPct:
+                parseNumber(
+                  form.liquidityReturnDeltaPct,
+                ),
+
+              investmentsReturnDeltaPct:
+                parseNumber(
+                  form.investmentsReturnDeltaPct,
+                ),
+
+              realEstateReturnDeltaPct:
+                parseNumber(
+                  form.realEstateReturnDeltaPct,
+                ),
+
+              otherAssetsReturnDeltaPct:
+                parseNumber(
+                  form.otherAssetsReturnDeltaPct,
+                ),
+
+              positiveCashFlowDestination:
+                "LIQUIDITY",
+
+              deficitFundingOrder: [
+                "LIQUIDITY",
+                "INVESTMENTS",
+                "OTHER_ASSETS",
+                "REAL_ESTATE",
+              ],
+
+              transfers:
+                allocationTransfers,
+            },
+          },
+
+          40,
+        );
+
+      const finalAssessment =
+        automaticResponse
+          .finalAssessment;
+
+      setAllocationTransfers(
+        automaticResponse
+          .finalTransfers,
+      );
+
+      setResult(
+        finalAssessment.scenario,
+      );
+
+      setAssessment(
+        finalAssessment,
+      );
+
+      setAllocationResult(
+        finalAssessment.allocation,
+      );
+
+      setAutomaticIpsPlan(
+        automaticResponse,
+      );
+    } catch (requestError) {
+      console.error(requestError);
+
+      setError(
+        "Impossibile applicare il piano IPS automatico.",
+      );
+    } finally {
+      setSimulating(false);
+    }
+  }
+
   function applyScenarioPreset(
     assumptions:
       SimulatePlanningScenarioInput,
@@ -801,6 +951,7 @@ export default function PlanningScenarioPanel() {
     setResult(null);
     setAssessment(null);
     setAllocationResult(null);
+    setAutomaticIpsPlan(null);
     setAllocationTransfers([]);
     setError("");
   }
@@ -893,6 +1044,7 @@ export default function PlanningScenarioPanel() {
     setResult(storedResult);
     setAssessment(null);
     setAllocationResult(null);
+    setAutomaticIpsPlan(null);
     setAllocationTransfers([]);
     setError("");
   }
@@ -2046,16 +2198,35 @@ export default function PlanningScenarioPanel() {
                       </Typography>
                     </Box>
 
-                    <Button
-                      variant="contained"
-                      color="warning"
-                      disabled={simulating}
-                      onClick={() =>
-                        void applyIpsRemediation()
-                      }
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 1,
+                        flexWrap: "wrap",
+                      }}
                     >
-                      Applica ribilanciamento IPS
-                    </Button>
+                      <Button
+                        variant="outlined"
+                        color="warning"
+                        disabled={simulating}
+                        onClick={() =>
+                          void applyIpsRemediation()
+                        }
+                      >
+                        Applica una correzione
+                      </Button>
+
+                      <Button
+                        variant="contained"
+                        color="warning"
+                        disabled={simulating}
+                        onClick={() =>
+                          void applyFullIpsPlan()
+                        }
+                      >
+                        Applica piano IPS completo
+                      </Button>
+                    </Box>
                   </Box>
 
                   <Box
@@ -2144,6 +2315,176 @@ export default function PlanningScenarioPanel() {
                       il target.
                     </Alert>
                   )}
+                </Paper>
+              )}
+
+              {automaticIpsPlan && (
+                <Paper
+                  elevation={0}
+                  sx={{
+                    mb: 2,
+                    p: 2,
+                    border: "1px solid",
+                    borderColor:
+                      automaticIpsPlan
+                        .fullyResolved
+                        ? "success.main"
+                        : "warning.main",
+                    backgroundColor:
+                      automaticIpsPlan
+                        .fullyResolved
+                        ? "rgba(46, 125, 50, 0.04)"
+                        : "rgba(237, 108, 2, 0.04)",
+                  }}
+                >
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      fontWeight: 800,
+                    }}
+                  >
+                    Piano IPS automatico
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      mt: 0.4,
+                    }}
+                  >
+                    {
+                      automaticIpsPlan
+                        .fullyResolved
+                        ? "Conformità IPS raggiunta."
+                        : "Il piano ha applicato tutte le correzioni disponibili, ma restano elementi da gestire."
+                    }
+                  </Typography>
+
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "1fr",
+                        sm:
+                          "repeat(2, minmax(0, 1fr))",
+                        lg:
+                          "repeat(4, minmax(0, 1fr))",
+                      },
+                      gap: 1.2,
+                      mt: 1.5,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                    >
+                      Interventi:{" "}
+                      <strong>
+                        {
+                          automaticIpsPlan
+                            .iterations
+                        }
+                      </strong>
+                    </Typography>
+
+                    <Typography
+                      variant="body2"
+                    >
+                      Totale trasferito:{" "}
+                      <strong>
+                        {formatCurrency(
+                          automaticIpsPlan
+                            .totalTransferred,
+                        )}
+                      </strong>
+                    </Typography>
+
+                    <Typography
+                      variant="body2"
+                    >
+                      Violazioni:{" "}
+                      <strong>
+                        {
+                          automaticIpsPlan
+                            .initialBreaches
+                        }
+                        {" → "}
+                        {
+                          automaticIpsPlan
+                            .finalBreaches
+                        }
+                      </strong>
+                    </Typography>
+
+                    <Typography
+                      variant="body2"
+                    >
+                      Stato finale:{" "}
+                      <strong>
+                        {
+                          automaticIpsPlan
+                            .finalStatus
+                        }
+                      </strong>
+                    </Typography>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gap: 0.8,
+                      mt: 1.5,
+                    }}
+                  >
+                    {automaticIpsPlan
+                      .interventions
+                      .map(
+                        (intervention) => (
+                          <Paper
+                            key={
+                              `${intervention.iteration}-${intervention.year}`
+                            }
+                            elevation={0}
+                            sx={{
+                              p: 1.2,
+                              border:
+                                "1px solid",
+                              borderColor:
+                                "divider",
+                            }}
+                          >
+                            <Typography
+                              variant="body2"
+                            >
+                              <strong>
+                                {
+                                  intervention
+                                    .year
+                                }
+                              </strong>
+                              {" · "}
+                              {formatCurrency(
+                                intervention
+                                  .amount,
+                              )}
+                              {" · "}
+                              {
+                                intervention
+                                  .breachesBefore
+                              }
+                              {" → "}
+                              {
+                                intervention
+                                  .breachesAfter
+                              }
+                              {
+                                " violazioni"
+                              }
+                            </Typography>
+                          </Paper>
+                        ),
+                      )}
+                  </Box>
                 </Paper>
               )}
 
