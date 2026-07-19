@@ -1356,6 +1356,18 @@ export class PlanningAllocationService {
       deviation: number;
     };
 
+    type ProjectionTargetAttention = {
+      year: number;
+      value: number;
+
+      status:
+        | 'BELOW_TARGET'
+        | 'ABOVE_TARGET';
+
+      target: number;
+      deviation: number;
+    };
+
     const roundProjectionValue = (
       value: number,
     ): number =>
@@ -1461,6 +1473,9 @@ export class PlanningAllocationService {
           const breaches:
             ProjectionBreach[] = [];
 
+          const targetAttentions:
+            ProjectionTargetAttention[] = [];
+
           if (supported) {
             for (
               const item of
@@ -1520,6 +1535,75 @@ export class PlanningAllocationService {
                         limit.maximum,
                     ),
                 });
+
+                continue;
+              }
+
+              const target =
+                limit.target;
+
+              if (target === null) {
+                continue;
+              }
+
+              const minimumTarget =
+                limit.minimum !== null &&
+                target >
+                  limit.minimum;
+
+              const maximumTarget =
+                limit.maximum !== null &&
+                target <
+                  limit.maximum;
+
+              if (
+                minimumTarget &&
+                item.value < target
+              ) {
+                targetAttentions.push({
+                  year:
+                    item.year,
+
+                  value:
+                    item.value,
+
+                  status:
+                    'BELOW_TARGET',
+
+                  target,
+
+                  deviation:
+                    roundProjectionValue(
+                      item.value -
+                        target,
+                    ),
+                });
+
+                continue;
+              }
+
+              if (
+                maximumTarget &&
+                item.value > target
+              ) {
+                targetAttentions.push({
+                  year:
+                    item.year,
+
+                  value:
+                    item.value,
+
+                  status:
+                    'ABOVE_TARGET',
+
+                  target,
+
+                  deviation:
+                    roundProjectionValue(
+                      item.value -
+                        target,
+                    ),
+                });
               }
             }
           }
@@ -1532,19 +1616,38 @@ export class PlanningAllocationService {
               breaches.length - 1
             ] ?? null;
 
-          const persistsToEnd =
+          const firstTargetAttention =
+            targetAttentions[0] ??
+            null;
+
+          const lastTargetAttention =
+            targetAttentions[
+              targetAttentions.length -
+                1
+            ] ?? null;
+
+          const breachPersistsToEnd =
             lastBreach !== null &&
             lastBreach.year ===
               finalYear.year;
 
+          const attentionPersistsToEnd =
+            lastTargetAttention !==
+              null &&
+            lastTargetAttention.year ===
+              finalYear.year;
+
           const severity =
-            breaches.length === 0
-              ? 'NONE'
-              : persistsToEnd
+            breaches.length > 0
+              ? breachPersistsToEnd
                 ? 'CRITICAL'
-                : breaches.length > 1
+                : 'WARNING'
+              : targetAttentions.length >
+                    0
+                ? attentionPersistsToEnd
                   ? 'WARNING'
-                  : 'ATTENTION';
+                  : 'ATTENTION'
+                : 'NONE';
 
           let recommendedAction:
             string | null = null;
@@ -1555,14 +1658,26 @@ export class PlanningAllocationService {
           ) {
             recommendedAction =
               `Incrementare ${limit.label.toLowerCase()} fino ad almeno ${firstBreach.threshold} ${limit.unit === 'EUR' ? 'EUR' : '%'}.`;
-          }
-
-          if (
+          } else if (
             firstBreach?.status ===
             'ABOVE_MAXIMUM'
           ) {
             recommendedAction =
               `Ridurre ${limit.label.toLowerCase()} fino a non oltre ${firstBreach.threshold} ${limit.unit === 'EUR' ? 'EUR' : '%'}.`;
+          } else if (
+            firstTargetAttention
+              ?.status ===
+            'BELOW_TARGET'
+          ) {
+            recommendedAction =
+              `Incrementare ${limit.label.toLowerCase()} verso il target di ${firstTargetAttention.target} ${limit.unit === 'EUR' ? 'EUR' : '%'}.`;
+          } else if (
+            firstTargetAttention
+              ?.status ===
+            'ABOVE_TARGET'
+          ) {
+            recommendedAction =
+              `Ridurre ${limit.label.toLowerCase()} verso il target di ${firstTargetAttention.target} ${limit.unit === 'EUR' ? 'EUR' : '%'}.`;
           }
 
           return {
@@ -1594,7 +1709,10 @@ export class PlanningAllocationService {
                 ? 'NOT_ASSESSED'
                 : breaches.length > 0
                   ? 'NON_COMPLIANT'
-                  : 'COMPLIANT',
+                  : targetAttentions
+                        .length > 0
+                    ? 'ATTENTION'
+                    : 'COMPLIANT',
 
             severity,
 
@@ -1609,10 +1727,22 @@ export class PlanningAllocationService {
             breachCount:
               breaches.length,
 
+            targetAttentionCount:
+              targetAttentions.length,
+
+            firstTargetAttentionYear:
+              firstTargetAttention
+                ?.year ?? null,
+
+            lastTargetAttentionYear:
+              lastTargetAttention
+                ?.year ?? null,
+
             recommendedAction,
 
             annualValues,
             breaches,
+            targetAttentions,
           };
         },
       );
@@ -1654,6 +1784,39 @@ export class PlanningAllocationService {
           result.breachCount > 0,
       ).length;
 
+    const attentionLimitCount =
+      projectedLimitResults.filter(
+        (result) =>
+          result
+            .targetAttentionCount >
+          0,
+      ).length;
+
+    const projectedTargetAttentions =
+      projectedLimitResults.reduce(
+        (total, result) =>
+          total +
+          result
+            .targetAttentionCount,
+        0,
+      );
+
+    const targetAttentionYears =
+      projectedLimitResults.flatMap(
+        (result) =>
+          result.targetAttentions.map(
+            (attention) =>
+              attention.year,
+          ),
+      );
+
+    const firstProjectedAttentionYear =
+      targetAttentionYears.length > 0
+        ? Math.min(
+            ...targetAttentionYears,
+          )
+        : null;
+
     const breachYears =
       projectedLimitResults.flatMap(
         (result) =>
@@ -1682,7 +1845,10 @@ export class PlanningAllocationService {
         ? 'NOT_ASSESSED'
         : projectedBreaches > 0
           ? 'NON_COMPLIANT'
-          : unsupportedLimits.length > 0
+          : projectedTargetAttentions >
+                0 ||
+              unsupportedLimits.length >
+                0
             ? 'ATTENTION'
             : 'COMPLIANT';
 
@@ -1914,10 +2080,17 @@ export class PlanningAllocationService {
 
         breachedLimitCount,
 
+        attentionLimitCount,
+
         projectedBreaches,
+
+        projectedTargetAttentions,
 
         firstBreachYear:
           firstProjectedBreachYear,
+
+        firstAttentionYear:
+          firstProjectedAttentionYear,
 
         unsupportedLimits,
 
@@ -1928,10 +2101,14 @@ export class PlanningAllocationService {
           enabledLimits.length === 0
             ? 'I limiti IPS esistono nel catalogo, ma non hanno ancora soglie attive.'
             : projectedBreaches > 0
-              ? 'La proiezione viola una o più soglie IPS attive.'
-              : unsupportedLimits.length > 0
-                ? 'Le soglie compatibili risultano rispettate; alcuni limiti attivi non sono ancora proiettabili.'
-                : 'Tutte le soglie IPS attive risultano rispettate sull’intero orizzonte.',
+              ? 'La proiezione viola una o più soglie IPS critiche.'
+              : projectedTargetAttentions >
+                    0
+                ? 'I limiti critici sono rispettati, ma uno o più target IPS richiedono attenzione.'
+                : unsupportedLimits.length >
+                      0
+                  ? 'Le soglie compatibili risultano rispettate; alcuni limiti attivi non sono ancora proiettabili.'
+                  : 'Tutti i limiti e i target IPS attivi risultano rispettati sull’intero orizzonte.',
       },
 
       years,

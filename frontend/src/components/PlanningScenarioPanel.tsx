@@ -1760,11 +1760,33 @@ export default function PlanningScenarioPanel() {
                         .projectedBreaches
                     }
                     {" · "}
+                    Limiti in attenzione:{" "}
+                    {
+                      allocationResult
+                        .ipsProjection
+                        .attentionLimitCount
+                    }
+                    {" · "}
+                    Annualità fuori target:{" "}
+                    {
+                      allocationResult
+                        .ipsProjection
+                        .projectedTargetAttentions
+                    }
+                    {" · "}
                     Prima violazione:{" "}
                     {
                       allocationResult
                         .ipsProjection
                         .firstBreachYear ??
+                      "—"
+                    }
+                    {" · "}
+                    Prima attenzione:{" "}
+                    {
+                      allocationResult
+                        .ipsProjection
+                        .firstAttentionYear ??
                       "—"
                     }
                   </Typography>

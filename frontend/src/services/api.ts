@@ -2981,6 +2981,18 @@ export type PlanningIpsForwardBreach = {
   deviation: number;
 };
 
+export type PlanningIpsForwardTargetAttention = {
+  year: number;
+  value: number;
+
+  status:
+    | "BELOW_TARGET"
+    | "ABOVE_TARGET";
+
+  target: number;
+  deviation: number;
+};
+
 export type PlanningIpsForwardLimit = {
   code: string;
   label: string;
@@ -2996,6 +3008,7 @@ export type PlanningIpsForwardLimit = {
   status:
     | "NOT_ASSESSED"
     | "COMPLIANT"
+    | "ATTENTION"
     | "NON_COMPLIANT";
 
   severity:
@@ -3012,6 +3025,14 @@ export type PlanningIpsForwardLimit = {
 
   breachCount: number;
 
+  targetAttentionCount: number;
+
+  firstTargetAttentionYear:
+    number | null;
+
+  lastTargetAttentionYear:
+    number | null;
+
   recommendedAction:
     string | null;
 
@@ -3022,6 +3043,9 @@ export type PlanningIpsForwardLimit = {
 
   breaches:
     PlanningIpsForwardBreach[];
+
+  targetAttentions:
+    PlanningIpsForwardTargetAttention[];
 };
 
 export type PlanningAllocationResponse = {
@@ -3073,9 +3097,15 @@ export type PlanningAllocationResponse = {
     assessedLimitCount: number;
     unsupportedLimitCount: number;
     breachedLimitCount: number;
+    attentionLimitCount: number;
+
     projectedBreaches: number;
+    projectedTargetAttentions: number;
 
     firstBreachYear:
+      number | null;
+
+    firstAttentionYear:
       number | null;
 
     unsupportedLimits: Array<{
