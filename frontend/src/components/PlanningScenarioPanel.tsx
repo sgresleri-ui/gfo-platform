@@ -40,17 +40,25 @@ import {
   YAxis,
 } from "recharts";
 
+import EconomicAssumptionProfileDialog, {
+  type EconomicProfileSourceValues,
+} from "./EconomicAssumptionProfileDialog";
 import PlanningScenarioArchive from "./PlanningScenarioArchive";
 import PlanningScenarioAssessmentPanel from "./PlanningScenarioAssessmentPanel";
 import PlanningScenarioPresets from "./PlanningScenarioPresets";
 
 import {
+  archiveEconomicAssumptionProfile,
+  createEconomicAssumptionProfile,
   getPlanningScenarioBaseline,
   getEconomicAssumptionProfiles,
+  setDefaultEconomicAssumptionProfile,
+  updateEconomicAssumptionProfile,
   assessPlanningAllocationScenario,
   applyAutomaticIpsRebalancingPlan,
   compareOptimizedIpsRebalancingStrategies,
   type EconomicAssumptionProfile,
+  type EconomicAssumptionProfileInput,
   type PlanningAllocationResponse,
   type PlanningAllocationTransfer,
   type PlanningAutomaticIpsRebalancingResponse,
@@ -331,6 +339,23 @@ export default function PlanningScenarioPanel() {
     setEconomicProfileMessage,
   ] = useState("");
 
+  const [
+    economicProfileDialogOpen,
+    setEconomicProfileDialogOpen,
+  ] = useState(false);
+
+  const [
+    economicProfileDialogMode,
+    setEconomicProfileDialogMode,
+  ] = useState<
+    "create" | "edit"
+  >("create");
+
+  const [
+    savingEconomicProfile,
+    setSavingEconomicProfile,
+  ] = useState(false);
+
   const [events, setEvents] =
     useState<
       ScenarioEventDraft[]
@@ -465,6 +490,65 @@ export default function PlanningScenarioPanel() {
       [allocationResult],
     );
 
+  const selectedEconomicProfile =
+    useMemo(
+      () =>
+        economicProfiles.find(
+          (profile) =>
+            profile.id ===
+            selectedEconomicProfileId,
+        ) ?? null,
+      [
+        economicProfiles,
+        selectedEconomicProfileId,
+      ],
+    );
+
+  const economicProfileSourceValues =
+    useMemo<
+      EconomicProfileSourceValues
+    >(
+      () => ({
+        liquidityReturnDeltaPct:
+          form.liquidityReturnDeltaPct,
+
+        investmentsReturnDeltaPct:
+          form.investmentsReturnDeltaPct,
+
+        realEstateReturnDeltaPct:
+          form.realEstateReturnDeltaPct,
+
+        otherAssetsReturnDeltaPct:
+          form.otherAssetsReturnDeltaPct,
+
+        liquidityTaxRatePct:
+          form.liquidityTaxRatePct ??
+          "0",
+
+        investmentsTaxRatePct:
+          form.investmentsTaxRatePct ??
+          "0",
+
+        rebalancingCostRatePct:
+          form.rebalancingCostRatePct ??
+          "0",
+
+        rebalancingMinimumCost:
+          form.rebalancingMinimumCost ??
+          "0",
+      }),
+      [
+        form.liquidityReturnDeltaPct,
+        form.investmentsReturnDeltaPct,
+        form.realEstateReturnDeltaPct,
+        form.otherAssetsReturnDeltaPct,
+        form.liquidityTaxRatePct,
+        form.investmentsTaxRatePct,
+        form.rebalancingCostRatePct,
+        form.rebalancingMinimumCost,
+      ],
+    );
+
   function updateForm(
     field: keyof ScenarioForm,
     value: string,
@@ -473,6 +557,202 @@ export default function PlanningScenarioPanel() {
       ...current,
       [field]: value,
     }));
+  }
+
+  function openCreateEconomicProfile() {
+    setEconomicProfileDialogMode(
+      "create",
+    );
+
+    setEconomicProfileDialogOpen(
+      true,
+    );
+  }
+
+  function openEditEconomicProfile() {
+    if (!selectedEconomicProfile) {
+      setEconomicProfileMessage(
+        "Seleziona il profilo da modificare.",
+      );
+
+      return;
+    }
+
+    setEconomicProfileDialogMode(
+      "edit",
+    );
+
+    setEconomicProfileDialogOpen(
+      true,
+    );
+  }
+
+  async function saveEconomicProfile(
+    input:
+      EconomicAssumptionProfileInput,
+  ) {
+    setSavingEconomicProfile(true);
+
+    try {
+      const savedProfile =
+        economicProfileDialogMode ===
+          "edit" &&
+        selectedEconomicProfile
+          ? await updateEconomicAssumptionProfile(
+              selectedEconomicProfile.id,
+              input,
+            )
+          : await createEconomicAssumptionProfile(
+              input,
+            );
+
+      const profiles =
+        await getEconomicAssumptionProfiles();
+
+      setEconomicProfiles(profiles);
+
+      setSelectedEconomicProfileId(
+        savedProfile.id,
+      );
+
+      setForm((current) =>
+        applyEconomicProfileValues(
+          current,
+          savedProfile,
+        ),
+      );
+
+      setEconomicProfileDialogOpen(
+        false,
+      );
+
+      setEconomicProfileMessage(
+        economicProfileDialogMode ===
+          "edit"
+          ? `Profilo “${savedProfile.name}” aggiornato e applicato.`
+          : `Profilo “${savedProfile.name}” creato e applicato.`,
+      );
+    } catch (requestError) {
+      console.error(requestError);
+
+      window.alert(
+        requestError instanceof Error
+          ? requestError.message
+          : "Impossibile salvare il profilo economico.",
+      );
+    } finally {
+      setSavingEconomicProfile(false);
+    }
+  }
+
+  async function makeSelectedProfileDefault() {
+    if (
+      !selectedEconomicProfile ||
+      selectedEconomicProfile.isDefault
+    ) {
+      return;
+    }
+
+    setSavingEconomicProfile(true);
+
+    try {
+      const updated =
+        await setDefaultEconomicAssumptionProfile(
+          selectedEconomicProfile.id,
+        );
+
+      const profiles =
+        await getEconomicAssumptionProfiles();
+
+      setEconomicProfiles(profiles);
+
+      setSelectedEconomicProfileId(
+        updated.id,
+      );
+
+      setEconomicProfileMessage(
+        `“${updated.name}” è ora il profilo predefinito.`,
+      );
+    } catch (requestError) {
+      console.error(requestError);
+
+      setEconomicProfileMessage(
+        "Impossibile impostare il profilo predefinito.",
+      );
+    } finally {
+      setSavingEconomicProfile(false);
+    }
+  }
+
+  async function archiveSelectedProfile() {
+    if (!selectedEconomicProfile) {
+      return;
+    }
+
+    if (
+      selectedEconomicProfile.isDefault
+    ) {
+      setEconomicProfileMessage(
+        "Il profilo predefinito non può essere archiviato. Imposta prima un altro profilo come predefinito.",
+      );
+
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        `Archiviare il profilo “${selectedEconomicProfile.name}”?`,
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setSavingEconomicProfile(true);
+
+    try {
+      await archiveEconomicAssumptionProfile(
+        selectedEconomicProfile.id,
+      );
+
+      const profiles =
+        await getEconomicAssumptionProfiles();
+
+      setEconomicProfiles(profiles);
+
+      const nextProfile =
+        profiles.find(
+          (profile) =>
+            profile.isDefault,
+        ) ??
+        profiles[0] ??
+        null;
+
+      setSelectedEconomicProfileId(
+        nextProfile?.id ?? "",
+      );
+
+      if (nextProfile) {
+        setForm((current) =>
+          applyEconomicProfileValues(
+            current,
+            nextProfile,
+          ),
+        );
+      }
+
+      setEconomicProfileMessage(
+        `Profilo “${selectedEconomicProfile.name}” archiviato.`,
+      );
+    } catch (requestError) {
+      console.error(requestError);
+
+      setEconomicProfileMessage(
+        "Impossibile archiviare il profilo economico.",
+      );
+    } finally {
+      setSavingEconomicProfile(false);
+    }
   }
 
   function applySelectedEconomicProfile() {
@@ -1903,19 +2183,113 @@ export default function PlanningScenarioPanel() {
             )}
           </TextField>
 
-          <Button
-            variant="contained"
-            disabled={
-              loadingEconomicProfiles ||
-              !selectedEconomicProfileId
-            }
-            onClick={
-              applySelectedEconomicProfile
-            }
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 1,
+            }}
           >
-            Applica profilo
-          </Button>
+            <Button
+              variant="contained"
+              disabled={
+                loadingEconomicProfiles ||
+                savingEconomicProfile ||
+                !selectedEconomicProfile
+              }
+              onClick={
+                applySelectedEconomicProfile
+              }
+            >
+              Applica
+            </Button>
+
+            <Button
+              variant="outlined"
+              disabled={
+                savingEconomicProfile
+              }
+              onClick={
+                openCreateEconomicProfile
+              }
+            >
+              Nuovo
+            </Button>
+
+            <Button
+              variant="outlined"
+              disabled={
+                savingEconomicProfile ||
+                !selectedEconomicProfile
+              }
+              onClick={
+                openEditEconomicProfile
+              }
+            >
+              Modifica
+            </Button>
+
+            <Button
+              variant="outlined"
+              disabled={
+                savingEconomicProfile ||
+                !selectedEconomicProfile ||
+                selectedEconomicProfile
+                  .isDefault
+              }
+              onClick={
+                makeSelectedProfileDefault
+              }
+            >
+              Predefinito
+            </Button>
+
+            <Button
+              variant="outlined"
+              color="error"
+              disabled={
+                savingEconomicProfile ||
+                !selectedEconomicProfile ||
+                selectedEconomicProfile
+                  .isDefault
+              }
+              onClick={
+                archiveSelectedProfile
+              }
+            >
+              Archivia
+            </Button>
+          </Box>
         </Box>
+
+        <EconomicAssumptionProfileDialog
+          open={
+            economicProfileDialogOpen
+          }
+          mode={
+            economicProfileDialogMode
+          }
+          profile={
+            economicProfileDialogMode ===
+            "edit"
+              ? selectedEconomicProfile
+              : null
+          }
+          sourceValues={
+            economicProfileSourceValues
+          }
+          saving={
+            savingEconomicProfile
+          }
+          onClose={() =>
+            setEconomicProfileDialogOpen(
+              false,
+            )
+          }
+          onSave={
+            saveEconomicProfile
+          }
+        />
 
         {economicProfileMessage ? (
           <Alert
