@@ -164,9 +164,11 @@ export default function MainLayout() {
   const drawer = (
     <Box
       sx={{
-        height: "100%",
+        height: "100dvh",
+        minHeight: 0,
         display: "flex",
         flexDirection: "column",
+        overflow: "hidden",
         color: "white",
         background:
           "linear-gradient(180deg, #071A36 0%, #092650 55%, #071A36 100%)",
@@ -198,7 +200,33 @@ export default function MainLayout() {
 
       <Divider sx={{ borderColor: "rgba(255,255,255,0.09)" }} />
 
-      <List sx={{ px: 1.5, py: 2 }}>
+      <List
+        sx={{
+          px: 1.5,
+          py: 2,
+          flexGrow: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          overflowX: "hidden",
+          overscrollBehavior: "contain",
+          scrollbarWidth: "thin",
+
+          "&::-webkit-scrollbar": {
+            width: 6,
+          },
+
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor:
+              "rgba(255,255,255,0.22)",
+            borderRadius: 10,
+          },
+
+          "&::-webkit-scrollbar-track": {
+            backgroundColor:
+              "transparent",
+          },
+        }}
+      >
         {navigation.map((item) => {
           const selected = location.pathname === item.path;
 
@@ -257,9 +285,18 @@ export default function MainLayout() {
         })}
       </List>
 
-      <Box sx={{ flexGrow: 1 }} />
-
-      <Box sx={{ px: 2.5, pb: 2.5 }}>
+      <Box
+        sx={{
+          px: 2.5,
+          py: 2,
+          flexShrink: 0,
+          borderTop: "1px solid",
+          borderColor:
+            "rgba(255,255,255,0.09)",
+          backgroundColor:
+            "rgba(3,16,37,0.30)",
+        }}
+      >
         <Typography
           variant="caption"
           sx={{ color: "rgba(255,255,255,0.48)" }}
@@ -371,6 +408,10 @@ export default function MainLayout() {
 
             "& .MuiDrawer-paper": {
               width: drawerWidth,
+              height: "100dvh",
+              overflow: "hidden",
+              borderRight: "none",
+              backgroundColor: "#071A36",
             },
           }}
         >
@@ -385,7 +426,10 @@ export default function MainLayout() {
 
             "& .MuiDrawer-paper": {
               width: drawerWidth,
+              height: "100dvh",
+              overflow: "hidden",
               borderRight: "none",
+              backgroundColor: "#071A36",
             },
           }}
         >

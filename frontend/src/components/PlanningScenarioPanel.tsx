@@ -38,12 +38,14 @@ import {
 } from "recharts";
 
 import PlanningScenarioArchive from "./PlanningScenarioArchive";
+import PlanningScenarioAssessmentPanel from "./PlanningScenarioAssessmentPanel";
 import PlanningScenarioPresets from "./PlanningScenarioPresets";
 
 import {
   getPlanningScenarioBaseline,
-  simulatePlanningScenario,
+  assessPlanningScenario,
   type PlanningScenarioBaselineResponse,
+  type PlanningScenarioAssessmentResponse,
   type PlanningScenarioResponse,
   type SimulatePlanningScenarioInput,
 } from "../services/api";
@@ -184,6 +186,13 @@ export default function PlanningScenarioPanel() {
     PlanningScenarioResponse | null
   >(null);
 
+  const [
+    assessment,
+    setAssessment,
+  ] = useState<
+    PlanningScenarioAssessmentResponse | null
+  >(null);
+
   const [form, setForm] =
     useState<ScenarioForm>(
       DEFAULT_FORM,
@@ -317,6 +326,7 @@ export default function PlanningScenarioPanel() {
     setForm(DEFAULT_FORM);
     setEvents([]);
     setResult(null);
+    setAssessment(null);
     setError("");
   }
 
@@ -401,11 +411,15 @@ export default function PlanningScenarioPanel() {
         };
 
       const response =
-        await simulatePlanningScenario(
+        await assessPlanningScenario(
           input,
         );
 
-      setResult(response);
+      setResult(
+        response.scenario,
+      );
+
+      setAssessment(response);
     } catch (requestError) {
       console.error(requestError);
 
@@ -491,6 +505,7 @@ export default function PlanningScenarioPanel() {
     );
 
     setResult(null);
+    setAssessment(null);
     setError("");
   }
 
@@ -1323,6 +1338,10 @@ export default function PlanningScenarioPanel() {
               </Box>
             </Paper>
           </Box>
+
+          <PlanningScenarioAssessmentPanel
+            assessment={assessment}
+          />
 
           <Paper
             elevation={0}

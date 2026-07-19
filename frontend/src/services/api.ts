@@ -2737,3 +2737,101 @@ export async function archiveStoredPlanningScenario(
     "Unable to archive planning scenario",
   );
 }
+
+export type PlanningScenarioAssessmentStatus =
+  | "COMPLIANT"
+  | "ATTENTION"
+  | "NON_COMPLIANT";
+
+export type PlanningScenarioAssessmentCheckStatus =
+  | "PASS"
+  | "WARNING"
+  | "FAIL"
+  | "NOT_APPLICABLE";
+
+export type PlanningScenarioAssessmentOrigin =
+  | "BASELINE"
+  | "SCENARIO";
+
+export type PlanningScenarioAssessmentCheck = {
+  code: string;
+  origin: PlanningScenarioAssessmentOrigin;
+  dimension: string;
+  status: PlanningScenarioAssessmentCheckStatus;
+  title: string;
+  description: string;
+  actualValue: number | string | null;
+  threshold: string | null;
+};
+
+export type PlanningScenarioAssessmentAction = {
+  code: string;
+  priority:
+    | "HIGH"
+    | "MEDIUM"
+    | "LOW";
+  title: string;
+  rationale: string;
+};
+
+export type PlanningScenarioAssessmentResponse = {
+  generatedAt: string;
+  assessmentVersion: string;
+
+  methodology: {
+    allocationProjected: boolean;
+    note: string;
+  };
+
+  contextAvailability: {
+    ips: boolean;
+    risk: boolean;
+    properties: boolean;
+  };
+
+  scenario: PlanningScenarioResponse;
+
+  assessment: {
+    overallStatus:
+      PlanningScenarioAssessmentStatus;
+
+    baselineStatus:
+      PlanningScenarioAssessmentStatus;
+
+    scenarioStatus:
+      PlanningScenarioAssessmentStatus;
+
+    score: number;
+    passCount: number;
+    warningCount: number;
+    failureCount: number;
+    baselineIssueCount: number;
+    scenarioIssueCount: number;
+
+    checks:
+      PlanningScenarioAssessmentCheck[];
+
+    actions:
+      PlanningScenarioAssessmentAction[];
+  };
+};
+
+export async function assessPlanningScenario(
+  input: SimulatePlanningScenarioInput,
+): Promise<PlanningScenarioAssessmentResponse> {
+  const response = await fetch(
+    `${API_URL}/planning/scenarios/assess`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+
+  return readJson<PlanningScenarioAssessmentResponse>(
+    response,
+    "Unable to assess planning scenario",
+  );
+}
