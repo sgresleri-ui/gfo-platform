@@ -21,5 +21,9 @@ import {
     IpsService,
     IpsClassificationService,
   ],
+
+  exports: [
+    IpsService,
+  ],
 })
 export class IpsModule {}
