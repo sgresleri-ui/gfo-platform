@@ -2958,6 +2958,72 @@ export type PlanningAllocationYear = {
   reconciliationDifference: number;
 };
 
+export type PlanningIpsForwardStatus =
+  | "NOT_ASSESSED"
+  | "COMPLIANT"
+  | "ATTENTION"
+  | "NON_COMPLIANT";
+
+export type PlanningIpsForwardConfigurationStatus =
+  | "NOT_CONFIGURED"
+  | "PARTIALLY_CONFIGURED"
+  | "CONFIGURED";
+
+export type PlanningIpsForwardBreach = {
+  year: number;
+  value: number;
+
+  status:
+    | "BELOW_MINIMUM"
+    | "ABOVE_MAXIMUM";
+
+  threshold: number;
+  deviation: number;
+};
+
+export type PlanningIpsForwardLimit = {
+  code: string;
+  label: string;
+  dimension: string;
+  unit: string;
+
+  minimum: number | null;
+  target: number | null;
+  maximum: number | null;
+
+  supported: boolean;
+
+  status:
+    | "NOT_ASSESSED"
+    | "COMPLIANT"
+    | "NON_COMPLIANT";
+
+  severity:
+    | "NONE"
+    | "ATTENTION"
+    | "WARNING"
+    | "CRITICAL";
+
+  firstBreachYear:
+    number | null;
+
+  lastBreachYear:
+    number | null;
+
+  breachCount: number;
+
+  recommendedAction:
+    string | null;
+
+  annualValues: Array<{
+    year: number;
+    value: number;
+  }>;
+
+  breaches:
+    PlanningIpsForwardBreach[];
+};
+
 export type PlanningAllocationResponse = {
   allocation: {
     initial:
@@ -2997,7 +3063,31 @@ export type PlanningAllocationResponse = {
   };
 
   ipsProjection: {
-    configurationStatus: string;
+    configurationStatus:
+      PlanningIpsForwardConfigurationStatus;
+
+    status:
+      PlanningIpsForwardStatus;
+
+    activeLimitCount: number;
+    assessedLimitCount: number;
+    unsupportedLimitCount: number;
+    breachedLimitCount: number;
+    projectedBreaches: number;
+
+    firstBreachYear:
+      number | null;
+
+    unsupportedLimits: Array<{
+      code: string;
+      label: string;
+      reason: string;
+    }>;
+
+    limits:
+      PlanningIpsForwardLimit[];
+
+    note: string;
   };
 
   years:

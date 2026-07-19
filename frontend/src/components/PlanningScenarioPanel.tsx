@@ -1648,10 +1648,20 @@ export default function PlanningScenarioPanel() {
                   color={
                     allocationResult
                       .ipsProjection
-                      .configurationStatus ===
-                    "NOT_CONFIGURED"
-                      ? "warning"
-                      : "success"
+                      .status ===
+                    "NON_COMPLIANT"
+                      ? "error"
+                      : allocationResult
+                            .ipsProjection
+                            .status ===
+                          "ATTENTION"
+                        ? "warning"
+                        : allocationResult
+                              .ipsProjection
+                              .status ===
+                            "COMPLIANT"
+                          ? "success"
+                          : "default"
                   }
                   label={
                     allocationResult
@@ -1659,10 +1669,107 @@ export default function PlanningScenarioPanel() {
                       .configurationStatus ===
                     "NOT_CONFIGURED"
                       ? "Limiti IPS non configurati"
-                      : "Controllo IPS attivo"
+                      : allocationResult
+                            .ipsProjection
+                            .status ===
+                          "NON_COMPLIANT"
+                        ? "Non conforme con IPS"
+                        : allocationResult
+                              .ipsProjection
+                              .status ===
+                            "ATTENTION"
+                          ? "Attenzione IPS"
+                          : allocationResult
+                                .ipsProjection
+                                .status ===
+                              "COMPLIANT"
+                            ? "Conforme con IPS"
+                            : "IPS non valutato"
                   }
                 />
               </Box>
+
+              <Alert
+                severity={
+                  allocationResult
+                    .ipsProjection
+                    .status ===
+                  "NON_COMPLIANT"
+                    ? "error"
+                    : allocationResult
+                          .ipsProjection
+                          .status ===
+                        "ATTENTION"
+                      ? "warning"
+                      : allocationResult
+                            .ipsProjection
+                            .status ===
+                          "COMPLIANT"
+                        ? "success"
+                        : "info"
+                }
+                sx={{ mb: 2 }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 700,
+                  }}
+                >
+                  {
+                    allocationResult
+                      .ipsProjection
+                      .note
+                  }
+                </Typography>
+
+                {allocationResult
+                  .ipsProjection
+                  .activeLimitCount >
+                  0 && (
+                  <Typography
+                    variant="caption"
+                    component="div"
+                    sx={{ mt: 0.5 }}
+                  >
+                    Limiti attivi:{" "}
+                    {
+                      allocationResult
+                        .ipsProjection
+                        .activeLimitCount
+                    }
+                    {" · "}
+                    Valutati:{" "}
+                    {
+                      allocationResult
+                        .ipsProjection
+                        .assessedLimitCount
+                    }
+                    {" · "}
+                    Limiti violati:{" "}
+                    {
+                      allocationResult
+                        .ipsProjection
+                        .breachedLimitCount
+                    }
+                    {" · "}
+                    Violazioni annuali:{" "}
+                    {
+                      allocationResult
+                        .ipsProjection
+                        .projectedBreaches
+                    }
+                    {" · "}
+                    Prima violazione:{" "}
+                    {
+                      allocationResult
+                        .ipsProjection
+                        .firstBreachYear ??
+                      "—"
+                    }
+                  </Typography>
+                )}
+              </Alert>
 
               {allocationResult.summary
                 .minimumLiquidity <= 0 && (

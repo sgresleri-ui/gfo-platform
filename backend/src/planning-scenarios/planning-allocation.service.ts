@@ -1343,6 +1343,349 @@ export class PlanningAllocationService {
           },
         });
 
+    type ProjectionYear =
+      (typeof years)[number];
+
+    type ProjectionBreach = {
+      year: number;
+      value: number;
+      status:
+        | 'BELOW_MINIMUM'
+        | 'ABOVE_MAXIMUM';
+      threshold: number;
+      deviation: number;
+    };
+
+    const roundProjectionValue = (
+      value: number,
+    ): number =>
+      Math.round(
+        (
+          value +
+          Number.EPSILON
+        ) * 10000,
+      ) / 10000;
+
+    const getProjectionMetric = (
+      code: string,
+      year: ProjectionYear,
+    ): number | null => {
+      const liquidityWeight =
+        year.weights.LIQUIDITY ??
+        0;
+
+      const investmentsWeight =
+        year.weights.INVESTMENTS ??
+        0;
+
+      const realEstateWeight =
+        year.weights.REAL_ESTATE ??
+        0;
+
+      const otherAssetsWeight =
+        year.weights.OTHER_ASSETS ??
+        0;
+
+      switch (code) {
+        case
+          'LIQUIDITY_GROSS_ASSETS':
+          return liquidityWeight;
+
+        case
+          'INVESTMENTS_GROSS_ASSETS':
+          return investmentsWeight;
+
+        case
+          'MARKETABLE_GROSS_ASSETS':
+          return roundProjectionValue(
+            liquidityWeight +
+              investmentsWeight,
+          );
+
+        case
+          'REAL_ESTATE_GROSS_ASSETS':
+          return realEstateWeight;
+
+        case
+          'OTHER_ASSETS_GROSS_ASSETS':
+          return otherAssetsWeight;
+
+        case 'NET_WORTH_EUR':
+          return year.endTotal;
+
+        case 'LIQUIDITY_EUR':
+          return (
+            year.end.LIQUIDITY ??
+            0
+          );
+
+        default:
+          return null;
+      }
+    };
+
+    const projectedLimitResults =
+      enabledLimits.map(
+        (limit) => {
+          const annualValues: Array<{
+            year: number;
+            value: number;
+          }> = [];
+
+          for (
+            const year of years
+          ) {
+            const value =
+              getProjectionMetric(
+                limit.code,
+                year,
+              );
+
+            if (value !== null) {
+              annualValues.push({
+                year:
+                  year.year,
+
+                value:
+                  roundProjectionValue(
+                    value,
+                  ),
+              });
+            }
+          }
+
+          const supported =
+            annualValues.length ===
+            years.length;
+
+          const breaches:
+            ProjectionBreach[] = [];
+
+          if (supported) {
+            for (
+              const item of
+              annualValues
+            ) {
+              if (
+                limit.minimum !==
+                  null &&
+                item.value <
+                  limit.minimum
+              ) {
+                breaches.push({
+                  year:
+                    item.year,
+
+                  value:
+                    item.value,
+
+                  status:
+                    'BELOW_MINIMUM',
+
+                  threshold:
+                    limit.minimum,
+
+                  deviation:
+                    roundProjectionValue(
+                      item.value -
+                        limit.minimum,
+                    ),
+                });
+
+                continue;
+              }
+
+              if (
+                limit.maximum !==
+                  null &&
+                item.value >
+                  limit.maximum
+              ) {
+                breaches.push({
+                  year:
+                    item.year,
+
+                  value:
+                    item.value,
+
+                  status:
+                    'ABOVE_MAXIMUM',
+
+                  threshold:
+                    limit.maximum,
+
+                  deviation:
+                    roundProjectionValue(
+                      item.value -
+                        limit.maximum,
+                    ),
+                });
+              }
+            }
+          }
+
+          const firstBreach =
+            breaches[0] ?? null;
+
+          const lastBreach =
+            breaches[
+              breaches.length - 1
+            ] ?? null;
+
+          const persistsToEnd =
+            lastBreach !== null &&
+            lastBreach.year ===
+              finalYear.year;
+
+          const severity =
+            breaches.length === 0
+              ? 'NONE'
+              : persistsToEnd
+                ? 'CRITICAL'
+                : breaches.length > 1
+                  ? 'WARNING'
+                  : 'ATTENTION';
+
+          let recommendedAction:
+            string | null = null;
+
+          if (
+            firstBreach?.status ===
+            'BELOW_MINIMUM'
+          ) {
+            recommendedAction =
+              `Incrementare ${limit.label.toLowerCase()} fino ad almeno ${firstBreach.threshold} ${limit.unit === 'EUR' ? 'EUR' : '%'}.`;
+          }
+
+          if (
+            firstBreach?.status ===
+            'ABOVE_MAXIMUM'
+          ) {
+            recommendedAction =
+              `Ridurre ${limit.label.toLowerCase()} fino a non oltre ${firstBreach.threshold} ${limit.unit === 'EUR' ? 'EUR' : '%'}.`;
+          }
+
+          return {
+            code:
+              limit.code,
+
+            label:
+              limit.label,
+
+            dimension:
+              limit.dimension,
+
+            unit:
+              limit.unit,
+
+            minimum:
+              limit.minimum,
+
+            target:
+              limit.target,
+
+            maximum:
+              limit.maximum,
+
+            supported,
+
+            status:
+              !supported
+                ? 'NOT_ASSESSED'
+                : breaches.length > 0
+                  ? 'NON_COMPLIANT'
+                  : 'COMPLIANT',
+
+            severity,
+
+            firstBreachYear:
+              firstBreach?.year ??
+              null,
+
+            lastBreachYear:
+              lastBreach?.year ??
+              null,
+
+            breachCount:
+              breaches.length,
+
+            recommendedAction,
+
+            annualValues,
+            breaches,
+          };
+        },
+      );
+
+    const assessedLimitCount =
+      projectedLimitResults.filter(
+        (result) =>
+          result.supported,
+      ).length;
+
+    const unsupportedLimits =
+      projectedLimitResults
+        .filter(
+          (result) =>
+            !result.supported,
+        )
+        .map((result) => ({
+          code:
+            result.code,
+
+          label:
+            result.label,
+
+          reason:
+            'La serie prospettica necessaria non è ancora disponibile.',
+        }));
+
+    const projectedBreaches =
+      projectedLimitResults.reduce(
+        (total, result) =>
+          total +
+          result.breachCount,
+        0,
+      );
+
+    const breachedLimitCount =
+      projectedLimitResults.filter(
+        (result) =>
+          result.breachCount > 0,
+      ).length;
+
+    const breachYears =
+      projectedLimitResults.flatMap(
+        (result) =>
+          result.breaches.map(
+            (breach) =>
+              breach.year,
+          ),
+      );
+
+    const firstProjectedBreachYear =
+      breachYears.length > 0
+        ? Math.min(
+            ...breachYears,
+          )
+        : null;
+
+    const configurationStatus =
+      enabledLimits.length === 0
+        ? 'NOT_CONFIGURED'
+        : unsupportedLimits.length > 0
+          ? 'PARTIALLY_CONFIGURED'
+          : 'CONFIGURED';
+
+    const ipsForwardStatus =
+      enabledLimits.length === 0
+        ? 'NOT_ASSESSED'
+        : projectedBreaches > 0
+          ? 'NON_COMPLIANT'
+          : unsupportedLimits.length > 0
+            ? 'ATTENTION'
+            : 'COMPLIANT';
+
     return {
       generatedAt:
         new Date().toISOString(),
@@ -1556,20 +1899,39 @@ export class PlanningAllocationService {
       },
 
       ipsProjection: {
-        configurationStatus:
-          enabledLimits.length === 0
-            ? 'NOT_CONFIGURED'
-            : 'CONFIGURED',
+        configurationStatus,
+
+        status:
+          ipsForwardStatus,
 
         activeLimitCount:
           enabledLimits.length,
 
-        projectedBreaches: 0,
+        assessedLimitCount,
+
+        unsupportedLimitCount:
+          unsupportedLimits.length,
+
+        breachedLimitCount,
+
+        projectedBreaches,
+
+        firstBreachYear:
+          firstProjectedBreachYear,
+
+        unsupportedLimits,
+
+        limits:
+          projectedLimitResults,
 
         note:
           enabledLimits.length === 0
             ? 'I limiti IPS esistono nel catalogo, ma non hanno ancora soglie attive.'
-            : 'La valutazione prospettica delle soglie attive sarà completata nella fase successiva.',
+            : projectedBreaches > 0
+              ? 'La proiezione viola una o più soglie IPS attive.'
+              : unsupportedLimits.length > 0
+                ? 'Le soglie compatibili risultano rispettate; alcuni limiti attivi non sono ancora proiettabili.'
+                : 'Tutte le soglie IPS attive risultano rispettate sull’intero orizzonte.',
       },
 
       years,

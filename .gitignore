@@ -22,3 +22,5 @@ backend/prisma/*.db-shm
 backend/prisma/*.db-wal
 backend/prisma/*.backup*
 backend/prisma/schema.prisma.backup*
+
+.gfo-logs/
