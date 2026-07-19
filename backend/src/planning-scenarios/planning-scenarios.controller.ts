@@ -59,6 +59,18 @@ export class PlanningScenariosController {
       .assessScenario(input);
   }
 
+  @Post('assess-allocation')
+  assessAllocationScenario(
+    @Body()
+    input:
+      SimulatePlanningAllocationInput,
+  ) {
+    return this.assessmentService
+      .assessAllocationScenario(
+        input,
+      );
+  }
+
   @Post('allocation')
   simulateAllocation(
     @Body()

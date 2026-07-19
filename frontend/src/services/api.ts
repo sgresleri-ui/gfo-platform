@@ -3163,6 +3163,41 @@ export type PlanningAllocationResponse = {
   years:
     PlanningAllocationYear[];
 };
+export type PlanningIntegratedScenarioAssessmentResponse =
+  PlanningScenarioAssessmentResponse & {
+    allocation:
+      PlanningAllocationResponse;
+
+    forwardIpsImpact: {
+      status:
+        PlanningIpsForwardStatus;
+
+      forwardStatusPenalty:
+        number;
+
+      criticalDurationPenalty:
+        number;
+
+      targetDurationPenalty:
+        number;
+
+      urgencyPenalty:
+        number;
+
+      projectedBreaches:
+        number;
+
+      projectedTargetAttentions:
+        number;
+
+      firstBreachYear:
+        number | null;
+
+      firstAttentionYear:
+        number | null;
+    };
+  };
+
 
 export async function simulatePlanningScenarioAllocation(
   input:
@@ -3185,5 +3220,31 @@ export async function simulatePlanningScenarioAllocation(
   return readJson<PlanningAllocationResponse>(
     response,
     "Unable to project scenario asset allocation",
+  );
+}
+
+
+export async function assessPlanningAllocationScenario(
+  input:
+    SimulatePlanningAllocationInput,
+): Promise<PlanningIntegratedScenarioAssessmentResponse> {
+  const response = await fetch(
+    `${API_URL}/planning/scenarios/assess-allocation`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+
+      body:
+        JSON.stringify(input),
+    },
+  );
+
+  return readJson<PlanningIntegratedScenarioAssessmentResponse>(
+    response,
+    "Unable to assess scenario asset allocation",
   );
 }

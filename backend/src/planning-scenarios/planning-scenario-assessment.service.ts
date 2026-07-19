@@ -9,6 +9,11 @@ import {
   type SimulatePlanningScenarioInput,
 } from './planning-scenarios.service';
 
+import {
+  PlanningAllocationService,
+  type SimulatePlanningAllocationInput,
+} from './planning-allocation.service';
+
 type AssessmentStatus =
   | 'COMPLIANT'
   | 'ATTENTION'
@@ -62,6 +67,9 @@ export class PlanningScenarioAssessmentService {
 
     private readonly propertiesService:
       PropertiesService,
+
+    private readonly allocationEngine:
+      PlanningAllocationService,
   ) {}
 
   private isRecord(
@@ -1002,4 +1010,389 @@ export class PlanningScenarioAssessmentService {
       },
     };
   }
+
+  async assessAllocationScenario(
+    input:
+      | SimulatePlanningAllocationInput
+      | undefined,
+  ) {
+    const [
+      baseAssessment,
+      allocation,
+    ] = await Promise.all([
+      this.assessScenario(input),
+
+      this.allocationEngine
+        .simulateAllocation(input),
+    ]);
+
+    const forwardChecks:
+      AssessmentCheck[] =
+      allocation
+        .ipsProjection
+        .limits
+        .map((limit) => {
+          const status:
+            CheckStatus =
+            limit.status ===
+              'NON_COMPLIANT'
+              ? 'FAIL'
+              : limit.status ===
+                  'ATTENTION'
+                ? 'WARNING'
+                : limit.status ===
+                    'COMPLIANT'
+                  ? 'PASS'
+                  : 'NOT_APPLICABLE';
+
+          const unit =
+            limit.unit === 'EUR'
+              ? '€'
+              : '%';
+
+          const thresholds:
+            string[] = [];
+
+          if (
+            limit.minimum !== null
+          ) {
+            thresholds.push(
+              `minimo ${limit.minimum}${unit}`,
+            );
+          }
+
+          if (
+            limit.target !== null
+          ) {
+            thresholds.push(
+              `target ${limit.target}${unit}`,
+            );
+          }
+
+          if (
+            limit.maximum !== null
+          ) {
+            thresholds.push(
+              `massimo ${limit.maximum}${unit}`,
+            );
+          }
+
+          const description =
+            status === 'FAIL'
+              ? `${limit.breachCount} annualità oltre i limiti critici; prima violazione nel ${limit.firstBreachYear ?? '—'}.`
+              : status === 'WARNING'
+                ? `${limit.targetAttentionCount} annualità fuori target; prima attenzione nel ${limit.firstTargetAttentionYear ?? '—'}.`
+                : status === 'PASS'
+                  ? 'Limiti critici e target rispettati sull’intero orizzonte.'
+                  : 'Indicatore non valutabile sulla proiezione disponibile.';
+
+          return {
+            code:
+              `FORWARD_${limit.code}`,
+
+            origin:
+              'SCENARIO' as const,
+
+            dimension:
+              limit.dimension,
+
+            status,
+
+            title:
+              `IPS prospettica · ${limit.label}`,
+
+            description,
+
+            actualValue:
+              status ===
+                'NOT_APPLICABLE'
+                ? null
+                : status === 'FAIL'
+                  ? `${limit.breachCount} violazioni critiche`
+                  : status ===
+                      'WARNING'
+                    ? `${limit.targetAttentionCount} annualità fuori target`
+                    : 'Conforme',
+
+            threshold:
+              thresholds.length > 0
+                ? thresholds.join(
+                    ' · ',
+                  )
+                : null,
+          };
+        });
+
+    const checks:
+      AssessmentCheck[] = [
+        ...baseAssessment
+          .assessment
+          .checks,
+
+        ...forwardChecks,
+      ];
+
+    const relevantChecks =
+      checks.filter(
+        (check) =>
+          check.status !==
+          'NOT_APPLICABLE',
+      );
+
+    const baselineChecks =
+      relevantChecks.filter(
+        (check) =>
+          check.origin ===
+          'BASELINE',
+      );
+
+    const scenarioChecks =
+      relevantChecks.filter(
+        (check) =>
+          check.origin ===
+          'SCENARIO',
+      );
+
+    const failureCount =
+      relevantChecks.filter(
+        (check) =>
+          check.status === 'FAIL',
+      ).length;
+
+    const warningCount =
+      relevantChecks.filter(
+        (check) =>
+          check.status ===
+          'WARNING',
+      ).length;
+
+    const passCount =
+      relevantChecks.filter(
+        (check) =>
+          check.status === 'PASS',
+      ).length;
+
+    const actions =
+      new Map<
+        string,
+        AssessmentAction
+      >(
+        baseAssessment
+          .assessment
+          .actions
+          .map((action) => [
+            action.code,
+            action,
+          ]),
+      );
+
+    const remediationPlan =
+      allocation
+        .ipsProjection
+        .remediationPlans[0];
+
+    if (remediationPlan) {
+      actions.set(
+        'APPLY_FORWARD_IPS_REBALANCING',
+        {
+          code:
+            'APPLY_FORWARD_IPS_REBALANCING',
+
+          priority:
+            allocation
+              .ipsProjection
+              .status ===
+              'NON_COMPLIANT'
+              ? 'HIGH'
+              : 'MEDIUM',
+
+          title:
+            `Ribilanciare la liquidità nel ${remediationPlan.year}`,
+
+          rationale:
+            `Trasferire ${remediationPlan.recommendedAmount.toLocaleString(
+              'it-IT',
+              {
+                style:
+                  'currency',
+                currency:
+                  'EUR',
+              },
+            )} da investimenti a liquidità.`,
+        },
+      );
+    }
+
+    const forwardStatusPenalty =
+      allocation
+        .ipsProjection
+        .status ===
+        'NON_COMPLIANT'
+        ? 15
+        : allocation
+              .ipsProjection
+              .status ===
+            'ATTENTION'
+          ? 8
+          : 0;
+
+    const criticalDurationPenalty =
+      Math.min(
+        10,
+        Math.ceil(
+          allocation
+            .ipsProjection
+            .projectedBreaches /
+            3,
+        ),
+      );
+
+    const targetDurationPenalty =
+      Math.min(
+        4,
+        Math.ceil(
+          allocation
+            .ipsProjection
+            .projectedTargetAttentions /
+            5,
+        ),
+      );
+
+    const firstBreachYear =
+      allocation
+        .ipsProjection
+        .firstBreachYear;
+
+    const urgencyPenalty =
+      firstBreachYear === null
+        ? 0
+        : Math.max(
+            1,
+            6 -
+              Math.floor(
+                (
+                  firstBreachYear -
+                  allocation.source
+                    .startYear
+                ) / 3,
+              ),
+          );
+
+    const score =
+      Math.max(
+        0,
+        Math.min(
+          100,
+          baseAssessment
+            .assessment
+            .score -
+            forwardStatusPenalty -
+            criticalDurationPenalty -
+            targetDurationPenalty -
+            urgencyPenalty,
+        ),
+      );
+
+    return {
+      ...baseAssessment,
+
+      generatedAt:
+        new Date().toISOString(),
+
+      assessmentVersion:
+        '2.0',
+
+      methodology: {
+        allocationProjected:
+          true,
+
+        note:
+          'La valutazione integra capitale, flussi, asset allocation prospettica, limiti IPS, target e ribilanciamenti correttivi.',
+      },
+
+      allocation,
+
+      forwardIpsImpact: {
+        status:
+          allocation
+            .ipsProjection
+            .status,
+
+        forwardStatusPenalty,
+        criticalDurationPenalty,
+        targetDurationPenalty,
+        urgencyPenalty,
+
+        projectedBreaches:
+          allocation
+            .ipsProjection
+            .projectedBreaches,
+
+        projectedTargetAttentions:
+          allocation
+            .ipsProjection
+            .projectedTargetAttentions,
+
+        firstBreachYear:
+          allocation
+            .ipsProjection
+            .firstBreachYear,
+
+        firstAttentionYear:
+          allocation
+            .ipsProjection
+            .firstAttentionYear,
+      },
+
+      assessment: {
+        ...baseAssessment.assessment,
+
+        overallStatus:
+          this.statusFromChecks(
+            relevantChecks,
+          ),
+
+        baselineStatus:
+          this.statusFromChecks(
+            baselineChecks,
+          ),
+
+        scenarioStatus:
+          this.statusFromChecks(
+            scenarioChecks,
+          ),
+
+        score,
+        passCount,
+        warningCount,
+        failureCount,
+
+        baselineIssueCount:
+          baselineChecks.filter(
+            (check) =>
+              check.status ===
+                'WARNING' ||
+              check.status ===
+                'FAIL',
+          ).length,
+
+        scenarioIssueCount:
+          scenarioChecks.filter(
+            (check) =>
+              check.status ===
+                'WARNING' ||
+              check.status ===
+                'FAIL',
+          ).length,
+
+        checks,
+
+        actions:
+          Array.from(
+            actions.values(),
+          ),
+      },
+    };
+  }
+
 }

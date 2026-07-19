@@ -45,8 +45,7 @@ import PlanningScenarioPresets from "./PlanningScenarioPresets";
 
 import {
   getPlanningScenarioBaseline,
-  assessPlanningScenario,
-  simulatePlanningScenarioAllocation,
+  assessPlanningAllocationScenario,
   type PlanningAllocationResponse,
   type PlanningAllocationTransfer,
   type PlanningScenarioBaselineResponse,
@@ -468,15 +467,8 @@ export default function PlanningScenarioPanel() {
         transfersOverride ??
         allocationTransfers;
 
-      const [
-        response,
-        allocationResponse,
-      ] = await Promise.all([
-        assessPlanningScenario(
-          input,
-        ),
-
-        simulatePlanningScenarioAllocation({
+      const response =
+        await assessPlanningAllocationScenario({
           ...input,
 
           allocation: {
@@ -513,8 +505,7 @@ export default function PlanningScenarioPanel() {
             transfers:
               effectiveTransfers,
           },
-        }),
-      ]);
+        });
 
       setResult(
         response.scenario,
@@ -523,7 +514,7 @@ export default function PlanningScenarioPanel() {
       setAssessment(response);
 
       setAllocationResult(
-        allocationResponse,
+        response.allocation,
       );
 
       setAllocationTransfers(
@@ -658,8 +649,8 @@ export default function PlanningScenarioPanel() {
           ),
         };
 
-      const allocationResponse =
-        await simulatePlanningScenarioAllocation({
+      const integratedResponse =
+        await assessPlanningAllocationScenario({
           ...input,
 
           allocation: {
@@ -702,8 +693,16 @@ export default function PlanningScenarioPanel() {
         nextTransfers,
       );
 
+      setResult(
+        integratedResponse.scenario,
+      );
+
+      setAssessment(
+        integratedResponse,
+      );
+
       setAllocationResult(
-        allocationResponse,
+        integratedResponse.allocation,
       );
     } catch (requestError) {
       console.error(requestError);

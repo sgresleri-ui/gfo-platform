@@ -556,14 +556,7 @@ export default function PlanningScenarioAssessmentPanel({
         severity="info"
         sx={{ mb: 2.5 }}
       >
-        Il motore proietta capitale e
-        flussi; la composizione futura per
-        asset class è disponibile nella
-        sezione Asset allocation
-        prospettica. La verifica di
-        conformità IPS prospettica dipende
-        dalla configurazione delle soglie
-        numeriche.
+        {assessment.methodology.note}
       </Alert>
 
       <Box
