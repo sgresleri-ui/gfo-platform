@@ -1823,7 +1823,8 @@ export class PlanningScenarioAssessmentService {
   ) {
     type StrategyCode =
       | 'MINIMUM_COMPLIANCE'
-      | 'TARGET_OPTIMIZED';
+      | 'TARGET_OPTIMIZED'
+      | 'ECONOMIC_BALANCED';
 
     type StrategyIntervention = {
       iteration: number;
@@ -1848,7 +1849,8 @@ export class PlanningScenarioAssessmentService {
       interventionType:
         | 'MINIMUM_PROTECTION'
         | 'PREFUNDING'
-        | 'SAFE_SWEEP';
+        | 'SAFE_SWEEP'
+        | 'ECONOMIC_SWEEP';
     };
 
     const upperTrigger =
@@ -2098,15 +2100,15 @@ export class PlanningScenarioAssessmentService {
           operationalPolicy: {
             upperTrigger:
               strategy ===
-              'TARGET_OPTIMIZED'
-                ? upperTrigger
-                : null,
+              'MINIMUM_COMPLIANCE'
+                ? null
+                : upperTrigger,
 
             minimumTrade:
               strategy ===
-              'TARGET_OPTIMIZED'
-                ? minimumTrade
-                : null,
+              'MINIMUM_COMPLIANCE'
+                ? null
+                : minimumTrade,
           },
 
           interventions:
@@ -2827,6 +2829,344 @@ export class PlanningScenarioAssessmentService {
         targetInterventions,
       );
 
+
+    /*
+     * STRATEGIA 3
+     * Bilanciata economica:
+     * parte dalla protezione minima e
+     * reinveste l'eccedenza oltre il
+     * 12,5%, garantendo in prospettiva
+     * il mantenimento del minimo IPS.
+     */
+    let economicTransfers = [
+      ...minimumTransfers,
+    ];
+
+    let economicAllocation =
+      minimumAllocation;
+
+    const economicInterventions:
+      StrategyIntervention[] =
+      minimumInterventions.map(
+        (intervention) => ({
+          ...intervention,
+        }),
+      );
+
+    const rebalancingCostRatePct =
+      Number(
+        baseAllocation
+          .rebalancingCostRatePct ??
+        0,
+      );
+
+    const rebalancingMinimumCost =
+      Number(
+        baseAllocation
+          .rebalancingMinimumCost ??
+        0,
+      );
+
+    const estimateTransferCost = (
+      amount: number,
+    ): number =>
+      roundMoney(
+        Math.max(
+          amount *
+            rebalancingCostRatePct /
+            100,
+
+          rebalancingMinimumCost,
+        ),
+      );
+
+    for (
+      const yearNumber of
+      yearNumbers
+    ) {
+      const year =
+        economicAllocation
+          .years
+          .find(
+            (item) =>
+              item.year ===
+              yearNumber,
+          );
+
+      if (!year) {
+        continue;
+      }
+
+      const currentWeight =
+        year.weights
+          .LIQUIDITY ??
+        0;
+
+      if (
+        currentWeight <=
+        upperTrigger
+      ) {
+        continue;
+      }
+
+      const futureYears =
+        economicAllocation
+          .years
+          .filter(
+            (item) =>
+              item.year >=
+              yearNumber,
+          );
+
+      /*
+       * Liquidità eliminabile senza
+       * scendere sotto il minimo IPS
+       * in nessun anno futuro.
+       */
+      const futureMinimumSurpluses =
+        futureYears.map(
+          (item) =>
+            roundMoney(
+              item.end.LIQUIDITY -
+              (
+                item.endTotal *
+                minimumWeight /
+                100
+              ),
+            ),
+        );
+
+      const safeRemovable =
+        roundMoney(
+          Math.max(
+            0,
+            Math.min(
+              ...futureMinimumSurpluses,
+            ),
+          ),
+        );
+
+      /*
+       * Quando la soglia superiore
+       * viene superata, il rientro
+       * desiderato è verso il target
+       * IPS del 10%, non verso il 5%.
+       */
+      const currentExcessToTarget =
+        roundMoney(
+          Math.max(
+            0,
+            year.end.LIQUIDITY -
+            targetAmount(
+              year,
+            ),
+          ),
+        );
+
+      const totalDebitCapacity =
+        roundMoney(
+          Math.min(
+            safeRemovable,
+            currentExcessToTarget,
+          ),
+        );
+
+      if (
+        totalDebitCapacity <= 0
+      ) {
+        continue;
+      }
+
+      /*
+       * Il costo viene addebitato alla
+       * liquidità oltre all'importo
+       * reinvestito. L'iterazione evita
+       * di superare la capacità sicura.
+       */
+      let amount =
+        totalDebitCapacity;
+
+      for (
+        let adjustment = 0;
+        adjustment < 6;
+        adjustment += 1
+      ) {
+        const estimatedCost =
+          estimateTransferCost(
+            amount,
+          );
+
+        amount =
+          roundMoney(
+            Math.max(
+              0,
+
+              Math.min(
+                currentExcessToTarget,
+
+                totalDebitCapacity -
+                estimatedCost,
+              ),
+            ),
+          );
+      }
+
+      if (
+        amount <
+        minimumTrade
+      ) {
+        continue;
+      }
+
+      const transferCost =
+        estimateTransferCost(
+          amount,
+        );
+
+      const fullyFundable =
+        year.end.LIQUIDITY +
+          0.01 >=
+        amount +
+          transferCost;
+
+      if (!fullyFundable) {
+        continue;
+      }
+
+      const transfer:
+        PlanningAllocationTransferInput =
+        {
+          year:
+            year.year,
+
+          label:
+            `Piano IPS economico ${year.year}`,
+
+          from:
+            'LIQUIDITY',
+
+          to:
+            'INVESTMENTS',
+
+          amount,
+
+          timing:
+            'END_OF_YEAR',
+        };
+
+      const nextTransfers =
+        addTransfer(
+          economicTransfers,
+          transfer,
+        );
+
+      const nextAllocation =
+        await this
+          .allocationEngine
+          .simulateAllocation(
+            buildInput(
+              nextTransfers,
+            ),
+          );
+
+      const nextYear =
+        nextAllocation
+          .years
+          .find(
+            (item) =>
+              item.year ===
+              year.year,
+          );
+
+      economicInterventions.push({
+        iteration:
+          economicInterventions
+            .length + 1,
+
+        year:
+          year.year,
+
+        source:
+          'LIQUIDITY',
+
+        destination:
+          'INVESTMENTS',
+
+        amount,
+
+        desiredWeight:
+          roundPercentage(
+            targetWeight,
+          ),
+
+        weightBefore:
+          roundPercentage(
+            currentWeight,
+          ),
+
+        weightAfter:
+          roundPercentage(
+            nextYear?.weights
+              .LIQUIDITY ??
+            currentWeight,
+          ),
+
+        fullyFundable,
+
+        interventionType:
+          'ECONOMIC_SWEEP',
+      });
+
+      economicTransfers =
+        nextTransfers;
+
+      economicAllocation =
+        nextAllocation;
+    }
+
+    const economicBalanced =
+      await finalizeStrategy(
+        'ECONOMIC_BALANCED',
+
+        'Bilanciata economica',
+
+        `Protegge il minimo IPS del ${minimumWeight}% e reinveste l’eccedenza oltre il ${upperTrigger}% soltanto quando non serve negli anni successivi.`,
+
+        economicTransfers,
+        economicInterventions,
+      );
+
+    const eligibleStrategies = [
+      minimumCompliance,
+      targetOptimized,
+      economicBalanced,
+    ].filter(
+      (strategy) =>
+        strategy.criticalCompliant,
+    );
+
+    const recommendedStrategyResult =
+      eligibleStrategies.length > 0
+        ? eligibleStrategies.reduce(
+            (best, current) =>
+              current.finalNetWorth >
+              best.finalNetWorth
+                ? current
+                : best,
+          )
+        : targetOptimized;
+
+    const recommendationRationale =
+      recommendedStrategyResult
+        .strategy ===
+      'ECONOMIC_BALANCED'
+        ? 'La strategia bilanciata economica produce il patrimonio finale netto più elevato tra le alternative senza violazioni critiche.'
+        : recommendedStrategyResult
+              .strategy ===
+            'MINIMUM_COMPLIANCE'
+          ? 'La protezione minima produce il patrimonio finale netto più elevato tra le alternative senza violazioni critiche.'
+          : 'Il target consolidato offre il miglior risultato economico tra le alternative senza violazioni critiche.';
+
     return {
       generatedAt:
         new Date().toISOString(),
@@ -2871,12 +3211,14 @@ export class PlanningScenarioAssessmentService {
 
       minimumCompliance,
       targetOptimized,
+      economicBalanced,
 
       recommendedStrategy:
-        'TARGET_OPTIMIZED',
+        recommendedStrategyResult
+          .strategy,
 
       rationale:
-        'Il target consolidato raggiunge la conformità con meno interventi rispetto al ribilanciamento annuale e reinveste soltanto la liquidità che non serve nei periodi successivi.',
+        recommendationRationale,
     };
   }
 
