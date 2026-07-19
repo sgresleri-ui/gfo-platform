@@ -3521,3 +3521,139 @@ export async function compareOptimizedIpsRebalancingStrategies(
     "Unable to compare optimized IPS strategies",
   );
 }
+
+export type EconomicAssumptionProfile = {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  fiscalResidence: string;
+
+  liquidityReturnDeltaPct: number;
+  investmentsReturnDeltaPct: number;
+  realEstateReturnDeltaPct: number;
+  otherAssetsReturnDeltaPct: number;
+
+  liquidityTaxRatePct: number;
+  investmentsTaxRatePct: number;
+
+  rebalancingCostRatePct: number;
+  rebalancingMinimumCost: number;
+
+  isDefault: boolean;
+  isArchived: boolean;
+
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type EconomicAssumptionProfileInput = {
+  code: string;
+  name: string;
+  description?: string;
+  fiscalResidence?: string;
+
+  liquidityReturnDeltaPct?: number;
+  investmentsReturnDeltaPct?: number;
+  realEstateReturnDeltaPct?: number;
+  otherAssetsReturnDeltaPct?: number;
+
+  liquidityTaxRatePct?: number;
+  investmentsTaxRatePct?: number;
+
+  rebalancingCostRatePct?: number;
+  rebalancingMinimumCost?: number;
+
+  isDefault?: boolean;
+  isArchived?: boolean;
+};
+
+export async function getEconomicAssumptionProfiles(
+  includeArchived = false,
+): Promise<EconomicAssumptionProfile[]> {
+  const response = await fetch(
+    `${API_URL}/economic-assumption-profiles?includeArchived=${includeArchived}`,
+  );
+
+  return readJson<EconomicAssumptionProfile[]>(
+    response,
+    "Unable to load economic assumption profiles",
+  );
+}
+
+export async function createEconomicAssumptionProfile(
+  input: EconomicAssumptionProfileInput,
+): Promise<EconomicAssumptionProfile> {
+  const response = await fetch(
+    `${API_URL}/economic-assumption-profiles`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify(input),
+    },
+  );
+
+  return readJson<EconomicAssumptionProfile>(
+    response,
+    "Unable to create economic assumption profile",
+  );
+}
+
+export async function updateEconomicAssumptionProfile(
+  id: string,
+  input: Partial<EconomicAssumptionProfileInput>,
+): Promise<EconomicAssumptionProfile> {
+  const response = await fetch(
+    `${API_URL}/economic-assumption-profiles/${id}`,
+    {
+      method: "PATCH",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify(input),
+    },
+  );
+
+  return readJson<EconomicAssumptionProfile>(
+    response,
+    "Unable to update economic assumption profile",
+  );
+}
+
+export async function setDefaultEconomicAssumptionProfile(
+  id: string,
+): Promise<EconomicAssumptionProfile> {
+  const response = await fetch(
+    `${API_URL}/economic-assumption-profiles/${id}/default`,
+    {
+      method: "PATCH",
+    },
+  );
+
+  return readJson<EconomicAssumptionProfile>(
+    response,
+    "Unable to set default economic assumption profile",
+  );
+}
+
+export async function archiveEconomicAssumptionProfile(
+  id: string,
+): Promise<EconomicAssumptionProfile> {
+  const response = await fetch(
+    `${API_URL}/economic-assumption-profiles/${id}/archive`,
+    {
+      method: "PATCH",
+    },
+  );
+
+  return readJson<EconomicAssumptionProfile>(
+    response,
+    "Unable to archive economic assumption profile",
+  );
+}

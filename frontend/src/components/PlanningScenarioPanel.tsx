@@ -12,6 +12,7 @@ import {
   CircularProgress,
   Divider,
   IconButton,
+  MenuItem,
   Paper,
   TextField,
   Typography,
@@ -45,9 +46,11 @@ import PlanningScenarioPresets from "./PlanningScenarioPresets";
 
 import {
   getPlanningScenarioBaseline,
+  getEconomicAssumptionProfiles,
   assessPlanningAllocationScenario,
   applyAutomaticIpsRebalancingPlan,
   compareOptimizedIpsRebalancingStrategies,
+  type EconomicAssumptionProfile,
   type PlanningAllocationResponse,
   type PlanningAllocationTransfer,
   type PlanningAutomaticIpsRebalancingResponse,
@@ -202,6 +205,55 @@ function formatSignedCurrency(
   return absoluteValue;
 }
 
+function applyEconomicProfileValues(
+  current: ScenarioForm,
+  profile: EconomicAssumptionProfile,
+): ScenarioForm {
+  return {
+    ...current,
+
+    liquidityReturnDeltaPct:
+      String(
+        profile.liquidityReturnDeltaPct,
+      ),
+
+    investmentsReturnDeltaPct:
+      String(
+        profile.investmentsReturnDeltaPct,
+      ),
+
+    realEstateReturnDeltaPct:
+      String(
+        profile.realEstateReturnDeltaPct,
+      ),
+
+    otherAssetsReturnDeltaPct:
+      String(
+        profile.otherAssetsReturnDeltaPct,
+      ),
+
+    liquidityTaxRatePct:
+      String(
+        profile.liquidityTaxRatePct,
+      ),
+
+    investmentsTaxRatePct:
+      String(
+        profile.investmentsTaxRatePct,
+      ),
+
+    rebalancingCostRatePct:
+      String(
+        profile.rebalancingCostRatePct,
+      ),
+
+    rebalancingMinimumCost:
+      String(
+        profile.rebalancingMinimumCost,
+      ),
+  };
+}
+
 export default function PlanningScenarioPanel() {
   const [
     baseline,
@@ -257,6 +309,28 @@ export default function PlanningScenarioPanel() {
       DEFAULT_FORM,
     );
 
+  const [
+    economicProfiles,
+    setEconomicProfiles,
+  ] = useState<
+    EconomicAssumptionProfile[]
+  >([]);
+
+  const [
+    selectedEconomicProfileId,
+    setSelectedEconomicProfileId,
+  ] = useState("");
+
+  const [
+    loadingEconomicProfiles,
+    setLoadingEconomicProfiles,
+  ] = useState(true);
+
+  const [
+    economicProfileMessage,
+    setEconomicProfileMessage,
+  ] = useState("");
+
   const [events, setEvents] =
     useState<
       ScenarioEventDraft[]
@@ -296,6 +370,58 @@ export default function PlanningScenarioPanel() {
       .finally(() => {
         if (active) {
           setLoadingBaseline(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    getEconomicAssumptionProfiles()
+      .then((profiles) => {
+        if (!active) {
+          return;
+        }
+
+        setEconomicProfiles(profiles);
+
+        const defaultProfile =
+          profiles.find(
+            (profile) =>
+              profile.isDefault,
+          );
+
+        if (defaultProfile) {
+          setSelectedEconomicProfileId(
+            defaultProfile.id,
+          );
+
+          setForm((current) =>
+            applyEconomicProfileValues(
+              current,
+              defaultProfile,
+            ),
+          );
+        }
+      })
+      .catch((requestError) => {
+        console.error(requestError);
+
+        if (active) {
+          setError(
+            "Impossibile caricare i profili economici.",
+          );
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoadingEconomicProfiles(
+            false,
+          );
         }
       });
 
@@ -347,6 +473,40 @@ export default function PlanningScenarioPanel() {
       ...current,
       [field]: value,
     }));
+  }
+
+  function applySelectedEconomicProfile() {
+    const selectedProfile =
+      economicProfiles.find(
+        (profile) =>
+          profile.id ===
+          selectedEconomicProfileId,
+      );
+
+    if (!selectedProfile) {
+      setEconomicProfileMessage(
+        "Seleziona un profilo economico.",
+      );
+
+      return;
+    }
+
+    setForm((current) =>
+      applyEconomicProfileValues(
+        current,
+        selectedProfile,
+      ),
+    );
+
+    setResult(null);
+    setAssessment(null);
+    setAllocationResult(null);
+    setAutomaticIpsPlan(null);
+    setOptimizedIpsComparison(null);
+
+    setEconomicProfileMessage(
+      `Profilo “${selectedProfile.name}” applicato. Esegui nuovamente la simulazione.`,
+    );
   }
 
   function addEvent() {
@@ -1663,6 +1823,117 @@ export default function PlanningScenarioPanel() {
             "rgba(31,111,178,0.025)",
         }}
       >
+        <Typography
+          variant="subtitle1"
+          sx={{
+            fontWeight: 800,
+          }}
+        >
+          Profilo ipotesi economiche
+        </Typography>
+
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{
+            mt: 0.4,
+            mb: 1.5,
+          }}
+        >
+          Carica un insieme salvato di
+          rendimenti, aliquote fiscali e
+          costi di ribilanciamento.
+        </Typography>
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              md:
+                "minmax(0, 1fr) auto",
+            },
+            gap: 1.2,
+            alignItems: "center",
+          }}
+        >
+          <TextField
+            select
+            size="small"
+            label="Profilo salvato"
+            value={
+              selectedEconomicProfileId
+            }
+            disabled={
+              loadingEconomicProfiles ||
+              economicProfiles.length === 0
+            }
+            onChange={(changeEvent) => {
+              setSelectedEconomicProfileId(
+                changeEvent.target.value,
+              );
+
+              setEconomicProfileMessage(
+                "",
+              );
+            }}
+          >
+            {economicProfiles.length ===
+            0 ? (
+              <MenuItem
+                value=""
+                disabled
+              >
+                Nessun profilo disponibile
+              </MenuItem>
+            ) : (
+              economicProfiles.map(
+                (profile) => (
+                  <MenuItem
+                    key={profile.id}
+                    value={profile.id}
+                  >
+                    {profile.name}
+                    {profile.isDefault
+                      ? " · Predefinito"
+                      : ""}
+                  </MenuItem>
+                ),
+              )
+            )}
+          </TextField>
+
+          <Button
+            variant="contained"
+            disabled={
+              loadingEconomicProfiles ||
+              !selectedEconomicProfileId
+            }
+            onClick={
+              applySelectedEconomicProfile
+            }
+          >
+            Applica profilo
+          </Button>
+        </Box>
+
+        {economicProfileMessage ? (
+          <Alert
+            severity="info"
+            sx={{
+              mt: 1.5,
+            }}
+          >
+            {economicProfileMessage}
+          </Alert>
+        ) : null}
+
+        <Divider
+          sx={{
+            my: 2,
+          }}
+        />
+
         <Typography
           variant="subtitle1"
           sx={{
