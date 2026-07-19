@@ -12,6 +12,11 @@ import {
 } from './planning-scenarios.service';
 
 import { PlanningScenarioStorageService } from './planning-scenario-storage.service';
+
+import type {
+  CreateStoredPlanningScenarioInput,
+} from './planning-scenario-economic-profile';
+
 import { PlanningScenarioAssessmentService } from './planning-scenario-assessment.service';
 
 import {
@@ -123,7 +128,8 @@ export class PlanningScenariosController {
   @Post()
   createScenario(
     @Body()
-    input: SimulatePlanningScenarioInput,
+    input:
+      CreateStoredPlanningScenarioInput,
   ) {
     return this.storageService
       .createScenario(input);

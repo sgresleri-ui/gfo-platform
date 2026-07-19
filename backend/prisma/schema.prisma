@@ -443,6 +443,12 @@ model PlanningScenario {
   description              String?
   status                   String    @default("ACTIVE")
   assumptionsJson          String
+
+  economicProfileId           String?
+  economicProfileCode         String?
+  economicProfileName         String?
+  economicProfileSnapshotJson String?
+
   lastResultJson           String?
   baselineWorkbook         String?
   baselineAsOfDate         String?
@@ -465,6 +471,7 @@ model PlanningScenario {
   @@index([householdId, status])
   @@index([householdId, updatedAt])
   @@index([sustainabilityStatus])
+  @@index([economicProfileId])
 }
 
 model EconomicAssumptionProfile {

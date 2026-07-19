@@ -59,6 +59,8 @@ import {
   compareOptimizedIpsRebalancingStrategies,
   type EconomicAssumptionProfile,
   type EconomicAssumptionProfileInput,
+  type StoredEconomicProfileSnapshot,
+  type StoredEconomicProfileSnapshotInput,
   type PlanningAllocationResponse,
   type PlanningAllocationTransfer,
   type PlanningAutomaticIpsRebalancingResponse,
@@ -538,6 +540,101 @@ export default function PlanningScenarioPanel() {
           "0",
       }),
       [
+        form.liquidityReturnDeltaPct,
+        form.investmentsReturnDeltaPct,
+        form.realEstateReturnDeltaPct,
+        form.otherAssetsReturnDeltaPct,
+        form.liquidityTaxRatePct,
+        form.investmentsTaxRatePct,
+        form.rebalancingCostRatePct,
+        form.rebalancingMinimumCost,
+      ],
+    );
+
+  const currentEconomicProfileSnapshot =
+    useMemo<
+      StoredEconomicProfileSnapshotInput
+    >(
+      () => ({
+        profileId:
+          selectedEconomicProfile
+            ?.id ?? null,
+
+        code:
+          selectedEconomicProfile
+            ?.code ?? null,
+
+        name:
+          selectedEconomicProfile
+            ?.name ??
+          "Ipotesi economiche manuali",
+
+        description:
+          selectedEconomicProfile
+            ?.description ?? null,
+
+        fiscalResidence:
+          selectedEconomicProfile
+            ?.fiscalResidence ?? null,
+
+        liquidityReturnDeltaPct:
+          parseNumber(
+            form
+              .liquidityReturnDeltaPct,
+          ),
+
+        investmentsReturnDeltaPct:
+          parseNumber(
+            form
+              .investmentsReturnDeltaPct,
+          ),
+
+        realEstateReturnDeltaPct:
+          parseNumber(
+            form
+              .realEstateReturnDeltaPct,
+          ),
+
+        otherAssetsReturnDeltaPct:
+          parseNumber(
+            form
+              .otherAssetsReturnDeltaPct,
+          ),
+
+        liquidityTaxRatePct:
+          parseNumber(
+            form
+              .liquidityTaxRatePct ??
+              "0",
+          ),
+
+        investmentsTaxRatePct:
+          parseNumber(
+            form
+              .investmentsTaxRatePct ??
+              "0",
+          ),
+
+        rebalancingCostRatePct:
+          parseNumber(
+            form
+              .rebalancingCostRatePct ??
+              "0",
+          ),
+
+        rebalancingMinimumCost:
+          parseNumber(
+            form
+              .rebalancingMinimumCost ??
+              "0",
+          ),
+
+        sourceProfileUpdatedAt:
+          selectedEconomicProfile
+            ?.updatedAt ?? null,
+      }),
+      [
+        selectedEconomicProfile,
         form.liquidityReturnDeltaPct,
         form.investmentsReturnDeltaPct,
         form.realEstateReturnDeltaPct,
@@ -1662,6 +1759,8 @@ export default function PlanningScenarioPanel() {
       SimulatePlanningScenarioInput,
     storedResult:
       PlanningScenarioResponse | null,
+    economicProfile:
+      StoredEconomicProfileSnapshot | null,
   ) {
     setForm({
       name:
@@ -1708,16 +1807,60 @@ export default function PlanningScenarioPanel() {
         ),
 
       liquidityReturnDeltaPct:
-        "0",
+        String(
+          economicProfile
+            ?.liquidityReturnDeltaPct ??
+            0,
+        ),
 
       investmentsReturnDeltaPct:
-        "0",
+        String(
+          economicProfile
+            ?.investmentsReturnDeltaPct ??
+            0,
+        ),
 
       realEstateReturnDeltaPct:
-        "0",
+        String(
+          economicProfile
+            ?.realEstateReturnDeltaPct ??
+            0,
+        ),
 
       otherAssetsReturnDeltaPct:
-        "0",
+        String(
+          economicProfile
+            ?.otherAssetsReturnDeltaPct ??
+            0,
+        ),
+
+      liquidityTaxRatePct:
+        String(
+          economicProfile
+            ?.liquidityTaxRatePct ??
+            0,
+        ),
+
+      investmentsTaxRatePct:
+        String(
+          economicProfile
+            ?.investmentsTaxRatePct ??
+            0,
+        ),
+
+      rebalancingCostRatePct:
+        String(
+          economicProfile
+            ?.rebalancingCostRatePct ??
+            0,
+        ),
+
+      rebalancingMinimumCost:
+        String(
+          economicProfile
+            ?.rebalancingMinimumCost ??
+            0,
+        ),
     });
 
     setEvents(
@@ -1740,6 +1883,27 @@ export default function PlanningScenarioPanel() {
             "EXTRAORDINARY",
         }),
       ),
+    );
+
+    const matchingProfile =
+      economicProfile
+        ? economicProfiles.find(
+            (profile) =>
+              profile.id ===
+                economicProfile.profileId ||
+              profile.code ===
+                economicProfile.code,
+          ) ?? null
+        : null;
+
+    setSelectedEconomicProfileId(
+      matchingProfile?.id ?? "",
+    );
+
+    setEconomicProfileMessage(
+      economicProfile
+        ? `Snapshot economico storico “${economicProfile.name ?? "Ipotesi manuali"}” ripristinato.`
+        : "Scenario storico senza snapshot economico: sono stati applicati valori neutri.",
     );
 
     setResult(storedResult);
@@ -4336,6 +4500,9 @@ export default function PlanningScenarioPanel() {
 
       <PlanningScenarioArchive
         currentResult={result}
+        currentEconomicProfile={
+          currentEconomicProfileSnapshot
+        }
         onLoadScenario={
           loadStoredScenario
         }

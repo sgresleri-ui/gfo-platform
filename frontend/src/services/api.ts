@@ -2598,6 +2598,54 @@ export async function simulatePlanningScenario(
   );
 }
 
+export type StoredEconomicProfileSnapshotInput = {
+  profileId?: string | null;
+  code?: string | null;
+  name?: string | null;
+  description?: string | null;
+  fiscalResidence?: string | null;
+
+  liquidityReturnDeltaPct?: number;
+  investmentsReturnDeltaPct?: number;
+  realEstateReturnDeltaPct?: number;
+  otherAssetsReturnDeltaPct?: number;
+
+  liquidityTaxRatePct?: number;
+  investmentsTaxRatePct?: number;
+
+  rebalancingCostRatePct?: number;
+  rebalancingMinimumCost?: number;
+
+  sourceProfileUpdatedAt?: string | null;
+};
+
+export type StoredEconomicProfileSnapshot =
+  Required<
+    Omit<
+      StoredEconomicProfileSnapshotInput,
+      "profileId" |
+      "code" |
+      "name" |
+      "description" |
+      "fiscalResidence" |
+      "sourceProfileUpdatedAt"
+    >
+  > & {
+    capturedAt: string;
+    profileId: string | null;
+    code: string | null;
+    name: string | null;
+    description: string | null;
+    fiscalResidence: string | null;
+    sourceProfileUpdatedAt: string | null;
+  };
+
+export type CreateStoredPlanningScenarioInput =
+  SimulatePlanningScenarioInput & {
+    economicProfile?:
+      StoredEconomicProfileSnapshotInput | null;
+  };
+
 export type StoredPlanningScenarioSummary = {
   id: string;
   householdId: number;
@@ -2629,6 +2677,9 @@ export type StoredPlanningScenarioSummary = {
 
   assumptions:
     SimulatePlanningScenarioInput | null;
+
+  economicProfile:
+    StoredEconomicProfileSnapshot | null;
 };
 
 export type StoredPlanningScenarioDetail =
@@ -2674,7 +2725,7 @@ export async function getStoredPlanningScenarios(): Promise<StoredPlanningScenar
 }
 
 export async function createStoredPlanningScenario(
-  input: SimulatePlanningScenarioInput,
+  input: CreateStoredPlanningScenarioInput,
 ): Promise<CreateStoredPlanningScenarioResponse> {
   const response = await fetch(
     `${API_URL}/planning/scenarios`,

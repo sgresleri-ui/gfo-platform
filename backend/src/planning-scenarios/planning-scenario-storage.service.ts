@@ -15,6 +15,12 @@ import {
   type SimulatePlanningScenarioInput,
 } from './planning-scenarios.service';
 
+import {
+  buildEconomicProfileSnapshot,
+  type CreateStoredPlanningScenarioInput,
+  type StoredEconomicProfileSnapshot,
+} from './planning-scenario-economic-profile';
+
 @Injectable()
 export class PlanningScenarioStorageService {
   constructor(
@@ -67,6 +73,14 @@ export class PlanningScenarioStorageService {
     scenario: PlanningScenario,
     includeResult = false,
   ) {
+    const economicProfile =
+      this.parseJson<
+        StoredEconomicProfileSnapshot
+      >(
+        scenario
+          .economicProfileSnapshotJson,
+      );
+
     const base = {
       id: scenario.id,
       householdId:
@@ -141,6 +155,8 @@ export class PlanningScenarioStorageService {
         >(
           scenario.assumptionsJson,
         ),
+
+      economicProfile,
     };
 
     if (!includeResult) {
@@ -197,9 +213,14 @@ export class PlanningScenarioStorageService {
 
   async createScenario(
     input:
-      | SimulatePlanningScenarioInput
+      | CreateStoredPlanningScenarioInput
       | undefined,
   ) {
+    const economicProfile =
+      buildEconomicProfileSnapshot(
+        input?.economicProfile,
+      );
+
     const result =
       await this.scenarioEngine
         .simulateScenario(input);
@@ -225,6 +246,25 @@ export class PlanningScenarioStorageService {
                 result.scenario
                   .assumptions,
               ),
+
+            economicProfileId:
+              economicProfile?.profileId ??
+              null,
+
+            economicProfileCode:
+              economicProfile?.code ??
+              null,
+
+            economicProfileName:
+              economicProfile?.name ??
+              null,
+
+            economicProfileSnapshotJson:
+              economicProfile
+                ? JSON.stringify(
+                    economicProfile,
+                  )
+                : null,
 
             lastResultJson:
               JSON.stringify(result),

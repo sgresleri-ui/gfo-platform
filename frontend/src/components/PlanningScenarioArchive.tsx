@@ -29,6 +29,8 @@ import {
   rerunStoredPlanningScenario,
   type PlanningScenarioResponse,
   type SimulatePlanningScenarioInput,
+  type StoredEconomicProfileSnapshot,
+  type StoredEconomicProfileSnapshotInput,
   type StoredPlanningScenarioSummary,
 } from "../services/api";
 
@@ -36,11 +38,16 @@ type Props = {
   currentResult:
     PlanningScenarioResponse | null;
 
+  currentEconomicProfile:
+    StoredEconomicProfileSnapshotInput | null;
+
   onLoadScenario: (
     assumptions:
       SimulatePlanningScenarioInput,
     result:
       PlanningScenarioResponse | null,
+    economicProfile:
+      StoredEconomicProfileSnapshot | null,
   ) => void;
 };
 
@@ -85,6 +92,7 @@ function formatDateTime(
 
 export default function PlanningScenarioArchive({
   currentResult,
+  currentEconomicProfile,
   onLoadScenario,
 }: Props) {
   const [
@@ -144,10 +152,13 @@ export default function PlanningScenarioArchive({
     setSuccess("");
 
     try {
-      await createStoredPlanningScenario(
-        currentResult.scenario
+      await createStoredPlanningScenario({
+        ...currentResult.scenario
           .assumptions,
-      );
+
+        economicProfile:
+          currentEconomicProfile,
+      });
 
       setSuccess(
         "Scenario salvato nel database.",
@@ -187,6 +198,7 @@ export default function PlanningScenarioArchive({
       onLoadScenario(
         scenario.assumptions,
         scenario.lastResult,
+        scenario.economicProfile,
       );
 
       setSuccess(
@@ -223,6 +235,7 @@ export default function PlanningScenarioArchive({
         onLoadScenario(
           scenario.assumptions,
           scenario.lastResult,
+          scenario.economicProfile,
         );
       }
 
