@@ -29,14 +29,14 @@ function assessmentLabel(
   status: PlanningScenarioAssessmentStatus,
 ): string {
   if (status === "COMPLIANT") {
-    return "Coerente";
+    return "Coerente con IPS";
   }
 
   if (status === "ATTENTION") {
-    return "Attenzione";
+    return "Attenzione IPS";
   }
 
-  return "Non coerente";
+  return "Non coerente con IPS";
 }
 
 function assessmentColor(
@@ -556,7 +556,14 @@ export default function PlanningScenarioAssessmentPanel({
         severity="info"
         sx={{ mb: 2.5 }}
       >
-        {assessment.methodology.note}
+        Il motore proietta capitale e
+        flussi; la composizione futura per
+        asset class è disponibile nella
+        sezione Asset allocation
+        prospettica. La verifica di
+        conformità IPS prospettica dipende
+        dalla configurazione delle soglie
+        numeriche.
       </Alert>
 
       <Box

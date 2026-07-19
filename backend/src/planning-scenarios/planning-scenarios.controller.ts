@@ -14,6 +14,11 @@ import {
 import { PlanningScenarioStorageService } from './planning-scenario-storage.service';
 import { PlanningScenarioAssessmentService } from './planning-scenario-assessment.service';
 
+import {
+  PlanningAllocationService,
+  type SimulatePlanningAllocationInput,
+} from './planning-allocation.service';
+
 @Controller('planning/scenarios')
 export class PlanningScenariosController {
   constructor(
@@ -25,6 +30,9 @@ export class PlanningScenariosController {
 
     private readonly assessmentService:
       PlanningScenarioAssessmentService,
+
+    private readonly allocationService:
+      PlanningAllocationService,
   ) {}
 
   @Get('baseline')
@@ -49,6 +57,16 @@ export class PlanningScenariosController {
   ) {
     return this.assessmentService
       .assessScenario(input);
+  }
+
+  @Post('allocation')
+  simulateAllocation(
+    @Body()
+    input:
+      SimulatePlanningAllocationInput,
+  ) {
+    return this.allocationService
+      .simulateAllocation(input);
   }
 
   @Get()

@@ -27,6 +27,8 @@ import TrendingDownRoundedIcon from "@mui/icons-material/TrendingDownRounded";
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 
 import {
+  Area,
+  AreaChart,
   CartesianGrid,
   Legend,
   Line,
@@ -44,6 +46,8 @@ import PlanningScenarioPresets from "./PlanningScenarioPresets";
 import {
   getPlanningScenarioBaseline,
   assessPlanningScenario,
+  simulatePlanningScenarioAllocation,
+  type PlanningAllocationResponse,
   type PlanningScenarioBaselineResponse,
   type PlanningScenarioAssessmentResponse,
   type PlanningScenarioResponse,
@@ -58,6 +62,11 @@ type ScenarioForm = {
   annualCostAdjustmentPct: string;
   annualRevenueAdjustmentPct: string;
   expenseInflationDeltaPct: string;
+
+  liquidityReturnDeltaPct: string;
+  investmentsReturnDeltaPct: string;
+  realEstateReturnDeltaPct: string;
+  otherAssetsReturnDeltaPct: string;
 };
 
 type ScenarioEventDraft = {
@@ -76,6 +85,11 @@ const DEFAULT_FORM: ScenarioForm = {
   annualCostAdjustmentPct: "0",
   annualRevenueAdjustmentPct: "0",
   expenseInflationDeltaPct: "0",
+
+  liquidityReturnDeltaPct: "0",
+  investmentsReturnDeltaPct: "0",
+  realEstateReturnDeltaPct: "0",
+  otherAssetsReturnDeltaPct: "0",
 };
 
 function parseNumber(
@@ -193,6 +207,13 @@ export default function PlanningScenarioPanel() {
     PlanningScenarioAssessmentResponse | null
   >(null);
 
+  const [
+    allocationResult,
+    setAllocationResult,
+  ] = useState<
+    PlanningAllocationResponse | null
+  >(null);
+
   const [form, setForm] =
     useState<ScenarioForm>(
       DEFAULT_FORM,
@@ -261,6 +282,25 @@ export default function PlanningScenarioPanel() {
     [result],
   );
 
+  const allocationChartData =
+    useMemo(
+      () =>
+        allocationResult?.years.map(
+          (year) => ({
+            year: year.year,
+            LIQUIDITY:
+              year.end.LIQUIDITY,
+            INVESTMENTS:
+              year.end.INVESTMENTS,
+            REAL_ESTATE:
+              year.end.REAL_ESTATE,
+            OTHER_ASSETS:
+              year.end.OTHER_ASSETS,
+          }),
+        ) ?? [],
+      [allocationResult],
+    );
+
   function updateForm(
     field: keyof ScenarioForm,
     value: string,
@@ -327,12 +367,14 @@ export default function PlanningScenarioPanel() {
     setEvents([]);
     setResult(null);
     setAssessment(null);
+    setAllocationResult(null);
     setError("");
   }
 
   async function runScenario() {
     setSimulating(true);
     setError("");
+    setAllocationResult(null);
 
     try {
       const invalidEvent =
@@ -410,16 +452,62 @@ export default function PlanningScenarioPanel() {
           ),
         };
 
-      const response =
-        await assessPlanningScenario(
+      const [
+        response,
+        allocationResponse,
+      ] = await Promise.all([
+        assessPlanningScenario(
           input,
-        );
+        ),
+
+        simulatePlanningScenarioAllocation({
+          ...input,
+
+          allocation: {
+            liquidityReturnDeltaPct:
+              parseNumber(
+                form.liquidityReturnDeltaPct,
+              ),
+
+            investmentsReturnDeltaPct:
+              parseNumber(
+                form.investmentsReturnDeltaPct,
+              ),
+
+            realEstateReturnDeltaPct:
+              parseNumber(
+                form.realEstateReturnDeltaPct,
+              ),
+
+            otherAssetsReturnDeltaPct:
+              parseNumber(
+                form.otherAssetsReturnDeltaPct,
+              ),
+
+            positiveCashFlowDestination:
+              "LIQUIDITY",
+
+            deficitFundingOrder: [
+              "LIQUIDITY",
+              "INVESTMENTS",
+              "OTHER_ASSETS",
+              "REAL_ESTATE",
+            ],
+
+            transfers: [],
+          },
+        }),
+      ]);
 
       setResult(
         response.scenario,
       );
 
       setAssessment(response);
+
+      setAllocationResult(
+        allocationResponse,
+      );
     } catch (requestError) {
       console.error(requestError);
 
@@ -480,6 +568,18 @@ export default function PlanningScenarioPanel() {
             .expenseInflationDeltaPct ??
             0,
         ),
+
+      liquidityReturnDeltaPct:
+        "0",
+
+      investmentsReturnDeltaPct:
+        "0",
+
+      realEstateReturnDeltaPct:
+        "0",
+
+      otherAssetsReturnDeltaPct:
+        "0",
     });
 
     setEvents(
@@ -506,6 +606,7 @@ export default function PlanningScenarioPanel() {
 
     setResult(null);
     setAssessment(null);
+    setAllocationResult(null);
     setError("");
   }
 
@@ -558,6 +659,18 @@ export default function PlanningScenarioPanel() {
             .expenseInflationDeltaPct ??
             0,
         ),
+
+      liquidityReturnDeltaPct:
+        "0",
+
+      investmentsReturnDeltaPct:
+        "0",
+
+      realEstateReturnDeltaPct:
+        "0",
+
+      otherAssetsReturnDeltaPct:
+        "0",
     });
 
     setEvents(
@@ -583,6 +696,8 @@ export default function PlanningScenarioPanel() {
     );
 
     setResult(storedResult);
+    setAssessment(null);
+    setAllocationResult(null);
     setError("");
   }
 
@@ -598,11 +713,11 @@ export default function PlanningScenarioPanel() {
   const statusLabel =
     result?.summary.status ===
     "SUSTAINABLE"
-      ? "Sostenibile"
+      ? "Capitale sostenibile"
       : result?.summary.status ===
           "AT_RISK"
-        ? "A rischio"
-        : "Non sostenibile";
+        ? "Capitale a rischio"
+        : "Capitale non sostenibile";
 
   if (loadingBaseline) {
     return (
@@ -922,6 +1037,138 @@ export default function PlanningScenarioPanel() {
           Aggiungi evento
         </Button>
       </Box>
+
+      <Paper
+        elevation={0}
+        sx={{
+          mt: 2,
+          mb: 2,
+          p: {
+            xs: 1.5,
+            md: 2,
+          },
+          border: "1px solid",
+          borderColor: "divider",
+          backgroundColor:
+            "rgba(31,111,178,0.025)",
+        }}
+      >
+        <Typography
+          variant="subtitle1"
+          sx={{
+            fontWeight: 800,
+          }}
+        >
+          Rendimenti per asset class
+        </Typography>
+
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{
+            mt: 0.4,
+            mb: 1.8,
+          }}
+        >
+          Variazioni aggiuntive rispetto
+          al rendimento generale dello
+          scenario.
+        </Typography>
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm:
+                "repeat(2, minmax(0, 1fr))",
+              lg:
+                "repeat(4, minmax(0, 1fr))",
+            },
+            gap: 1.4,
+          }}
+        >
+          <TextField
+            label="Liquidità · delta %"
+            type="number"
+            size="small"
+            value={
+              form.liquidityReturnDeltaPct
+            }
+            onChange={(changeEvent) =>
+              updateForm(
+                "liquidityReturnDeltaPct",
+                changeEvent.target.value,
+              )
+            }
+            slotProps={{
+              htmlInput: {
+                step: 0.1,
+              },
+            }}
+          />
+
+          <TextField
+            label="Investimenti · delta %"
+            type="number"
+            size="small"
+            value={
+              form.investmentsReturnDeltaPct
+            }
+            onChange={(changeEvent) =>
+              updateForm(
+                "investmentsReturnDeltaPct",
+                changeEvent.target.value,
+              )
+            }
+            slotProps={{
+              htmlInput: {
+                step: 0.1,
+              },
+            }}
+          />
+
+          <TextField
+            label="Immobili · delta %"
+            type="number"
+            size="small"
+            value={
+              form.realEstateReturnDeltaPct
+            }
+            onChange={(changeEvent) =>
+              updateForm(
+                "realEstateReturnDeltaPct",
+                changeEvent.target.value,
+              )
+            }
+            slotProps={{
+              htmlInput: {
+                step: 0.1,
+              },
+            }}
+          />
+
+          <TextField
+            label="Altri attivi · delta %"
+            type="number"
+            size="small"
+            value={
+              form.otherAssetsReturnDeltaPct
+            }
+            onChange={(changeEvent) =>
+              updateForm(
+                "otherAssetsReturnDeltaPct",
+                changeEvent.target.value,
+              )
+            }
+            slotProps={{
+              htmlInput: {
+                step: 0.1,
+              },
+            }}
+          />
+        </Box>
+      </Paper>
 
       {events.length === 0 ? (
         <Alert severity="info">
@@ -1342,6 +1589,551 @@ export default function PlanningScenarioPanel() {
           <PlanningScenarioAssessmentPanel
             assessment={assessment}
           />
+
+          {allocationResult && (
+            <Paper
+              elevation={0}
+              sx={{
+                mt: 2.5,
+                p: {
+                  xs: 1.5,
+                  md: 2.5,
+                },
+                border: "1px solid",
+                borderColor:
+                  "divider",
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent:
+                    "space-between",
+                  alignItems: {
+                    xs: "flex-start",
+                    md: "center",
+                  },
+                  flexDirection: {
+                    xs: "column",
+                    md: "row",
+                  },
+                  gap: 1,
+                  mb: 2,
+                }}
+              >
+                <Box>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 800,
+                    }}
+                  >
+                    Asset allocation
+                    prospettica
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 0.3 }}
+                  >
+                    Evoluzione annuale di
+                    liquidità, investimenti,
+                    immobili e altri attivi.
+                  </Typography>
+                </Box>
+
+                <Chip
+                  size="small"
+                  color={
+                    allocationResult
+                      .ipsProjection
+                      .configurationStatus ===
+                    "NOT_CONFIGURED"
+                      ? "warning"
+                      : "success"
+                  }
+                  label={
+                    allocationResult
+                      .ipsProjection
+                      .configurationStatus ===
+                    "NOT_CONFIGURED"
+                      ? "Limiti IPS non configurati"
+                      : "Controllo IPS attivo"
+                  }
+                />
+              </Box>
+
+              {allocationResult.summary
+                .minimumLiquidity <= 0 && (
+                <Alert
+                  severity="error"
+                  sx={{ mb: 2 }}
+                >
+                  La liquidità raggiunge{" "}
+                  {formatCurrency(
+                    allocationResult
+                      .summary
+                      .minimumLiquidity,
+                  )}{" "}
+                  nel{" "}
+                  {allocationResult
+                    .summary
+                    .minimumLiquidityYear ??
+                    "—"}
+                  . Il piano non conserva
+                  un margine liquido di
+                  sicurezza.
+                </Alert>
+              )}
+
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    sm:
+                      "repeat(2, minmax(0, 1fr))",
+                    lg:
+                      "repeat(4, minmax(0, 1fr))",
+                  },
+                  gap: 1.4,
+                  mb: 2,
+                }}
+              >
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 1.6,
+                    border:
+                      "1px solid",
+                    borderColor:
+                      "divider",
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    Patrimonio iniziale
+                  </Typography>
+
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      mt: 0.4,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {formatCurrency(
+                      allocationResult
+                        .allocation
+                        .initialTotal,
+                    )}
+                  </Typography>
+                </Paper>
+
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 1.6,
+                    border:
+                      "1px solid",
+                    borderColor:
+                      "divider",
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    Patrimonio finale
+                  </Typography>
+
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      mt: 0.4,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {formatCurrency(
+                      allocationResult
+                        .summary
+                        .finalNetWorth,
+                    )}
+                  </Typography>
+                </Paper>
+
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 1.6,
+                    border:
+                      "1px solid",
+                    borderColor:
+                      allocationResult
+                          .summary
+                          .minimumLiquidity <=
+                        0
+                        ? "error.main"
+                        : "divider",
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    Liquidità minima
+                  </Typography>
+
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      mt: 0.4,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {formatCurrency(
+                      allocationResult
+                        .summary
+                        .minimumLiquidity,
+                    )}
+                  </Typography>
+
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    Nel{" "}
+                    {allocationResult
+                      .summary
+                      .minimumLiquidityYear ??
+                      "—"}
+                  </Typography>
+                </Paper>
+
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 1.6,
+                    border:
+                      "1px solid",
+                    borderColor:
+                      "divider",
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    Concentrazione immobiliare
+                    massima
+                  </Typography>
+
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      mt: 0.4,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {formatPercentage(
+                      allocationResult
+                        .summary
+                        .maximumRealEstateWeight,
+                    )}
+                  </Typography>
+
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    Nel{" "}
+                    {allocationResult
+                      .summary
+                      .maximumRealEstateWeightYear ??
+                      "—"}
+                  </Typography>
+                </Paper>
+              </Box>
+
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    md:
+                      "repeat(2, minmax(0, 1fr))",
+                  },
+                  gap: 1.4,
+                  mb: 2.5,
+                }}
+              >
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 1.6,
+                    border:
+                      "1px solid",
+                    borderColor:
+                      "divider",
+                  }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    sx={{
+                      fontWeight: 800,
+                      mb: 1,
+                    }}
+                  >
+                    Allocazione finale
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                  >
+                    Liquidità:{" "}
+                    <strong>
+                      {formatPercentage(
+                        allocationResult
+                          .allocation
+                          .finalWeights
+                          .LIQUIDITY,
+                      )}
+                    </strong>
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                  >
+                    Investimenti:{" "}
+                    <strong>
+                      {formatPercentage(
+                        allocationResult
+                          .allocation
+                          .finalWeights
+                          .INVESTMENTS,
+                      )}
+                    </strong>
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                  >
+                    Immobili:{" "}
+                    <strong>
+                      {formatPercentage(
+                        allocationResult
+                          .allocation
+                          .finalWeights
+                          .REAL_ESTATE,
+                      )}
+                    </strong>
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                  >
+                    Altri attivi:{" "}
+                    <strong>
+                      {formatPercentage(
+                        allocationResult
+                          .allocation
+                          .finalWeights
+                          .OTHER_ASSETS,
+                      )}
+                    </strong>
+                  </Typography>
+                </Paper>
+
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 1.6,
+                    border:
+                      "1px solid",
+                    borderColor:
+                      "divider",
+                  }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    sx={{
+                      fontWeight: 800,
+                      mb: 1,
+                    }}
+                  >
+                    Movimenti immobiliari
+                    iniziali
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                  >
+                    Acquisti:{" "}
+                    <strong>
+                      {formatCurrency(
+                        allocationResult
+                          .years[0]
+                          ?.propertyMovements
+                          .purchases
+                          .reduce(
+                            (
+                              total,
+                              movement,
+                            ) =>
+                              total +
+                              movement.amount,
+                            0,
+                          ) ?? 0,
+                      )}
+                    </strong>
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                  >
+                    Vendite:{" "}
+                    <strong>
+                      {formatCurrency(
+                        allocationResult
+                          .years[0]
+                          ?.propertyMovements
+                          .sales
+                          .reduce(
+                            (
+                              total,
+                              movement,
+                            ) =>
+                              total +
+                              movement.amount,
+                            0,
+                          ) ?? 0,
+                      )}
+                    </strong>
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                  >
+                    Plus/minusvalenza:{" "}
+                    <strong>
+                      {formatSignedCurrency(
+                        allocationResult
+                          .years[0]
+                          ?.propertyMovements
+                          .saleGainLoss ??
+                          0,
+                      )}
+                    </strong>
+                  </Typography>
+                </Paper>
+              </Box>
+
+              {allocationResult
+                .openingReconciliation
+                .excludedProperties
+                .length > 0 && (
+                <Alert
+                  severity="info"
+                  sx={{ mb: 2.5 }}
+                >
+                  Immobili esclusi dal
+                  patrimonio iniziale:{" "}
+                  {allocationResult
+                    .openingReconciliation
+                    .excludedProperties
+                    .map(
+                      (property) =>
+                        property.name,
+                    )
+                    .join(", ")}
+                  .
+                </Alert>
+              )}
+
+              <Box
+                sx={{
+                  width: "100%",
+                  height: 390,
+                }}
+              >
+                <ResponsiveContainer
+                  width="100%"
+                  height="100%"
+                >
+                  <AreaChart
+                    data={
+                      allocationChartData
+                    }
+                    margin={{
+                      top: 10,
+                      right: 20,
+                      left: 20,
+                      bottom: 5,
+                    }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                    />
+
+                    <XAxis
+                      dataKey="year"
+                      minTickGap={22}
+                    />
+
+                    <YAxis
+                      tickFormatter={
+                        formatCompactCurrency
+                      }
+                      width={75}
+                    />
+
+                    <Tooltip />
+
+                    <Legend />
+
+                    <Area
+                      type="monotone"
+                      dataKey="LIQUIDITY"
+                      name="Liquidità"
+                      stackId="allocation"
+                      stroke="#2E86AB"
+                      fill="#8ECAE6"
+                    />
+
+                    <Area
+                      type="monotone"
+                      dataKey="INVESTMENTS"
+                      name="Investimenti"
+                      stackId="allocation"
+                      stroke="#3A7D44"
+                      fill="#90BE6D"
+                    />
+
+                    <Area
+                      type="monotone"
+                      dataKey="REAL_ESTATE"
+                      name="Immobili"
+                      stackId="allocation"
+                      stroke="#C87941"
+                      fill="#F4A261"
+                    />
+
+                    <Area
+                      type="monotone"
+                      dataKey="OTHER_ASSETS"
+                      name="Altri attivi"
+                      stackId="allocation"
+                      stroke="#7251B5"
+                      fill="#B8A1E3"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Box>
+            </Paper>
+          )}
 
           <Paper
             elevation={0}

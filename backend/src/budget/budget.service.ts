@@ -13,13 +13,38 @@ type AnnualBudget = {
   netCashFlow: number;
 };
 
+type LongTermCapitalMovement = {
+  label: string;
+  amount: number;
+};
+
 type LongTermYear = {
   year: number;
   capitalStart: number | null;
+
+  ordinaryExpenses: number;
+  extraordinaryExpenses: number;
+  operatingCosts: number;
+
+  propertyInvestments: number;
+  propertySales: number;
+
+  operatingRevenues: number;
+  operatingNetCashFlow: number;
+  propertyNetCashFlow: number;
+
   totalCosts: number;
   totalRevenues: number;
   netCashFlow: number;
   capitalEnd: number | null;
+
+  capitalMovements: {
+    propertyInvestments:
+      LongTermCapitalMovement[];
+
+    propertySales:
+      LongTermCapitalMovement[];
+  };
 };
 
 @Injectable()
@@ -41,48 +66,161 @@ export class BudgetService {
       .toLowerCase();
   }
 
-  private getNumericValue(cell: ExcelJS.Cell): number | null {
-    const value = cell.value;
-
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      return value;
-    }
-
-    if (value && typeof value === 'object' && 'result' in value) {
-      const result = value.result;
-
-      if (typeof result === 'number' && Number.isFinite(result)) {
-        return result;
-      }
-
-      if (typeof result === 'string') {
-        const parsed = Number(
-          result.replace(/\s/g, '').replace(',', '.'),
-        );
-
-        return Number.isFinite(parsed) ? parsed : null;
-      }
-    }
-
-    if (typeof value === 'string') {
-      const parsed = Number(
-        value.replace(/\s/g, '').replace(',', '.'),
-      );
-
-      return Number.isFinite(parsed) ? parsed : null;
-    }
-
-    const text = cell.text?.trim();
+  private parseNumericText(
+    value: string,
+  ): number | null {
+    let text = value.trim();
 
     if (!text) {
       return null;
     }
 
-    const parsed = Number(
-      text.replace(/\s/g, '').replace(',', '.'),
-    );
+    const percentage =
+      text.includes('%');
 
-    return Number.isFinite(parsed) ? parsed : null;
+    const negative =
+      text.includes('(') &&
+      text.includes(')');
+
+    text = text
+      .replace(/[()]/g, '')
+      .replace(/\s/g, '')
+      .replace(
+        /[^0-9,.\-+]/g,
+        '',
+      );
+
+    if (
+      !text ||
+      text === '-' ||
+      text === '+'
+    ) {
+      return null;
+    }
+
+    const lastComma =
+      text.lastIndexOf(',');
+
+    const lastDot =
+      text.lastIndexOf('.');
+
+    let normalized = text;
+
+    if (
+      lastComma >= 0 &&
+      lastDot >= 0
+    ) {
+      if (lastComma > lastDot) {
+        normalized = text
+          .replace(/\./g, '')
+          .replace(',', '.');
+      } else {
+        normalized =
+          text.replace(/,/g, '');
+      }
+    } else if (
+      lastComma >= 0
+    ) {
+      const decimalDigits =
+        text.length -
+        lastComma -
+        1;
+
+      normalized =
+        decimalDigits >= 1 &&
+        decimalDigits <= 2
+          ? text.replace(',', '.')
+          : text.replace(/,/g, '');
+    } else if (
+      lastDot >= 0
+    ) {
+      const decimalDigits =
+        text.length -
+        lastDot -
+        1;
+
+      normalized =
+        decimalDigits >= 1 &&
+        decimalDigits <= 2
+          ? text
+          : text.replace(/\./g, '');
+    }
+
+    const parsed =
+      Number(normalized);
+
+    if (!Number.isFinite(parsed)) {
+      return null;
+    }
+
+    let result =
+      negative
+        ? -Math.abs(parsed)
+        : parsed;
+
+    if (percentage) {
+      result /= 100;
+    }
+
+    return result;
+  }
+
+  private getNumericValue(
+    cell: ExcelJS.Cell,
+  ): number | null {
+    const value = cell.value;
+
+    if (
+      typeof value === 'number' &&
+      Number.isFinite(value)
+    ) {
+      return value;
+    }
+
+    if (
+      value &&
+      typeof value === 'object' &&
+      'result' in value
+    ) {
+      const result = value.result;
+
+      if (
+        typeof result === 'number' &&
+        Number.isFinite(result)
+      ) {
+        return result;
+      }
+
+      if (
+        typeof result === 'string'
+      ) {
+        const parsed =
+          this.parseNumericText(
+            result,
+          );
+
+        if (parsed !== null) {
+          return parsed;
+        }
+      }
+    }
+
+    if (
+      typeof value === 'string'
+    ) {
+      const parsed =
+        this.parseNumericText(
+          value,
+        );
+
+      if (parsed !== null) {
+        return parsed;
+      }
+    }
+
+    return this.parseNumericText(
+      cell.text ?? '',
+    );
   }
 
   private findRowByLabel(
@@ -127,6 +265,115 @@ export class BudgetService {
     }
 
     return null;
+  }
+
+  private findExactRowByLabel(
+    sheet: ExcelJS.Worksheet,
+    label: string,
+  ): number | null {
+    const normalizedLabel =
+      this.normalize(label);
+
+    for (
+      let rowNumber = 1;
+      rowNumber <= sheet.rowCount;
+      rowNumber += 1
+    ) {
+      const row = sheet.getRow(
+        rowNumber,
+      );
+
+      for (
+        let columnNumber = 1;
+        columnNumber <=
+          Math.min(
+            sheet.columnCount,
+            8,
+          );
+        columnNumber += 1
+      ) {
+        const text =
+          this.normalize(
+            row.getCell(
+              columnNumber,
+            ).text,
+          );
+
+        if (
+          text ===
+          normalizedLabel
+        ) {
+          return rowNumber;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private getRowLabel(
+    sheet: ExcelJS.Worksheet,
+    rowNumber: number,
+  ): string {
+    const row =
+      sheet.getRow(rowNumber);
+
+    for (
+      let columnNumber = 1;
+      columnNumber <=
+        Math.min(
+          sheet.columnCount,
+          8,
+        );
+      columnNumber += 1
+    ) {
+      const text =
+        row
+          .getCell(columnNumber)
+          .text
+          .trim();
+
+      if (text) {
+        return text;
+      }
+    }
+
+    return '';
+  }
+
+  private findRowsByPrefix(
+    sheet: ExcelJS.Worksheet,
+    prefix: string,
+  ): number[] {
+    const normalizedPrefix =
+      this.normalize(prefix);
+
+    const rows: number[] = [];
+
+    for (
+      let rowNumber = 1;
+      rowNumber <=
+        sheet.rowCount;
+      rowNumber += 1
+    ) {
+      const label =
+        this.normalize(
+          this.getRowLabel(
+            sheet,
+            rowNumber,
+          ),
+        );
+
+      if (
+        label.startsWith(
+          normalizedPrefix,
+        )
+      ) {
+        rows.push(rowNumber);
+      }
+    }
+
+    return rows;
   }
 
   private findColumnByLabel(
@@ -301,27 +548,77 @@ export class BudgetService {
     sheet: ExcelJS.Worksheet,
     warnings: string[],
   ): LongTermYear[] {
-    const yearRow = this.findRowByLabel(sheet, [
-      'Anno solare',
-    ]);
+    const yearRow =
+      this.findExactRowByLabel(
+        sheet,
+        'Anno solare',
+      );
 
-    const capitalStartRow = this.findRowByLabel(sheet, [
-      'Capitale inizio anno',
-    ]);
+    const capitalStartRow =
+      this.findExactRowByLabel(
+        sheet,
+        'Capitale inizio anno',
+      );
 
-    const costsRow = this.findRowByLabel(sheet, [
-      'Costi Totali',
-    ]);
+    const costsRow =
+      this.findExactRowByLabel(
+        sheet,
+        'Costi Totali',
+      );
 
-    const revenuesRow = this.findRowByLabel(sheet, [
-      'Ricavi Totali',
-    ]);
+    /*
+     * Il foglio contiene due sezioni
+     * denominate "Ricavi Totali".
+     * La proiezione di lungo termine
+     * utilizza l'ultima occorrenza.
+     */
+    const revenueRows =
+      this.findRowsByPrefix(
+        sheet,
+        'Ricavi Totali',
+      );
+
+    const revenuesRow =
+      revenueRows.length > 0
+        ? revenueRows[
+            revenueRows.length - 1
+          ]
+        : null;
+
+    const ordinaryExpensesRow =
+      this.findExactRowByLabel(
+        sheet,
+        'Spese Ordinarie',
+      );
+
+    const extraordinaryExpensesRow =
+      this.findExactRowByLabel(
+        sheet,
+        'Spese Straordinarie',
+      );
+
+    const propertyInvestmentsRow =
+      this.findExactRowByLabel(
+        sheet,
+        'Investimenti Immobili',
+      );
+
+    const propertySaleRows =
+      this.findRowsByPrefix(
+        sheet,
+        'Vendita Immobile',
+      );
 
     if (
       yearRow === null ||
       capitalStartRow === null ||
       costsRow === null ||
-      revenuesRow === null
+      revenuesRow === null ||
+      ordinaryExpensesRow === null ||
+      extraordinaryExpensesRow ===
+        null ||
+      propertyInvestmentsRow ===
+        null
     ) {
       warnings.push(
         'Righe principali del Budget 27-66 non identificate.',
@@ -330,18 +627,45 @@ export class BudgetService {
       return [];
     }
 
+    const propertyInvestmentRows:
+      number[] = [];
+
+    for (
+      let rowNumber =
+        propertyInvestmentsRow + 1;
+
+      rowNumber < revenuesRow;
+      rowNumber += 1
+    ) {
+      const label =
+        this.getRowLabel(
+          sheet,
+          rowNumber,
+        );
+
+      if (label) {
+        propertyInvestmentRows.push(
+          rowNumber,
+        );
+      }
+    }
+
     const provisionalYears: Array<
       Omit<LongTermYear, 'capitalEnd'>
     > = [];
 
     for (
       let columnNumber = 1;
-      columnNumber <= sheet.columnCount;
+      columnNumber <=
+        sheet.columnCount;
       columnNumber += 1
     ) {
-      const yearValue = this.getNumericValue(
-        sheet.getRow(yearRow).getCell(columnNumber),
-      );
+      const yearValue =
+        this.getNumericValue(
+          sheet
+            .getRow(yearRow)
+            .getCell(columnNumber),
+        );
 
       if (
         yearValue === null ||
@@ -351,15 +675,18 @@ export class BudgetService {
         continue;
       }
 
-      const capitalStart = this.getNumericValue(
-        sheet
-          .getRow(capitalStartRow)
-          .getCell(columnNumber),
-      );
+      const capitalStart =
+        this.getNumericValue(
+          sheet
+            .getRow(capitalStartRow)
+            .getCell(columnNumber),
+        );
 
       const totalCosts =
         this.getNumericValue(
-          sheet.getRow(costsRow).getCell(columnNumber),
+          sheet
+            .getRow(costsRow)
+            .getCell(columnNumber),
         ) ?? 0;
 
       const totalRevenues =
@@ -369,41 +696,235 @@ export class BudgetService {
             .getCell(columnNumber),
         ) ?? 0;
 
+      const ordinaryExpenses =
+        this.getNumericValue(
+          sheet
+            .getRow(
+              ordinaryExpensesRow,
+            )
+            .getCell(columnNumber),
+        ) ?? 0;
+
+      const extraordinaryExpenses =
+        this.getNumericValue(
+          sheet
+            .getRow(
+              extraordinaryExpensesRow,
+            )
+            .getCell(columnNumber),
+        ) ?? 0;
+
+      const propertyInvestmentDetails =
+        propertyInvestmentRows
+          .map((rowNumber) => {
+            const row =
+              sheet.getRow(
+                rowNumber,
+              );
+
+            const amount =
+              this.getNumericValue(
+                row.getCell(
+                  columnNumber,
+                ),
+              ) ?? 0;
+
+            return {
+              label:
+                this.getRowLabel(
+                  sheet,
+                  rowNumber,
+                ),
+
+              amount:
+                this.round(amount),
+            };
+          })
+          .filter(
+            (movement) =>
+              movement.label &&
+              movement.amount !== 0,
+          );
+
+      const propertyInvestments =
+        this.getNumericValue(
+          sheet
+            .getRow(
+              propertyInvestmentsRow,
+            )
+            .getCell(columnNumber),
+        ) ??
+        propertyInvestmentDetails.reduce(
+          (total, movement) =>
+            total +
+            movement.amount,
+          0,
+        );
+
+      const propertySaleDetails =
+        propertySaleRows
+          .map((rowNumber) => {
+            const row =
+              sheet.getRow(
+                rowNumber,
+              );
+
+            const amount =
+              this.getNumericValue(
+                row.getCell(
+                  columnNumber,
+                ),
+              ) ?? 0;
+
+            return {
+              label:
+                this.getRowLabel(
+                  sheet,
+                  rowNumber,
+                ),
+
+              amount:
+                this.round(amount),
+            };
+          })
+          .filter(
+            (movement) =>
+              movement.label &&
+              movement.amount !== 0,
+          );
+
+      const propertySales =
+        propertySaleDetails.reduce(
+          (total, movement) =>
+            total +
+            movement.amount,
+          0,
+        );
+
+      const operatingCosts =
+        ordinaryExpenses +
+        extraordinaryExpenses;
+
+      const operatingRevenues =
+        totalRevenues -
+        propertySales;
+
+      const operatingNetCashFlow =
+        operatingRevenues -
+        operatingCosts;
+
+      const propertyNetCashFlow =
+        propertySales -
+        propertyInvestments;
+
       provisionalYears.push({
-        year: Math.round(yearValue),
+        year:
+          Math.round(yearValue),
+
         capitalStart:
           capitalStart === null
             ? null
-            : this.round(capitalStart),
-        totalCosts: this.round(totalCosts),
-        totalRevenues: this.round(totalRevenues),
-        netCashFlow: this.round(
-          totalRevenues - totalCosts,
-        ),
+            : this.round(
+                capitalStart,
+              ),
+
+        ordinaryExpenses:
+          this.round(
+            ordinaryExpenses,
+          ),
+
+        extraordinaryExpenses:
+          this.round(
+            extraordinaryExpenses,
+          ),
+
+        operatingCosts:
+          this.round(
+            operatingCosts,
+          ),
+
+        propertyInvestments:
+          this.round(
+            propertyInvestments,
+          ),
+
+        propertySales:
+          this.round(
+            propertySales,
+          ),
+
+        operatingRevenues:
+          this.round(
+            operatingRevenues,
+          ),
+
+        operatingNetCashFlow:
+          this.round(
+            operatingNetCashFlow,
+          ),
+
+        propertyNetCashFlow:
+          this.round(
+            propertyNetCashFlow,
+          ),
+
+        totalCosts:
+          this.round(totalCosts),
+
+        totalRevenues:
+          this.round(
+            totalRevenues,
+          ),
+
+        netCashFlow:
+          this.round(
+            totalRevenues -
+            totalCosts,
+          ),
+
+        capitalMovements: {
+          propertyInvestments:
+            propertyInvestmentDetails,
+
+          propertySales:
+            propertySaleDetails,
+        },
       });
     }
 
-    return provisionalYears.map((entry, index) => {
-      const nextYear = provisionalYears[index + 1];
+    return provisionalYears.map(
+      (entry, index) => {
+        const nextYear =
+          provisionalYears[
+            index + 1
+          ];
 
-      let capitalEnd: number | null = null;
+        let capitalEnd:
+          number | null = null;
 
-      if (
-        nextYear &&
-        nextYear.capitalStart !== null
-      ) {
-        capitalEnd = nextYear.capitalStart;
-      } else if (entry.capitalStart !== null) {
-        capitalEnd = this.round(
-          entry.capitalStart + entry.netCashFlow,
-        );
-      }
+        if (
+          nextYear &&
+          nextYear.capitalStart !==
+            null
+        ) {
+          capitalEnd =
+            nextYear.capitalStart;
+        } else if (
+          entry.capitalStart !== null
+        ) {
+          capitalEnd =
+            this.round(
+              entry.capitalStart +
+              entry.netCashFlow,
+            );
+        }
 
-      return {
-        ...entry,
-        capitalEnd,
-      };
-    });
+        return {
+          ...entry,
+          capitalEnd,
+        };
+      },
+    );
   }
 
   async getOverview() {

@@ -2835,3 +2835,195 @@ export async function assessPlanningScenario(
     "Unable to assess planning scenario",
   );
 }
+
+
+// ==================================================
+// Forward Asset Allocation Engine
+// ==================================================
+
+export type PlanningAllocationAssetClass =
+  | "LIQUIDITY"
+  | "INVESTMENTS"
+  | "REAL_ESTATE"
+  | "OTHER_ASSETS";
+
+export type PlanningAllocationValues =
+  Record<
+    PlanningAllocationAssetClass,
+    number
+  >;
+
+export type PlanningAllocationTransfer = {
+  year: number;
+  from:
+    PlanningAllocationAssetClass;
+  to:
+    PlanningAllocationAssetClass;
+  amount: number;
+  label?: string;
+};
+
+export type PlanningAllocationSettings = {
+  liquidityReturnDeltaPct: number;
+  investmentsReturnDeltaPct: number;
+  realEstateReturnDeltaPct: number;
+  otherAssetsReturnDeltaPct: number;
+
+  positiveCashFlowDestination:
+    PlanningAllocationAssetClass;
+
+  deficitFundingOrder:
+    PlanningAllocationAssetClass[];
+
+  transfers:
+    PlanningAllocationTransfer[];
+};
+
+export type SimulatePlanningAllocationInput =
+  SimulatePlanningScenarioInput & {
+    allocation:
+      PlanningAllocationSettings;
+  };
+
+export type PlanningAllocationPurchase = {
+  label: string;
+  amount: number;
+};
+
+export type PlanningAllocationSale = {
+  label: string;
+  amount: number;
+  carryingValue: number;
+  gainLoss: number;
+};
+
+export type PlanningAllocationYear = {
+  year: number;
+
+  start:
+    PlanningAllocationValues;
+
+  startTotal: number;
+
+  returns:
+    PlanningAllocationValues;
+
+  effectiveReturnsPct:
+    PlanningAllocationValues;
+
+  totalReturnImpact: number;
+
+  budget: {
+    ordinaryExpenses: number;
+    extraordinaryExpenses: number;
+    operatingCosts: number;
+    operatingRevenues: number;
+    propertyInvestments: number;
+    propertySales: number;
+  };
+
+  adjustedOperatingCosts: number;
+  adjustedOperatingRevenues: number;
+  operatingEventImpact: number;
+  operatingNetCashFlow: number;
+
+  propertyMovements: {
+    purchases:
+      PlanningAllocationPurchase[];
+
+    sales:
+      PlanningAllocationSale[];
+
+    saleGainLoss: number;
+  };
+
+  manualTransfers:
+    PlanningAllocationTransfer[];
+
+  cashFlowAllocation: {
+    positiveDestination:
+      PlanningAllocationAssetClass;
+
+    unfundedAmount: number;
+  };
+
+  end:
+    PlanningAllocationValues;
+
+  endTotal: number;
+
+  weights:
+    PlanningAllocationValues;
+
+  reconciliationDifference: number;
+};
+
+export type PlanningAllocationResponse = {
+  allocation: {
+    initial:
+      PlanningAllocationValues;
+
+    initialTotal: number;
+
+    final:
+      PlanningAllocationValues;
+
+    finalWeights:
+      PlanningAllocationValues;
+  };
+
+  openingReconciliation: {
+    financialCapital: number;
+    realEstate: number;
+    otherAssets: number;
+
+    excludedProperties: Array<{
+      name: string;
+      reason?: string;
+      value?: number;
+    }>;
+  };
+
+  summary: {
+    finalNetWorth: number;
+
+    minimumLiquidity: number;
+    minimumLiquidityYear:
+      number | null;
+
+    maximumRealEstateWeight: number;
+    maximumRealEstateWeightYear:
+      number | null;
+  };
+
+  ipsProjection: {
+    configurationStatus: string;
+  };
+
+  years:
+    PlanningAllocationYear[];
+};
+
+export async function simulatePlanningScenarioAllocation(
+  input:
+    SimulatePlanningAllocationInput,
+): Promise<PlanningAllocationResponse> {
+  const response = await fetch(
+    `${API_URL}/planning/scenarios/allocation`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+
+      body: JSON.stringify(input),
+    },
+  );
+
+  return readJson<PlanningAllocationResponse>(
+    response,
+    "Unable to project scenario asset allocation",
+  );
+}
