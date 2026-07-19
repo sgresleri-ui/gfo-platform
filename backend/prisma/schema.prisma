@@ -466,3 +466,32 @@ model PlanningScenario {
   @@index([householdId, updatedAt])
   @@index([sustainabilityStatus])
 }
+
+model EconomicAssumptionProfile {
+  id              String @id @default(cuid())
+  code            String @unique
+  name            String
+  description     String @default("")
+  fiscalResidence String @default("Spain")
+
+  liquidityReturnDeltaPct   Float @default(0)
+  investmentsReturnDeltaPct Float @default(0)
+  realEstateReturnDeltaPct  Float @default(0)
+  otherAssetsReturnDeltaPct Float @default(0)
+
+  liquidityTaxRatePct   Float @default(0)
+  investmentsTaxRatePct Float @default(0)
+
+  rebalancingCostRatePct Float @default(0)
+  rebalancingMinimumCost Float @default(0)
+
+  isDefault  Boolean @default(false)
+  isArchived Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([fiscalResidence])
+  @@index([isDefault])
+  @@index([isArchived])
+}
