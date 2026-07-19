@@ -72,6 +72,12 @@ type ScenarioForm = {
   investmentsReturnDeltaPct: string;
   realEstateReturnDeltaPct: string;
   otherAssetsReturnDeltaPct: string;
+
+  liquidityTaxRatePct?: string;
+  investmentsTaxRatePct?: string;
+
+  rebalancingCostRatePct?: string;
+  rebalancingMinimumCost?: string;
 };
 
 type ScenarioEventDraft = {
@@ -95,6 +101,12 @@ const DEFAULT_FORM: ScenarioForm = {
   investmentsReturnDeltaPct: "0",
   realEstateReturnDeltaPct: "0",
   otherAssetsReturnDeltaPct: "0",
+
+  liquidityTaxRatePct: "0",
+  investmentsTaxRatePct: "0",
+
+  rebalancingCostRatePct: "0",
+  rebalancingMinimumCost: "0",
 };
 
 function parseNumber(
@@ -515,6 +527,30 @@ export default function PlanningScenarioPanel() {
                 form.otherAssetsReturnDeltaPct,
               ),
 
+            liquidityTaxRatePct:
+              parseNumber(
+                form.liquidityTaxRatePct ??
+                  "0",
+              ),
+
+            investmentsTaxRatePct:
+              parseNumber(
+                form.investmentsTaxRatePct ??
+                  "0",
+              ),
+
+            rebalancingCostRatePct:
+              parseNumber(
+                form.rebalancingCostRatePct ??
+                  "0",
+              ),
+
+            rebalancingMinimumCost:
+              parseNumber(
+                form.rebalancingMinimumCost ??
+                  "0",
+              ),
+
             positiveCashFlowDestination:
               "LIQUIDITY",
 
@@ -698,6 +734,30 @@ export default function PlanningScenarioPanel() {
                 form.otherAssetsReturnDeltaPct,
               ),
 
+            liquidityTaxRatePct:
+              parseNumber(
+                form.liquidityTaxRatePct ??
+                  "0",
+              ),
+
+            investmentsTaxRatePct:
+              parseNumber(
+                form.investmentsTaxRatePct ??
+                  "0",
+              ),
+
+            rebalancingCostRatePct:
+              parseNumber(
+                form.rebalancingCostRatePct ??
+                  "0",
+              ),
+
+            rebalancingMinimumCost:
+              parseNumber(
+                form.rebalancingMinimumCost ??
+                  "0",
+              ),
+
             positiveCashFlowDestination:
               "LIQUIDITY",
 
@@ -822,6 +882,30 @@ export default function PlanningScenarioPanel() {
               otherAssetsReturnDeltaPct:
                 parseNumber(
                   form.otherAssetsReturnDeltaPct,
+                ),
+
+              liquidityTaxRatePct:
+                parseNumber(
+                  form.liquidityTaxRatePct ??
+                    "0",
+                ),
+
+              investmentsTaxRatePct:
+                parseNumber(
+                  form.investmentsTaxRatePct ??
+                    "0",
+                ),
+
+              rebalancingCostRatePct:
+                parseNumber(
+                  form.rebalancingCostRatePct ??
+                    "0",
+                ),
+
+              rebalancingMinimumCost:
+                parseNumber(
+                  form.rebalancingMinimumCost ??
+                    "0",
                 ),
 
               positiveCashFlowDestination:
@@ -959,6 +1043,30 @@ export default function PlanningScenarioPanel() {
             otherAssetsReturnDeltaPct:
               parseNumber(
                 form.otherAssetsReturnDeltaPct,
+              ),
+
+            liquidityTaxRatePct:
+              parseNumber(
+                form.liquidityTaxRatePct ??
+                  "0",
+              ),
+
+            investmentsTaxRatePct:
+              parseNumber(
+                form.investmentsTaxRatePct ??
+                  "0",
+              ),
+
+            rebalancingCostRatePct:
+              parseNumber(
+                form.rebalancingCostRatePct ??
+                  "0",
+              ),
+
+            rebalancingMinimumCost:
+              parseNumber(
+                form.rebalancingMinimumCost ??
+                  "0",
               ),
 
             positiveCashFlowDestination:
@@ -1666,6 +1774,97 @@ export default function PlanningScenarioPanel() {
             slotProps={{
               htmlInput: {
                 step: 0.1,
+              },
+            }}
+          />
+
+          <TextField
+            label="Imposta liquidità %"
+            type="number"
+            size="small"
+            value={
+              form.liquidityTaxRatePct ??
+              "0"
+            }
+            onChange={(changeEvent) =>
+              updateForm(
+                "liquidityTaxRatePct",
+                changeEvent.target.value,
+              )
+            }
+            slotProps={{
+              htmlInput: {
+                min: 0,
+                max: 100,
+                step: 0.1,
+              },
+            }}
+          />
+
+          <TextField
+            label="Imposta investimenti %"
+            type="number"
+            size="small"
+            value={
+              form.investmentsTaxRatePct ??
+              "0"
+            }
+            onChange={(changeEvent) =>
+              updateForm(
+                "investmentsTaxRatePct",
+                changeEvent.target.value,
+              )
+            }
+            slotProps={{
+              htmlInput: {
+                min: 0,
+                max: 100,
+                step: 0.1,
+              },
+            }}
+          />
+
+          <TextField
+            label="Costo ribilanciamento %"
+            type="number"
+            size="small"
+            value={
+              form.rebalancingCostRatePct ??
+              "0"
+            }
+            onChange={(changeEvent) =>
+              updateForm(
+                "rebalancingCostRatePct",
+                changeEvent.target.value,
+              )
+            }
+            slotProps={{
+              htmlInput: {
+                min: 0,
+                max: 10,
+                step: 0.01,
+              },
+            }}
+          />
+
+          <TextField
+            label="Costo minimo operazione €"
+            type="number"
+            size="small"
+            value={
+              form.rebalancingMinimumCost ??
+              "0"
+            }
+            onChange={(changeEvent) =>
+              updateForm(
+                "rebalancingMinimumCost",
+                changeEvent.target.value,
+              )
+            }
+            slotProps={{
+              htmlInput: {
+                min: 0,
+                step: 1,
               },
             }}
           />
@@ -2524,7 +2723,7 @@ export default function PlanningScenarioPanel() {
                       gridTemplateColumns: {
                         xs: "1fr",
                         lg:
-                          "repeat(2, minmax(0, 1fr))",
+                          "repeat(3, minmax(0, 1fr))",
                       },
                       gap: 1.5,
                     }}
@@ -2534,6 +2733,8 @@ export default function PlanningScenarioPanel() {
                         .minimumCompliance,
                       optimizedIpsComparison
                         .targetOptimized,
+                      optimizedIpsComparison
+                        .economicBalanced,
                     ].map(
                       (strategy) => (
                         <Paper
@@ -2547,7 +2748,8 @@ export default function PlanningScenarioPanel() {
                               "1px solid",
                             borderColor:
                               strategy.strategy ===
-                              "TARGET_OPTIMIZED"
+                              optimizedIpsComparison
+                                .recommendedStrategy
                                 ? "success.main"
                                 : "divider",
                           }}
@@ -2588,7 +2790,8 @@ export default function PlanningScenarioPanel() {
                             </Box>
 
                             {strategy.strategy ===
-                              "TARGET_OPTIMIZED" && (
+                              optimizedIpsComparison
+                                .recommendedStrategy && (
                               <Chip
                                 size="small"
                                 color="success"
@@ -2671,6 +2874,17 @@ export default function PlanningScenarioPanel() {
                                 )}
                               </strong>
                             </Typography>
+
+                            <Typography
+                              variant="body2"
+                            >
+                              Patrimonio finale:{" "}
+                              <strong>
+                                {formatCurrency(
+                                  strategy.finalNetWorth,
+                                )}
+                              </strong>
+                            </Typography>
                           </Box>
 
                           <Button
@@ -2678,13 +2892,15 @@ export default function PlanningScenarioPanel() {
                             sx={{ mt: 1.7 }}
                             variant={
                               strategy.strategy ===
-                              "TARGET_OPTIMIZED"
+                              optimizedIpsComparison
+                                .recommendedStrategy
                                 ? "contained"
                                 : "outlined"
                             }
                             color={
                               strategy.strategy ===
-                              "TARGET_OPTIMIZED"
+                              optimizedIpsComparison
+                                .recommendedStrategy
                                 ? "success"
                                 : "primary"
                             }

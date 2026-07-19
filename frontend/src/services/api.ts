@@ -2873,6 +2873,12 @@ export type PlanningAllocationSettings = {
   realEstateReturnDeltaPct: number;
   otherAssetsReturnDeltaPct: number;
 
+  liquidityTaxRatePct?: number;
+  investmentsTaxRatePct?: number;
+
+  rebalancingCostRatePct?: number;
+  rebalancingMinimumCost?: number;
+
   positiveCashFlowDestination:
     PlanningAllocationAssetClass;
 
@@ -3291,18 +3297,33 @@ export type PlanningOptimizedIpsIntervention = {
   weightAfter: number;
 
   fullyFundable: boolean;
+
+  interventionType:
+    | "MINIMUM_PROTECTION"
+    | "PREFUNDING"
+    | "SAFE_SWEEP"
+    | "ECONOMIC_SWEEP";
 };
 
 export type PlanningOptimizedIpsStrategyResult = {
   strategy:
     | "MINIMUM_COMPLIANCE"
-    | "TARGET_OPTIMIZED";
+    | "TARGET_OPTIMIZED"
+    | "ECONOMIC_BALANCED";
 
   label: string;
   description: string;
 
   minimumWeight: number;
   targetWeight: number;
+
+  operationalPolicy: {
+    upperTrigger:
+      number | null;
+
+    minimumTrade:
+      number | null;
+  };
 
   interventions: number;
 
@@ -3356,6 +3377,8 @@ export type PlanningOptimizedIpsComparisonResponse = {
   liquidityPolicy: {
     minimumWeight: number;
     targetWeight: number;
+    upperTrigger: number;
+    minimumTrade: number;
   };
 
   baseline: {
@@ -3375,8 +3398,13 @@ export type PlanningOptimizedIpsComparisonResponse = {
   targetOptimized:
     PlanningOptimizedIpsStrategyResult;
 
+  economicBalanced:
+    PlanningOptimizedIpsStrategyResult;
+
   recommendedStrategy:
-    "TARGET_OPTIMIZED";
+    | "MINIMUM_COMPLIANCE"
+    | "TARGET_OPTIMIZED"
+    | "ECONOMIC_BALANCED";
 
   rationale: string;
 };
