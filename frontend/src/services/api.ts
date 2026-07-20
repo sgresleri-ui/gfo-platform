@@ -2713,9 +2713,17 @@ export type ArchiveStoredPlanningScenarioResponse = {
     StoredPlanningScenarioSummary;
 };
 
-export async function getStoredPlanningScenarios(): Promise<StoredPlanningScenariosResponse> {
+export type RestoreStoredPlanningScenarioResponse = {
+  restored: boolean;
+  scenario:
+    StoredPlanningScenarioSummary;
+};
+
+export async function getStoredPlanningScenarios(
+  includeArchived = false,
+): Promise<StoredPlanningScenariosResponse> {
   const response = await fetch(
-    `${API_URL}/planning/scenarios`,
+    `${API_URL}/planning/scenarios?includeArchived=${includeArchived}`,
   );
 
   return readJson<StoredPlanningScenariosResponse>(
@@ -2786,6 +2794,22 @@ export async function archiveStoredPlanningScenario(
   return readJson<ArchiveStoredPlanningScenarioResponse>(
     response,
     "Unable to archive planning scenario",
+  );
+}
+
+export async function restoreStoredPlanningScenario(
+  id: string,
+): Promise<RestoreStoredPlanningScenarioResponse> {
+  const response = await fetch(
+    `${API_URL}/planning/scenarios/${id}/restore`,
+    {
+      method: "POST",
+    },
+  );
+
+  return readJson<RestoreStoredPlanningScenarioResponse>(
+    response,
+    "Unable to restore planning scenario",
   );
 }
 

@@ -334,13 +334,17 @@ export class PlanningScenarioStorageService {
     };
   }
 
-  async getScenarios() {
+  async getScenarios(
+    includeArchived = false,
+  ) {
     const scenarios =
       await this.prisma
         .planningScenario.findMany({
-          where: {
-            status: 'ACTIVE',
-          },
+          where: includeArchived
+            ? undefined
+            : {
+                status: 'ACTIVE',
+              },
 
           orderBy: [
             {
@@ -514,6 +518,33 @@ export class PlanningScenarioStorageService {
 
     return {
       archived: true,
+
+      scenario:
+        this.serializeScenario(
+          scenario,
+        ),
+    };
+  }
+
+  async restoreScenario(
+    id: string,
+  ) {
+    await this.findScenario(id);
+
+    const scenario =
+      await this.prisma
+        .planningScenario.update({
+          where: {
+            id,
+          },
+
+          data: {
+            status: 'ACTIVE',
+          },
+        });
+
+    return {
+      restored: true,
 
       scenario:
         this.serializeScenario(

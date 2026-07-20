@@ -13,6 +13,8 @@ import {
   MenuItem,
   Paper,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
 
@@ -21,6 +23,7 @@ import FolderOpenRoundedIcon from "@mui/icons-material/FolderOpenRounded";
 import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
+import UnarchiveRoundedIcon from "@mui/icons-material/UnarchiveRounded";
 
 import PlanningScenarioComparison from "./PlanningScenarioComparison";
 
@@ -31,6 +34,7 @@ import {
   getStoredPlanningScenario,
   getStoredPlanningScenarios,
   rerunStoredPlanningScenario,
+  restoreStoredPlanningScenario,
   type EconomicAssumptionProfile,
   type PlanningScenarioResponse,
   type SimulatePlanningScenarioInput,
@@ -374,6 +378,13 @@ export default function PlanningScenarioArchive({
     useState("");
 
   const [
+    scenarioArchiveView,
+    setScenarioArchiveView,
+  ] = useState<
+    "ACTIVE" | "ARCHIVED"
+  >("ACTIVE");
+
+  const [
     scenarioSearch,
     setScenarioSearch,
   ] = useState("");
@@ -410,7 +421,9 @@ export default function PlanningScenarioArchive({
         response,
         profiles,
       ] = await Promise.all([
-        getStoredPlanningScenarios(),
+        getStoredPlanningScenarios(
+          true,
+        ),
         getEconomicAssumptionProfiles(
           true,
         ),
@@ -438,12 +451,40 @@ export default function PlanningScenarioArchive({
     void loadScenarios();
   }, [economicProfilesRefreshKey]);
 
+  const activeScenarios =
+    useMemo(
+      () =>
+        scenarios.filter(
+          (scenario) =>
+            scenario.status ===
+            "ACTIVE",
+        ),
+      [scenarios],
+    );
+
+  const archivedScenarios =
+    useMemo(
+      () =>
+        scenarios.filter(
+          (scenario) =>
+            scenario.status ===
+            "ARCHIVED",
+        ),
+      [scenarios],
+    );
+
+  const visibleScenarios =
+    scenarioArchiveView ===
+    "ARCHIVED"
+      ? archivedScenarios
+      : activeScenarios;
+
   const economicProfileOptions =
     useMemo(() => {
       const options =
         new Map<string, string>();
 
-      scenarios.forEach(
+      visibleScenarios.forEach(
         (scenario) => {
           const snapshot =
             scenario.economicProfile;
@@ -479,7 +520,7 @@ export default function PlanningScenarioArchive({
             "it",
           ),
         );
-    }, [scenarios]);
+    }, [visibleScenarios]);
 
   const filteredScenarios =
     useMemo(() => {
@@ -491,7 +532,7 @@ export default function PlanningScenarioArchive({
           );
 
       const filtered =
-        scenarios.filter(
+        visibleScenarios.filter(
         (scenario) => {
           const profileSnapshot =
             scenario.economicProfile;
@@ -692,7 +733,7 @@ export default function PlanningScenarioArchive({
         },
       );
     }, [
-      scenarios,
+      visibleScenarios,
       scenarioSearch,
       economicProfileFilter,
       sustainabilityFilter,
@@ -841,6 +882,34 @@ export default function PlanningScenarioArchive({
     }
   }
 
+  async function restoreScenario(
+    id: string,
+  ) {
+    setActiveId(id);
+    setError("");
+    setSuccess("");
+
+    try {
+      await restoreStoredPlanningScenario(
+        id,
+      );
+
+      setSuccess(
+        "Scenario ripristinato tra gli scenari attivi.",
+      );
+
+      await loadScenarios();
+    } catch (requestError) {
+      console.error(requestError);
+
+      setError(
+        "Impossibile ripristinare lo scenario.",
+      );
+    } finally {
+      setActiveId(null);
+    }
+  }
+
   return (
     <Paper
       elevation={0}
@@ -952,6 +1021,47 @@ export default function PlanningScenarioArchive({
               borderRadius: 2,
             }}
           >
+            <ToggleButtonGroup
+              exclusive
+              size="small"
+              value={scenarioArchiveView}
+              onChange={(
+                _event,
+                nextView:
+                  | "ACTIVE"
+                  | "ARCHIVED"
+                  | null,
+              ) => {
+                if (!nextView) {
+                  return;
+                }
+
+                setScenarioArchiveView(
+                  nextView,
+                );
+
+                setScenarioSearch("");
+                setEconomicProfileFilter(
+                  "ALL",
+                );
+                setSustainabilityFilter(
+                  "ALL",
+                );
+              }}
+              sx={{
+                mb: 2,
+                flexWrap: "wrap",
+              }}
+            >
+              <ToggleButton value="ACTIVE">
+                Attivi ({activeScenarios.length})
+              </ToggleButton>
+
+              <ToggleButton value="ARCHIVED">
+                Archiviati ({archivedScenarios.length})
+              </ToggleButton>
+            </ToggleButtonGroup>
+
             <Box
               sx={{
                 display: "grid",
@@ -1136,7 +1246,11 @@ export default function PlanningScenarioArchive({
               }}
             >
               {filteredScenarios.length} di{" "}
-              {scenarios.length} scenari
+              {visibleScenarios.length} scenari{" "}
+              {scenarioArchiveView ===
+              "ARCHIVED"
+                ? "archiviati"
+                : "attivi"}
             </Typography>
           </Paper>
         )}
@@ -1154,6 +1268,14 @@ export default function PlanningScenarioArchive({
       ) : scenarios.length === 0 ? (
         <Alert severity="info">
           Nessuno scenario salvato.
+        </Alert>
+      ) : visibleScenarios.length ===
+        0 ? (
+        <Alert severity="info">
+          {scenarioArchiveView ===
+          "ARCHIVED"
+            ? "Nessuno scenario archiviato."
+            : "Nessuno scenario attivo."}
         </Alert>
       ) : filteredScenarios.length ===
         0 ? (
@@ -1417,44 +1539,73 @@ export default function PlanningScenarioArchive({
                       Apri
                     </Button>
 
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={
-                        busy ? (
-                          <CircularProgress
-                            size={15}
-                            color="inherit"
-                          />
-                        ) : (
-                          <ReplayRoundedIcon />
-                        )
-                      }
-                      disabled={busy}
-                      onClick={() =>
-                        void rerunScenario(
-                          scenario.id,
-                        )
-                      }
-                    >
-                      Ricalcola
-                    </Button>
+                    {scenario.status ===
+                    "ARCHIVED" ? (
+                      <Button
+                        size="small"
+                        color="success"
+                        variant="outlined"
+                        startIcon={
+                          busy ? (
+                            <CircularProgress
+                              size={15}
+                              color="inherit"
+                            />
+                          ) : (
+                            <UnarchiveRoundedIcon />
+                          )
+                        }
+                        disabled={busy}
+                        onClick={() =>
+                          void restoreScenario(
+                            scenario.id,
+                          )
+                        }
+                      >
+                        Ripristina
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={
+                            busy ? (
+                              <CircularProgress
+                                size={15}
+                                color="inherit"
+                              />
+                            ) : (
+                              <ReplayRoundedIcon />
+                            )
+                          }
+                          disabled={busy}
+                          onClick={() =>
+                            void rerunScenario(
+                              scenario.id,
+                            )
+                          }
+                        >
+                          Ricalcola
+                        </Button>
 
-                    <Button
-                      size="small"
-                      color="warning"
-                      startIcon={
-                        <ArchiveRoundedIcon />
-                      }
-                      disabled={busy}
-                      onClick={() =>
-                        void archiveScenario(
-                          scenario.id,
-                        )
-                      }
-                    >
-                      Archivia
-                    </Button>
+                        <Button
+                          size="small"
+                          color="warning"
+                          startIcon={
+                            <ArchiveRoundedIcon />
+                          }
+                          disabled={busy}
+                          onClick={() =>
+                            void archiveScenario(
+                              scenario.id,
+                            )
+                          }
+                        >
+                          Archivia
+                        </Button>
+                      </>
+                    )}
                   </Box>
                 </Paper>
               );
@@ -1462,11 +1613,13 @@ export default function PlanningScenarioArchive({
           )}
         </Box>
       )}
-      {!loading && (
-        <PlanningScenarioComparison
-          scenarios={scenarios}
-        />
-      )}
+      {!loading &&
+        scenarioArchiveView ===
+          "ACTIVE" && (
+          <PlanningScenarioComparison
+            scenarios={activeScenarios}
+          />
+        )}
 
     </Paper>
   );

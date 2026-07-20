@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
 } from '@nestjs/common';
 
 import {
@@ -120,9 +121,14 @@ export class PlanningScenariosController {
   }
 
   @Get()
-  getScenarios() {
+  getScenarios(
+    @Query('includeArchived')
+    includeArchived?: string,
+  ) {
     return this.storageService
-      .getScenarios();
+      .getScenarios(
+        includeArchived === 'true',
+      );
   }
 
   @Post()
@@ -157,5 +163,13 @@ export class PlanningScenariosController {
   ) {
     return this.storageService
       .archiveScenario(id);
+  }
+
+  @Post(':id/restore')
+  restoreScenario(
+    @Param('id') id: string,
+  ) {
+    return this.storageService
+      .restoreScenario(id);
   }
 }
