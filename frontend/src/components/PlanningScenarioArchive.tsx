@@ -24,9 +24,11 @@ import PlanningScenarioComparison from "./PlanningScenarioComparison";
 import {
   archiveStoredPlanningScenario,
   createStoredPlanningScenario,
+  getEconomicAssumptionProfiles,
   getStoredPlanningScenario,
   getStoredPlanningScenarios,
   rerunStoredPlanningScenario,
+  type EconomicAssumptionProfile,
   type PlanningScenarioResponse,
   type SimulatePlanningScenarioInput,
   type StoredEconomicProfileSnapshot,
@@ -90,6 +92,133 @@ function formatDateTime(
   );
 }
 
+type EconomicProfileDrift = {
+  label: string;
+
+  color:
+    | "default"
+    | "success"
+    | "warning"
+    | "error"
+    | "info";
+
+  detail: string;
+};
+
+function getEconomicProfileDrift(
+  snapshot:
+    StoredEconomicProfileSnapshot | null,
+  profiles:
+    EconomicAssumptionProfile[],
+): EconomicProfileDrift {
+  if (!snapshot) {
+    return {
+      label: "Non tracciato",
+      color: "default",
+      detail:
+        "Lo scenario non contiene uno snapshot economico.",
+    };
+  }
+
+  if (
+    !snapshot.profileId &&
+    !snapshot.code
+  ) {
+    return {
+      label: "Ipotesi manuali",
+      color: "info",
+      detail:
+        "Snapshot indipendente da un profilo salvato.",
+    };
+  }
+
+  const currentProfile =
+    profiles.find(
+      (profile) =>
+        profile.id ===
+          snapshot.profileId ||
+        profile.code ===
+          snapshot.code,
+    );
+
+  if (!currentProfile) {
+    return {
+      label:
+        "Profilo non disponibile",
+      color: "error",
+      detail:
+        "Il profilo originario non è più presente.",
+    };
+  }
+
+  if (currentProfile.isArchived) {
+    return {
+      label: "Profilo archiviato",
+      color: "warning",
+      detail:
+        "Il profilo originario è stato archiviato.",
+    };
+  }
+
+  const numericValuesChanged =
+    [
+      "liquidityReturnDeltaPct",
+      "investmentsReturnDeltaPct",
+      "realEstateReturnDeltaPct",
+      "otherAssetsReturnDeltaPct",
+      "liquidityTaxRatePct",
+      "investmentsTaxRatePct",
+      "rebalancingCostRatePct",
+      "rebalancingMinimumCost",
+    ].some((field) => {
+      const key =
+        field as keyof Pick<
+          EconomicAssumptionProfile,
+          | "liquidityReturnDeltaPct"
+          | "investmentsReturnDeltaPct"
+          | "realEstateReturnDeltaPct"
+          | "otherAssetsReturnDeltaPct"
+          | "liquidityTaxRatePct"
+          | "investmentsTaxRatePct"
+          | "rebalancingCostRatePct"
+          | "rebalancingMinimumCost"
+        >;
+
+      return (
+        Math.abs(
+          currentProfile[key] -
+            snapshot[key],
+        ) > 0.000001
+      );
+    });
+
+  const fiscalResidenceChanged =
+    Boolean(
+      snapshot.fiscalResidence &&
+      currentProfile.fiscalResidence !==
+        snapshot.fiscalResidence,
+    );
+
+  if (
+    numericValuesChanged ||
+    fiscalResidenceChanged
+  ) {
+    return {
+      label: "Profilo modificato",
+      color: "warning",
+      detail:
+        "Le ipotesi attuali differiscono dallo snapshot storico.",
+    };
+  }
+
+  return {
+    label: "Profilo invariato",
+    color: "success",
+    detail:
+      "Le ipotesi attuali coincidono con lo snapshot storico.",
+  };
+}
+
 export default function PlanningScenarioArchive({
   currentResult,
   currentEconomicProfile,
@@ -100,6 +229,13 @@ export default function PlanningScenarioArchive({
     setScenarios,
   ] = useState<
     StoredPlanningScenarioSummary[]
+  >([]);
+
+  const [
+    economicProfiles,
+    setEconomicProfiles,
+  ] = useState<
+    EconomicAssumptionProfile[]
   >([]);
 
   const [loading, setLoading] =
@@ -121,11 +257,22 @@ export default function PlanningScenarioArchive({
     setLoading(true);
 
     try {
-      const response =
-        await getStoredPlanningScenarios();
+      const [
+        response,
+        profiles,
+      ] = await Promise.all([
+        getStoredPlanningScenarios(),
+        getEconomicAssumptionProfiles(
+          true,
+        ),
+      ]);
 
       setScenarios(
         response.scenarios,
+      );
+
+      setEconomicProfiles(
+        profiles,
       );
     } catch (requestError) {
       console.error(requestError);
@@ -411,6 +558,12 @@ export default function PlanningScenarioArchive({
                 activeId ===
                 scenario.id;
 
+              const profileDrift =
+                getEconomicProfileDrift(
+                  scenario.economicProfile,
+                  economicProfiles,
+                );
+
               const statusColor =
                 scenario
                   .sustainabilityStatus ===
@@ -494,6 +647,16 @@ export default function PlanningScenarioArchive({
                         }
                       />
 
+                      <Chip
+                        size="small"
+                        color={
+                          profileDrift.color
+                        }
+                        label={
+                          profileDrift.label
+                        }
+                      />
+
                       {scenario
                         .economicProfile
                         ?.capturedAt ? (
@@ -510,6 +673,17 @@ export default function PlanningScenarioArchive({
                         </Typography>
                       ) : null}
                     </Box>
+
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{
+                        display: "block",
+                        mt: 0.5,
+                      }}
+                    >
+                      {profileDrift.detail}
+                    </Typography>
                   </Box>
 
                   <Box>
