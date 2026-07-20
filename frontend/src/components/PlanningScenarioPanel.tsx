@@ -122,6 +122,62 @@ const DEFAULT_FORM: ScenarioForm = {
   rebalancingMinimumCost: "0",
 };
 
+const SCENARIO_LAB_DRAFT_KEY =
+  "gfo.planning.scenario-lab-draft.v1";
+
+type ScenarioLabDraft = {
+  version: 1;
+  savedAt: string;
+  form: ScenarioForm;
+  events: ScenarioEventDraft[];
+  selectedEconomicProfileId: string;
+};
+
+function readScenarioLabDraft():
+  ScenarioLabDraft | null {
+  try {
+    const raw =
+      window.localStorage.getItem(
+        SCENARIO_LAB_DRAFT_KEY,
+      );
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed =
+      JSON.parse(raw) as
+        Partial<ScenarioLabDraft>;
+
+    if (
+      parsed.version !== 1 ||
+      !parsed.form ||
+      !Array.isArray(parsed.events)
+    ) {
+      return null;
+    }
+
+    return {
+      version: 1,
+      savedAt:
+        String(parsed.savedAt ?? ""),
+      form:
+        parsed.form as ScenarioForm,
+      events:
+        parsed.events as
+          ScenarioEventDraft[],
+      selectedEconomicProfileId:
+        String(
+          parsed
+            .selectedEconomicProfileId ??
+            "",
+        ),
+    };
+  } catch {
+    return null;
+  }
+}
+
 function parseNumber(
   value: string,
 ): number {
@@ -314,9 +370,18 @@ export default function PlanningScenarioPanel() {
     PlanningOptimizedIpsComparisonResponse | null
   >(null);
 
+  const [initialDraft] =
+    useState<
+      ScenarioLabDraft | null
+    >(
+      () =>
+        readScenarioLabDraft(),
+    );
+
   const [form, setForm] =
     useState<ScenarioForm>(
-      DEFAULT_FORM,
+      initialDraft?.form ??
+        DEFAULT_FORM,
     );
 
   const [
@@ -329,7 +394,11 @@ export default function PlanningScenarioPanel() {
   const [
     selectedEconomicProfileId,
     setSelectedEconomicProfileId,
-  ] = useState("");
+  ] = useState(
+    initialDraft
+      ?.selectedEconomicProfileId ??
+      "",
+  );
 
   const [
     loadingEconomicProfiles,
@@ -361,7 +430,10 @@ export default function PlanningScenarioPanel() {
   const [events, setEvents] =
     useState<
       ScenarioEventDraft[]
-    >([]);
+    >(
+      initialDraft?.events ??
+        [],
+    );
 
   const [
     loadingBaseline,
@@ -422,6 +494,32 @@ export default function PlanningScenarioPanel() {
               profile.isDefault,
           );
 
+        if (initialDraft) {
+          const selectedProfileExists =
+            profiles.some(
+              (profile) =>
+                profile.id ===
+                initialDraft
+                  .selectedEconomicProfileId,
+            );
+
+          if (
+            initialDraft
+              .selectedEconomicProfileId &&
+            !selectedProfileExists
+          ) {
+            setSelectedEconomicProfileId(
+              "",
+            );
+          }
+
+          setEconomicProfileMessage(
+            "Bozza automatica dello Scenario Lab ripristinata.",
+          );
+
+          return;
+        }
+
         if (defaultProfile) {
           setSelectedEconomicProfileId(
             defaultProfile.id,
@@ -455,7 +553,39 @@ export default function PlanningScenarioPanel() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [initialDraft]);
+
+  useEffect(() => {
+    if (loadingEconomicProfiles) {
+      return;
+    }
+
+    const draft: ScenarioLabDraft = {
+      version: 1,
+      savedAt:
+        new Date().toISOString(),
+      form,
+      events,
+      selectedEconomicProfileId,
+    };
+
+    try {
+      window.localStorage.setItem(
+        SCENARIO_LAB_DRAFT_KEY,
+        JSON.stringify(draft),
+      );
+    } catch (storageError) {
+      console.error(
+        "Impossibile salvare la bozza dello Scenario Lab.",
+        storageError,
+      );
+    }
+  }, [
+    form,
+    events,
+    selectedEconomicProfileId,
+    loadingEconomicProfiles,
+  ]);
 
   const chartData = useMemo(
     () =>
@@ -938,7 +1068,36 @@ export default function PlanningScenarioPanel() {
   }
 
   function resetScenario() {
-    setForm(DEFAULT_FORM);
+    const defaultProfile =
+      economicProfiles.find(
+        (profile) =>
+          profile.isDefault,
+      );
+
+    try {
+      window.localStorage.removeItem(
+        SCENARIO_LAB_DRAFT_KEY,
+      );
+    } catch (storageError) {
+      console.error(
+        "Impossibile cancellare la bozza dello Scenario Lab.",
+        storageError,
+      );
+    }
+
+    setSelectedEconomicProfileId(
+      defaultProfile?.id ?? "",
+    );
+
+    setForm(
+      defaultProfile
+        ? applyEconomicProfileValues(
+            DEFAULT_FORM,
+            defaultProfile,
+          )
+        : DEFAULT_FORM,
+    );
+
     setEvents([]);
     setResult(null);
     setAssessment(null);
@@ -947,6 +1106,10 @@ export default function PlanningScenarioPanel() {
     setAutomaticIpsPlan(null);
     setAllocationTransfers([]);
     setError("");
+
+    setEconomicProfileMessage(
+      "Scenario reimpostato e bozza precedente cancellata.",
+    );
   }
 
   async function runScenario(
