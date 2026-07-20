@@ -37,6 +37,9 @@ import {
 } from "../services/api";
 
 type Props = {
+  economicProfilesRefreshKey:
+    number;
+
   currentResult:
     PlanningScenarioResponse | null;
 
@@ -333,6 +336,7 @@ function getEconomicProfileDrift(
 }
 
 export default function PlanningScenarioArchive({
+  economicProfilesRefreshKey,
   currentResult,
   currentEconomicProfile,
   onLoadScenario,
@@ -400,7 +404,7 @@ export default function PlanningScenarioArchive({
 
   useEffect(() => {
     void loadScenarios();
-  }, []);
+  }, [economicProfilesRefreshKey]);
 
   async function saveCurrentScenario() {
     if (!currentResult) {

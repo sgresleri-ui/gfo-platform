@@ -417,6 +417,11 @@ export default function PlanningScenarioPanel() {
   >([]);
 
   const [
+    economicProfilesRevision,
+    setEconomicProfilesRevision,
+  ] = useState(0);
+
+  const [
     selectedEconomicProfileId,
     setSelectedEconomicProfileId,
   ] = useState(
@@ -912,6 +917,10 @@ export default function PlanningScenarioPanel() {
 
       setEconomicProfiles(profiles);
 
+      setEconomicProfilesRevision(
+        (current) => current + 1,
+      );
+
       setSelectedEconomicProfileId(
         savedProfile.id,
       );
@@ -967,6 +976,10 @@ export default function PlanningScenarioPanel() {
 
       setEconomicProfiles(profiles);
 
+      setEconomicProfilesRevision(
+        (current) => current + 1,
+      );
+
       setSelectedEconomicProfileId(
         updated.id,
       );
@@ -1020,6 +1033,10 @@ export default function PlanningScenarioPanel() {
         await getEconomicAssumptionProfiles();
 
       setEconomicProfiles(profiles);
+
+      setEconomicProfilesRevision(
+        (current) => current + 1,
+      );
 
       const nextProfile =
         profiles.find(
@@ -4741,6 +4758,9 @@ export default function PlanningScenarioPanel() {
       )}
 
       <PlanningScenarioArchive
+        economicProfilesRefreshKey={
+          economicProfilesRevision
+        }
         currentResult={result}
         currentEconomicProfile={
           currentEconomicProfileSnapshot
