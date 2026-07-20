@@ -1,6 +1,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -131,6 +132,11 @@ type ScenarioLabDraft = {
   form: ScenarioForm;
   events: ScenarioEventDraft[];
   selectedEconomicProfileId: string;
+
+  allocationTransfers:
+    PlanningAllocationTransfer[];
+
+  hasRunSimulation: boolean;
 };
 
 function readScenarioLabDraft():
@@ -171,6 +177,20 @@ function readScenarioLabDraft():
           parsed
             .selectedEconomicProfileId ??
             "",
+        ),
+
+      allocationTransfers:
+        Array.isArray(
+          parsed.allocationTransfers,
+        )
+          ? parsed
+              .allocationTransfers as
+                PlanningAllocationTransfer[]
+          : [],
+
+      hasRunSimulation:
+        Boolean(
+          parsed.hasRunSimulation,
         ),
     };
   } catch {
@@ -354,7 +374,12 @@ export default function PlanningScenarioPanel() {
     setAllocationTransfers,
   ] = useState<
     PlanningAllocationTransfer[]
-  >([]);
+  >(
+    () =>
+      readScenarioLabDraft()
+        ?.allocationTransfers ??
+      [],
+  );
 
   const [
     automaticIpsPlan,
@@ -444,6 +469,18 @@ export default function PlanningScenarioPanel() {
     simulating,
     setSimulating,
   ] = useState(false);
+
+  const [
+    hasRunSimulation,
+    setHasRunSimulation,
+  ] = useState(
+    initialDraft
+      ?.hasRunSimulation ??
+      false,
+  );
+
+  const automaticDraftRestoreStarted =
+    useRef(false);
 
   const [error, setError] =
     useState("");
@@ -567,6 +604,8 @@ export default function PlanningScenarioPanel() {
       form,
       events,
       selectedEconomicProfileId,
+      allocationTransfers,
+      hasRunSimulation,
     };
 
     try {
@@ -584,6 +623,41 @@ export default function PlanningScenarioPanel() {
     form,
     events,
     selectedEconomicProfileId,
+    allocationTransfers,
+    hasRunSimulation,
+    loadingEconomicProfiles,
+  ]);
+
+  useEffect(() => {
+    if (
+      automaticDraftRestoreStarted
+        .current ||
+      !initialDraft
+        ?.hasRunSimulation ||
+      loadingBaseline ||
+      loadingEconomicProfiles
+    ) {
+      return;
+    }
+
+    automaticDraftRestoreStarted
+      .current = true;
+
+    setEconomicProfileMessage(
+      "Bozza ripristinata. Ricalcolo automatico dell’ultima simulazione in corso.",
+    );
+
+    void runScenario(
+      initialDraft
+        .allocationTransfers,
+    ).then(() => {
+      setEconomicProfileMessage(
+        "Bozza e ultima simulazione ripristinate automaticamente.",
+      );
+    });
+  }, [
+    initialDraft,
+    loadingBaseline,
     loadingEconomicProfiles,
   ]);
 
@@ -1105,6 +1179,7 @@ export default function PlanningScenarioPanel() {
     setOptimizedIpsComparison(null);
     setAutomaticIpsPlan(null);
     setAllocationTransfers([]);
+    setHasRunSimulation(false);
     setError("");
 
     setEconomicProfileMessage(
@@ -1279,8 +1354,12 @@ export default function PlanningScenarioPanel() {
       setAllocationTransfers(
         effectiveTransfers,
       );
+
+      setHasRunSimulation(true);
     } catch (requestError) {
       console.error(requestError);
+
+      setHasRunSimulation(false);
 
       setError(
         "Impossibile calcolare lo scenario. Controlla i valori inseriti.",
