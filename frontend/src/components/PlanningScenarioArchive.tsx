@@ -388,6 +388,20 @@ export default function PlanningScenarioArchive({
     setSustainabilityFilter,
   ] = useState("ALL");
 
+  const [
+    scenarioSort,
+    setScenarioSort,
+  ] = useState(
+    "LAST_SIMULATED_AT",
+  );
+
+  const [
+    scenarioSortDirection,
+    setScenarioSortDirection,
+  ] = useState<
+    "ASC" | "DESC"
+  >("DESC");
+
   async function loadScenarios() {
     setLoading(true);
 
@@ -476,7 +490,8 @@ export default function PlanningScenarioArchive({
             "it-IT",
           );
 
-      return scenarios.filter(
+      const filtered =
+        scenarios.filter(
         (scenario) => {
           const profileSnapshot =
             scenario.economicProfile;
@@ -538,11 +553,151 @@ export default function PlanningScenarioArchive({
           );
         },
       );
+
+      const compareNullableNumbers = (
+        leftValue: number | null,
+        rightValue: number | null,
+      ): number => {
+        if (
+          leftValue === null &&
+          rightValue === null
+        ) {
+          return 0;
+        }
+
+        if (leftValue === null) {
+          return 1;
+        }
+
+        if (rightValue === null) {
+          return -1;
+        }
+
+        const comparison =
+          leftValue - rightValue;
+
+        return scenarioSortDirection ===
+          "ASC"
+          ? comparison
+          : -comparison;
+      };
+
+      const sustainabilityRank = (
+        status:
+          StoredPlanningScenarioSummary[
+            "sustainabilityStatus"
+          ],
+      ): number => {
+        if (status === "SUSTAINABLE") {
+          return 3;
+        }
+
+        if (status === "AT_RISK") {
+          return 2;
+        }
+
+        return 1;
+      };
+
+      return filtered.sort(
+        (left, right) => {
+          let comparison = 0;
+
+          switch (scenarioSort) {
+            case "NAME":
+              comparison =
+                left.name.localeCompare(
+                  right.name,
+                  "it",
+                  {
+                    sensitivity:
+                      "base",
+                  },
+                );
+
+              if (
+                scenarioSortDirection ===
+                "DESC"
+              ) {
+                comparison =
+                  -comparison;
+              }
+
+              break;
+
+            case "FINAL_CAPITAL":
+              comparison =
+                compareNullableNumbers(
+                  left.finalCapital,
+                  right.finalCapital,
+                );
+              break;
+
+            case "MINIMUM_CAPITAL":
+              comparison =
+                compareNullableNumbers(
+                  left.minimumCapital,
+                  right.minimumCapital,
+                );
+              break;
+
+            case "SUSTAINABILITY":
+              comparison =
+                sustainabilityRank(
+                  left.sustainabilityStatus,
+                ) -
+                sustainabilityRank(
+                  right.sustainabilityStatus,
+                );
+
+              if (
+                scenarioSortDirection ===
+                "DESC"
+              ) {
+                comparison =
+                  -comparison;
+              }
+
+              break;
+
+            case "LAST_SIMULATED_AT":
+            default:
+              comparison =
+                compareNullableNumbers(
+                  left.lastSimulatedAt
+                    ? Date.parse(
+                        left.lastSimulatedAt,
+                      )
+                    : null,
+                  right.lastSimulatedAt
+                    ? Date.parse(
+                        right.lastSimulatedAt,
+                      )
+                    : null,
+                );
+              break;
+          }
+
+          if (comparison !== 0) {
+            return comparison;
+          }
+
+          return left.name.localeCompare(
+            right.name,
+            "it",
+            {
+              sensitivity: "base",
+            },
+          );
+        },
+      );
     }, [
       scenarios,
       scenarioSearch,
       economicProfileFilter,
       sustainabilityFilter,
+      scenarioSort,
+      scenarioSortDirection,
     ]);
 
   async function saveCurrentScenario() {
@@ -803,7 +958,9 @@ export default function PlanningScenarioArchive({
                 gridTemplateColumns: {
                   xs: "1fr",
                   md:
-                    "minmax(220px, 1.4fr) minmax(190px, 1fr) minmax(180px, 1fr) auto",
+                    "repeat(2, minmax(0, 1fr))",
+                  xl:
+                    "minmax(220px, 1.4fr) minmax(180px, 1fr) minmax(170px, 1fr) minmax(180px, 1fr) auto auto",
                 },
                 gap: 1.5,
                 alignItems: "center",
@@ -888,6 +1045,55 @@ export default function PlanningScenarioArchive({
                 </MenuItem>
               </TextField>
 
+              <TextField
+                select
+                size="small"
+                label="Ordina per"
+                value={scenarioSort}
+                onChange={(event) =>
+                  setScenarioSort(
+                    event.target.value,
+                  )
+                }
+              >
+                <MenuItem value="LAST_SIMULATED_AT">
+                  Data di ricalcolo
+                </MenuItem>
+
+                <MenuItem value="NAME">
+                  Nome
+                </MenuItem>
+
+                <MenuItem value="FINAL_CAPITAL">
+                  Capitale finale
+                </MenuItem>
+
+                <MenuItem value="MINIMUM_CAPITAL">
+                  Capitale minimo
+                </MenuItem>
+
+                <MenuItem value="SUSTAINABILITY">
+                  Stato patrimoniale
+                </MenuItem>
+              </TextField>
+
+              <Button
+                variant="outlined"
+                onClick={() =>
+                  setScenarioSortDirection(
+                    (current) =>
+                      current === "ASC"
+                        ? "DESC"
+                        : "ASC",
+                  )
+                }
+              >
+                {scenarioSortDirection ===
+                "ASC"
+                  ? "Crescente ↑"
+                  : "Decrescente ↓"}
+              </Button>
+
               <Button
                 variant="outlined"
                 disabled={
@@ -895,7 +1101,11 @@ export default function PlanningScenarioArchive({
                   economicProfileFilter ===
                     "ALL" &&
                   sustainabilityFilter ===
-                    "ALL"
+                    "ALL" &&
+                  scenarioSort ===
+                    "LAST_SIMULATED_AT" &&
+                  scenarioSortDirection ===
+                    "DESC"
                 }
                 onClick={() => {
                   setScenarioSearch("");
@@ -904,6 +1114,12 @@ export default function PlanningScenarioArchive({
                   );
                   setSustainabilityFilter(
                     "ALL",
+                  );
+                  setScenarioSort(
+                    "LAST_SIMULATED_AT",
+                  );
+                  setScenarioSortDirection(
+                    "DESC",
                   );
                 }}
               >
