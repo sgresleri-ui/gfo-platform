@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
@@ -9,7 +10,9 @@ import {
   Button,
   Chip,
   CircularProgress,
+  MenuItem,
   Paper,
+  TextField,
   Typography,
 } from "@mui/material";
 
@@ -370,6 +373,21 @@ export default function PlanningScenarioArchive({
   const [success, setSuccess] =
     useState("");
 
+  const [
+    scenarioSearch,
+    setScenarioSearch,
+  ] = useState("");
+
+  const [
+    economicProfileFilter,
+    setEconomicProfileFilter,
+  ] = useState("ALL");
+
+  const [
+    sustainabilityFilter,
+    setSustainabilityFilter,
+  ] = useState("ALL");
+
   async function loadScenarios() {
     setLoading(true);
 
@@ -405,6 +423,127 @@ export default function PlanningScenarioArchive({
   useEffect(() => {
     void loadScenarios();
   }, [economicProfilesRefreshKey]);
+
+  const economicProfileOptions =
+    useMemo(() => {
+      const options =
+        new Map<string, string>();
+
+      scenarios.forEach(
+        (scenario) => {
+          const snapshot =
+            scenario.economicProfile;
+
+          if (!snapshot) {
+            return;
+          }
+
+          const key =
+            snapshot.profileId ||
+            snapshot.code ||
+            `name:${snapshot.name}`;
+
+          options.set(
+            key,
+            snapshot.name ||
+              snapshot.code ||
+              "Profilo economico",
+          );
+        },
+      );
+
+      return Array.from(
+        options.entries(),
+      )
+        .map(([value, label]) => ({
+          value,
+          label,
+        }))
+        .sort((left, right) =>
+          left.label.localeCompare(
+            right.label,
+            "it",
+          ),
+        );
+    }, [scenarios]);
+
+  const filteredScenarios =
+    useMemo(() => {
+      const normalizedSearch =
+        scenarioSearch
+          .trim()
+          .toLocaleLowerCase(
+            "it-IT",
+          );
+
+      return scenarios.filter(
+        (scenario) => {
+          const profileSnapshot =
+            scenario.economicProfile;
+
+          const profileKey =
+            profileSnapshot
+              ? profileSnapshot
+                    .profileId ||
+                profileSnapshot.code ||
+                `name:${profileSnapshot.name}`
+              : "UNTRACKED";
+
+          const profileName =
+            profileSnapshot
+              ?.name ?? "";
+
+          const matchesSearch =
+            !normalizedSearch ||
+            scenario.name
+              .toLocaleLowerCase(
+                "it-IT",
+              )
+              .includes(
+                normalizedSearch,
+              ) ||
+            profileName
+              .toLocaleLowerCase(
+                "it-IT",
+              )
+              .includes(
+                normalizedSearch,
+              );
+
+          const matchesProfile =
+            economicProfileFilter ===
+              "ALL" ||
+            economicProfileFilter ===
+              profileKey;
+
+          const matchesStatus =
+            sustainabilityFilter ===
+              "ALL" ||
+            sustainabilityFilter ===
+              scenario
+                .sustainabilityStatus ||
+            (sustainabilityFilter ===
+              "NOT_SUSTAINABLE" &&
+              scenario
+                .sustainabilityStatus !==
+                "SUSTAINABLE" &&
+              scenario
+                .sustainabilityStatus !==
+                "AT_RISK");
+
+          return (
+            matchesSearch &&
+            matchesProfile &&
+            matchesStatus
+          );
+        },
+      );
+    }, [
+      scenarios,
+      scenarioSearch,
+      economicProfileFilter,
+      sustainabilityFilter,
+    ]);
 
   async function saveCurrentScenario() {
     if (!currentResult) {
@@ -648,6 +787,144 @@ export default function PlanningScenarioArchive({
         </Alert>
       )}
 
+      {!loading &&
+        scenarios.length > 0 && (
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 2,
+              mb: 2,
+              borderRadius: 2,
+            }}
+          >
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  md:
+                    "minmax(220px, 1.4fr) minmax(190px, 1fr) minmax(180px, 1fr) auto",
+                },
+                gap: 1.5,
+                alignItems: "center",
+              }}
+            >
+              <TextField
+                size="small"
+                label="Cerca scenario"
+                placeholder="Nome o profilo economico"
+                value={scenarioSearch}
+                onChange={(event) =>
+                  setScenarioSearch(
+                    event.target.value,
+                  )
+                }
+              />
+
+              <TextField
+                select
+                size="small"
+                label="Profilo economico"
+                value={
+                  economicProfileFilter
+                }
+                onChange={(event) =>
+                  setEconomicProfileFilter(
+                    event.target.value,
+                  )
+                }
+              >
+                <MenuItem value="ALL">
+                  Tutti i profili
+                </MenuItem>
+
+                <MenuItem value="UNTRACKED">
+                  Non tracciato
+                </MenuItem>
+
+                {economicProfileOptions.map(
+                  (profile) => (
+                    <MenuItem
+                      key={
+                        profile.value
+                      }
+                      value={
+                        profile.value
+                      }
+                    >
+                      {profile.label}
+                    </MenuItem>
+                  ),
+                )}
+              </TextField>
+
+              <TextField
+                select
+                size="small"
+                label="Stato patrimoniale"
+                value={
+                  sustainabilityFilter
+                }
+                onChange={(event) =>
+                  setSustainabilityFilter(
+                    event.target.value,
+                  )
+                }
+              >
+                <MenuItem value="ALL">
+                  Tutti gli stati
+                </MenuItem>
+
+                <MenuItem value="SUSTAINABLE">
+                  Sostenibile
+                </MenuItem>
+
+                <MenuItem value="AT_RISK">
+                  A rischio
+                </MenuItem>
+
+                <MenuItem value="NOT_SUSTAINABLE">
+                  Non sostenibile
+                </MenuItem>
+              </TextField>
+
+              <Button
+                variant="outlined"
+                disabled={
+                  !scenarioSearch &&
+                  economicProfileFilter ===
+                    "ALL" &&
+                  sustainabilityFilter ===
+                    "ALL"
+                }
+                onClick={() => {
+                  setScenarioSearch("");
+                  setEconomicProfileFilter(
+                    "ALL",
+                  );
+                  setSustainabilityFilter(
+                    "ALL",
+                  );
+                }}
+              >
+                Azzera filtri
+              </Button>
+            </Box>
+
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{
+                display: "block",
+                mt: 1.2,
+              }}
+            >
+              {filteredScenarios.length} di{" "}
+              {scenarios.length} scenari
+            </Typography>
+          </Paper>
+        )}
+
       {loading ? (
         <Box
           sx={{
@@ -662,6 +939,12 @@ export default function PlanningScenarioArchive({
         <Alert severity="info">
           Nessuno scenario salvato.
         </Alert>
+      ) : filteredScenarios.length ===
+        0 ? (
+        <Alert severity="info">
+          Nessuno scenario corrisponde
+          ai filtri selezionati.
+        </Alert>
       ) : (
         <Box
           sx={{
@@ -669,7 +952,7 @@ export default function PlanningScenarioArchive({
             gap: 1.2,
           }}
         >
-          {scenarios.map(
+          {filteredScenarios.map(
             (scenario) => {
               const busy =
                 activeId ===
