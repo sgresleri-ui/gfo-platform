@@ -103,7 +103,35 @@ type EconomicProfileDrift = {
     | "info";
 
   detail: string;
+  changes: string[];
 };
+
+function formatEconomicDriftValue(
+  value: number,
+  format:
+    | "percentage"
+    | "currency",
+): string {
+  if (format === "currency") {
+    return value.toLocaleString(
+      "it-IT",
+      {
+        style: "currency",
+        currency: "EUR",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      },
+    );
+  }
+
+  return `${value.toLocaleString(
+    "it-IT",
+    {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 4,
+    },
+  )}%`;
+}
 
 function getEconomicProfileDrift(
   snapshot:
@@ -117,6 +145,7 @@ function getEconomicProfileDrift(
       color: "default",
       detail:
         "Lo scenario non contiene uno snapshot economico.",
+      changes: [],
     };
   }
 
@@ -129,6 +158,7 @@ function getEconomicProfileDrift(
       color: "info",
       detail:
         "Snapshot indipendente da un profilo salvato.",
+      changes: [],
     };
   }
 
@@ -148,6 +178,7 @@ function getEconomicProfileDrift(
       color: "error",
       detail:
         "Il profilo originario non è più presente.",
+      changes: [],
     };
   }
 
@@ -157,40 +188,107 @@ function getEconomicProfileDrift(
       color: "warning",
       detail:
         "Il profilo originario è stato archiviato.",
+      changes: [],
     };
   }
 
-  const numericValuesChanged =
-    [
-      "liquidityReturnDeltaPct",
-      "investmentsReturnDeltaPct",
-      "realEstateReturnDeltaPct",
-      "otherAssetsReturnDeltaPct",
-      "liquidityTaxRatePct",
-      "investmentsTaxRatePct",
-      "rebalancingCostRatePct",
-      "rebalancingMinimumCost",
-    ].some((field) => {
-      const key =
-        field as keyof Pick<
-          EconomicAssumptionProfile,
-          | "liquidityReturnDeltaPct"
-          | "investmentsReturnDeltaPct"
-          | "realEstateReturnDeltaPct"
-          | "otherAssetsReturnDeltaPct"
-          | "liquidityTaxRatePct"
-          | "investmentsTaxRatePct"
-          | "rebalancingCostRatePct"
-          | "rebalancingMinimumCost"
-        >;
+  const changes: string[] = [];
 
-      return (
+  const numericFields = [
+    {
+      key:
+        "liquidityReturnDeltaPct",
+      label:
+        "Rendimento liquidità",
+      format:
+        "percentage",
+    },
+    {
+      key:
+        "investmentsReturnDeltaPct",
+      label:
+        "Rendimento investimenti",
+      format:
+        "percentage",
+    },
+    {
+      key:
+        "realEstateReturnDeltaPct",
+      label:
+        "Rendimento immobili",
+      format:
+        "percentage",
+    },
+    {
+      key:
+        "otherAssetsReturnDeltaPct",
+      label:
+        "Rendimento altri attivi",
+      format:
+        "percentage",
+    },
+    {
+      key:
+        "liquidityTaxRatePct",
+      label:
+        "Imposta liquidità",
+      format:
+        "percentage",
+    },
+    {
+      key:
+        "investmentsTaxRatePct",
+      label:
+        "Imposta investimenti",
+      format:
+        "percentage",
+    },
+    {
+      key:
+        "rebalancingCostRatePct",
+      label:
+        "Costo ribilanciamento",
+      format:
+        "percentage",
+    },
+    {
+      key:
+        "rebalancingMinimumCost",
+      label:
+        "Costo minimo operazione",
+      format:
+        "currency",
+    },
+  ] as const;
+
+  numericFields.forEach(
+    (field) => {
+      const previousValue =
+        snapshot[field.key];
+
+      const currentValue =
+        currentProfile[field.key];
+
+      if (
         Math.abs(
-          currentProfile[key] -
-            snapshot[key],
-        ) > 0.000001
+          currentValue -
+            previousValue,
+        ) <= 0.000001
+      ) {
+        return;
+      }
+
+      changes.push(
+        `${field.label}: ${formatEconomicDriftValue(
+          previousValue,
+          field.format,
+        )} → ${formatEconomicDriftValue(
+          currentValue,
+          field.format,
+        )}`,
       );
-    });
+    },
+  );
 
   const fiscalResidenceChanged =
     Boolean(
@@ -198,6 +296,19 @@ function getEconomicProfileDrift(
       currentProfile.fiscalResidence !==
         snapshot.fiscalResidence,
     );
+
+  if (fiscalResidenceChanged) {
+    changes.push(
+      `Residenza fiscale: ${
+        snapshot.fiscalResidence
+      } → ${
+        currentProfile.fiscalResidence
+      }`,
+    );
+  }
+
+  const numericValuesChanged =
+    changes.length > 0;
 
   if (
     numericValuesChanged ||
@@ -208,6 +319,7 @@ function getEconomicProfileDrift(
       color: "warning",
       detail:
         "Le ipotesi attuali differiscono dallo snapshot storico.",
+      changes,
     };
   }
 
@@ -216,6 +328,7 @@ function getEconomicProfileDrift(
     color: "success",
     detail:
       "Le ipotesi attuali coincidono con lo snapshot storico.",
+    changes: [],
   };
 }
 
@@ -684,6 +797,36 @@ export default function PlanningScenarioArchive({
                     >
                       {profileDrift.detail}
                     </Typography>
+
+                    {profileDrift
+                      .changes.length >
+                    0 ? (
+                      <Box
+                        sx={{
+                          mt: 0.6,
+                          display: "grid",
+                          gap: 0.25,
+                        }}
+                      >
+                        {profileDrift
+                          .changes.map(
+                            (change) => (
+                              <Typography
+                                key={change}
+                                variant="caption"
+                                sx={{
+                                  display:
+                                    "block",
+                                  fontWeight:
+                                    700,
+                                }}
+                              >
+                                • {change}
+                              </Typography>
+                            ),
+                          )}
+                      </Box>
+                    ) : null}
                   </Box>
 
                   <Box>
