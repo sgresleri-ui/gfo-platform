@@ -171,6 +171,14 @@ export class PlanningScenariosController {
       .rerunScenario(id);
   }
 
+  @Post(':id/duplicate')
+  duplicateScenario(
+    @Param('id') id: string,
+  ) {
+    return this.storageService
+      .duplicateScenario(id);
+  }
+
   @Post(':id/archive')
   archiveScenario(
     @Param('id') id: string,

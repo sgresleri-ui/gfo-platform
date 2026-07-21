@@ -23,6 +23,7 @@ import {
 } from "@mui/material";
 
 import ArchiveRoundedIcon from "@mui/icons-material/ArchiveRounded";
+import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import FolderOpenRoundedIcon from "@mui/icons-material/FolderOpenRounded";
 import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
@@ -35,6 +36,7 @@ import PlanningScenarioComparison from "./PlanningScenarioComparison";
 import {
   archiveStoredPlanningScenario,
   createStoredPlanningScenario,
+  duplicateStoredPlanningScenario,
   getEconomicAssumptionProfiles,
   getStoredPlanningScenario,
   getStoredPlanningScenarios,
@@ -887,6 +889,37 @@ export default function PlanningScenarioArchive({
     }
   }
 
+  async function duplicateScenario(
+    id: string,
+  ) {
+    setActiveId(id);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response =
+        await duplicateStoredPlanningScenario(
+          id,
+        );
+
+      setSuccess(
+        `Scenario “${response.scenario.name}” duplicato tra gli scenari attivi.`,
+      );
+
+      await loadScenarios();
+    } catch (requestError) {
+      console.error(requestError);
+
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Impossibile duplicare lo scenario.",
+      );
+    } finally {
+      setActiveId(null);
+    }
+  }
+
   function openScenarioEditor(
     scenario:
       StoredPlanningScenarioSummary,
@@ -1674,6 +1707,29 @@ export default function PlanningScenarioArchive({
                       }
                     >
                       Modifica
+                    </Button>
+
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={
+                        busy ? (
+                          <CircularProgress
+                            size={15}
+                            color="inherit"
+                          />
+                        ) : (
+                          <ContentCopyRoundedIcon />
+                        )
+                      }
+                      disabled={busy}
+                      onClick={() =>
+                        void duplicateScenario(
+                          scenario.id,
+                        )
+                      }
+                    >
+                      Duplica
                     </Button>
 
                     {scenario.status ===

@@ -2730,6 +2730,12 @@ export type UpdateStoredPlanningScenarioResponse = {
     StoredPlanningScenarioDetail;
 };
 
+export type DuplicateStoredPlanningScenarioResponse = {
+  duplicated: boolean;
+  scenario:
+    StoredPlanningScenarioDetail;
+};
+
 export async function getStoredPlanningScenarios(
   includeArchived = false,
 ): Promise<StoredPlanningScenariosResponse> {
@@ -2796,6 +2802,22 @@ export async function updateStoredPlanningScenario(
   return readJson<UpdateStoredPlanningScenarioResponse>(
     response,
     "Unable to update planning scenario",
+  );
+}
+
+export async function duplicateStoredPlanningScenario(
+  id: string,
+): Promise<DuplicateStoredPlanningScenarioResponse> {
+  const response = await fetch(
+    `${API_URL}/planning/scenarios/${id}/duplicate`,
+    {
+      method: "POST",
+    },
+  );
+
+  return readJson<DuplicateStoredPlanningScenarioResponse>(
+    response,
+    "Unable to duplicate planning scenario",
   );
 }
 

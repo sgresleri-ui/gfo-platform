@@ -517,6 +517,160 @@ export class PlanningScenarioStorageService {
     };
   }
 
+  async duplicateScenario(
+    id: string,
+  ) {
+    const current =
+      await this.findScenario(id);
+
+    const assumptions =
+      this.parseJson<
+        SimulatePlanningScenarioInput
+      >(
+        current.assumptionsJson,
+      );
+
+    if (!assumptions) {
+      throw new BadRequestException(
+        'Le ipotesi dello scenario non sono leggibili.',
+      );
+    }
+
+    const copyName =
+      `Copia di ${current.name}`
+        .slice(0, 160);
+
+    const duplicatedAssumptions:
+      SimulatePlanningScenarioInput = {
+        ...assumptions,
+        name: copyName,
+      };
+
+    const storedResult =
+      this.parseJson<{
+        scenario?: {
+          name?: string;
+          assumptions?:
+            SimulatePlanningScenarioInput;
+          [key: string]: unknown;
+        };
+        [key: string]: unknown;
+      }>(
+        current.lastResultJson,
+      );
+
+    const duplicatedResult =
+      storedResult?.scenario
+        ? {
+            ...storedResult,
+
+            scenario: {
+              ...storedResult.scenario,
+              name: copyName,
+              assumptions:
+                duplicatedAssumptions,
+            },
+          }
+        : storedResult;
+
+    const scenario =
+      await this.prisma
+        .planningScenario.create({
+          data: {
+            householdId:
+              current.householdId,
+
+            name:
+              copyName,
+
+            description:
+              current.description,
+
+            status:
+              'ACTIVE',
+
+            assumptionsJson:
+              JSON.stringify(
+                duplicatedAssumptions,
+              ),
+
+            economicProfileId:
+              current.economicProfileId,
+
+            economicProfileCode:
+              current.economicProfileCode,
+
+            economicProfileName:
+              current.economicProfileName,
+
+            economicProfileSnapshotJson:
+              current
+                .economicProfileSnapshotJson,
+
+            lastResultJson:
+              duplicatedResult
+                ? JSON.stringify(
+                    duplicatedResult,
+                  )
+                : current
+                    .lastResultJson,
+
+            baselineWorkbook:
+              current.baselineWorkbook,
+
+            baselineAsOfDate:
+              current.baselineAsOfDate,
+
+            baselineStartYear:
+              current.baselineStartYear,
+
+            baselineEndYear:
+              current.baselineEndYear,
+
+            sustainabilityStatus:
+              current
+                .sustainabilityStatus,
+
+            initialCapital:
+              current.initialCapital,
+
+            finalCapital:
+              current.finalCapital,
+
+            minimumCapital:
+              current.minimumCapital,
+
+            minimumCapitalYear:
+              current
+                .minimumCapitalYear,
+
+            firstNegativeCapitalYear:
+              current
+                .firstNegativeCapitalYear,
+
+            finalCapitalDelta:
+              current.finalCapitalDelta,
+
+            finalCapitalDeltaPct:
+              current
+                .finalCapitalDeltaPct,
+
+            lastSimulatedAt:
+              current.lastSimulatedAt,
+          },
+        });
+
+    return {
+      duplicated: true,
+
+      scenario:
+        this.serializeScenario(
+          scenario,
+          true,
+        ),
+    };
+  }
+
   async rerunScenario(
     id: string,
   ) {
