@@ -19,6 +19,7 @@ import {
   buildEconomicProfileSnapshot,
   type CreateStoredPlanningScenarioInput,
   type StoredEconomicProfileSnapshot,
+  type UpdateStoredPlanningScenarioInput,
 } from './planning-scenario-economic-profile';
 
 @Injectable()
@@ -382,6 +383,138 @@ export class PlanningScenarioStorageService {
       scenario,
       true,
     );
+  }
+
+  async updateScenario(
+    id: string,
+
+    input:
+      UpdateStoredPlanningScenarioInput,
+  ) {
+    const current =
+      await this.findScenario(id);
+
+    const assumptions =
+      this.parseJson<
+        SimulatePlanningScenarioInput
+      >(
+        current.assumptionsJson,
+      );
+
+    if (!assumptions) {
+      throw new BadRequestException(
+        'Le ipotesi dello scenario non sono leggibili.',
+      );
+    }
+
+    const name =
+      input.name === undefined
+        ? current.name
+        : String(
+            input.name ?? '',
+          ).trim();
+
+    if (!name) {
+      throw new BadRequestException(
+        'Il nome dello scenario è obbligatorio.',
+      );
+    }
+
+    if (name.length > 160) {
+      throw new BadRequestException(
+        'Il nome dello scenario non può superare 160 caratteri.',
+      );
+    }
+
+    const description =
+      input.description === undefined
+        ? current.description
+        : String(
+            input.description ?? '',
+          ).trim() || null;
+
+    if (
+      description &&
+      description.length > 2000
+    ) {
+      throw new BadRequestException(
+        'La descrizione non può superare 2000 caratteri.',
+      );
+    }
+
+    const updatedAssumptions:
+      SimulatePlanningScenarioInput = {
+        ...assumptions,
+        name,
+        description:
+          description ?? '',
+      };
+
+    const storedResult =
+      this.parseJson<{
+        scenario?: {
+          name?: string;
+          description?: string;
+          assumptions?:
+            SimulatePlanningScenarioInput;
+          [key: string]: unknown;
+        };
+        [key: string]: unknown;
+      }>(
+        current.lastResultJson,
+      );
+
+    const updatedResult =
+      storedResult?.scenario
+        ? {
+            ...storedResult,
+
+            scenario: {
+              ...storedResult.scenario,
+              name,
+              description:
+                description ?? '',
+              assumptions:
+                updatedAssumptions,
+            },
+          }
+        : storedResult;
+
+    const scenario =
+      await this.prisma
+        .planningScenario.update({
+          where: {
+            id,
+          },
+
+          data: {
+            name,
+            description,
+
+            assumptionsJson:
+              JSON.stringify(
+                updatedAssumptions,
+              ),
+
+            lastResultJson:
+              updatedResult
+                ? JSON.stringify(
+                    updatedResult,
+                  )
+                : current
+                    .lastResultJson,
+          },
+        });
+
+    return {
+      updated: true,
+
+      scenario:
+        this.serializeScenario(
+          scenario,
+          true,
+        ),
+    };
   }
 
   async rerunScenario(

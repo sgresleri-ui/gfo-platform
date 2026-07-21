@@ -2719,6 +2719,17 @@ export type RestoreStoredPlanningScenarioResponse = {
     StoredPlanningScenarioSummary;
 };
 
+export type UpdateStoredPlanningScenarioInput = {
+  name: string;
+  description?: string | null;
+};
+
+export type UpdateStoredPlanningScenarioResponse = {
+  updated: boolean;
+  scenario:
+    StoredPlanningScenarioDetail;
+};
+
 export async function getStoredPlanningScenarios(
   includeArchived = false,
 ): Promise<StoredPlanningScenariosResponse> {
@@ -2762,6 +2773,29 @@ export async function getStoredPlanningScenario(
   return readJson<StoredPlanningScenarioDetail>(
     response,
     "Unable to load planning scenario",
+  );
+}
+
+export async function updateStoredPlanningScenario(
+  id: string,
+  input:
+    UpdateStoredPlanningScenarioInput,
+): Promise<UpdateStoredPlanningScenarioResponse> {
+  const response = await fetch(
+    `${API_URL}/planning/scenarios/${id}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+
+  return readJson<UpdateStoredPlanningScenarioResponse>(
+    response,
+    "Unable to update planning scenario",
   );
 }
 

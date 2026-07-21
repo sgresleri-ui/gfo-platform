@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import { PlanningScenarioStorageService } from './planning-scenario-storage.serv
 
 import type {
   CreateStoredPlanningScenarioInput,
+  UpdateStoredPlanningScenarioInput,
 } from './planning-scenario-economic-profile';
 
 import { PlanningScenarioAssessmentService } from './planning-scenario-assessment.service';
@@ -147,6 +149,18 @@ export class PlanningScenariosController {
   ) {
     return this.storageService
       .getScenario(id);
+  }
+
+  @Patch(':id')
+  updateScenario(
+    @Param('id') id: string,
+
+    @Body()
+    input:
+      UpdateStoredPlanningScenarioInput,
+  ) {
+    return this.storageService
+      .updateScenario(id, input);
   }
 
   @Post(':id/simulate')

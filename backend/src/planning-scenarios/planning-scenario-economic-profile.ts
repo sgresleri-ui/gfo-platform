@@ -57,6 +57,11 @@ export type CreateStoredPlanningScenarioInput =
       | null;
   };
 
+export type UpdateStoredPlanningScenarioInput = {
+  name?: string;
+  description?: string | null;
+};
+
 function optionalText(
   value: unknown,
 ): string | null {

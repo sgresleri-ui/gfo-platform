@@ -10,6 +10,10 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   MenuItem,
   Paper,
   TextField,
@@ -19,6 +23,7 @@ import {
 } from "@mui/material";
 
 import ArchiveRoundedIcon from "@mui/icons-material/ArchiveRounded";
+import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import FolderOpenRoundedIcon from "@mui/icons-material/FolderOpenRounded";
 import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
@@ -35,6 +40,7 @@ import {
   getStoredPlanningScenarios,
   rerunStoredPlanningScenario,
   restoreStoredPlanningScenario,
+  updateStoredPlanningScenario,
   type EconomicAssumptionProfile,
   type PlanningScenarioResponse,
   type SimulatePlanningScenarioInput,
@@ -376,6 +382,33 @@ export default function PlanningScenarioArchive({
 
   const [success, setSuccess] =
     useState("");
+
+  const [
+    scenarioEditorOpen,
+    setScenarioEditorOpen,
+  ] = useState(false);
+
+  const [
+    editingScenarioId,
+    setEditingScenarioId,
+  ] = useState<string | null>(
+    null,
+  );
+
+  const [
+    editingScenarioName,
+    setEditingScenarioName,
+  ] = useState("");
+
+  const [
+    editingScenarioDescription,
+    setEditingScenarioDescription,
+  ] = useState("");
+
+  const [
+    savingScenarioEdit,
+    setSavingScenarioEdit,
+  ] = useState(false);
 
   const [
     scenarioArchiveView,
@@ -851,6 +884,80 @@ export default function PlanningScenarioArchive({
       );
     } finally {
       setActiveId(null);
+    }
+  }
+
+  function openScenarioEditor(
+    scenario:
+      StoredPlanningScenarioSummary,
+  ) {
+    setEditingScenarioId(
+      scenario.id,
+    );
+
+    setEditingScenarioName(
+      scenario.name,
+    );
+
+    setEditingScenarioDescription(
+      scenario.description ?? "",
+    );
+
+    setScenarioEditorOpen(true);
+    setError("");
+    setSuccess("");
+  }
+
+  async function saveScenarioEdit() {
+    if (!editingScenarioId) {
+      return;
+    }
+
+    const normalizedName =
+      editingScenarioName.trim();
+
+    if (!normalizedName) {
+      setError(
+        "Il nome dello scenario è obbligatorio.",
+      );
+
+      return;
+    }
+
+    setSavingScenarioEdit(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response =
+        await updateStoredPlanningScenario(
+          editingScenarioId,
+          {
+            name: normalizedName,
+
+            description:
+              editingScenarioDescription
+                .trim() || null,
+          },
+        );
+
+      setScenarioEditorOpen(false);
+
+      setSuccess(
+        `Scenario “${response.scenario.name}” aggiornato.`,
+      );
+
+      await loadScenarios();
+    } catch (requestError) {
+      console.error(requestError);
+
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Impossibile modificare lo scenario.",
+      );
+    } finally {
+      setSavingScenarioEdit(false);
     }
   }
 
@@ -1353,6 +1460,20 @@ export default function PlanningScenarioArchive({
                       {scenario.name}
                     </Typography>
 
+                    {scenario.description ? (
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          mt: 0.4,
+                          whiteSpace:
+                            "pre-line",
+                        }}
+                      >
+                        {scenario.description}
+                      </Typography>
+                    ) : null}
+
                     <Typography
                       variant="body2"
                       color="text.secondary"
@@ -1539,6 +1660,22 @@ export default function PlanningScenarioArchive({
                       Apri
                     </Button>
 
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={
+                        <EditRoundedIcon />
+                      }
+                      disabled={busy}
+                      onClick={() =>
+                        openScenarioEditor(
+                          scenario,
+                        )
+                      }
+                    >
+                      Modifica
+                    </Button>
+
                     {scenario.status ===
                     "ARCHIVED" ? (
                       <Button
@@ -1620,6 +1757,112 @@ export default function PlanningScenarioArchive({
             scenarios={activeScenarios}
           />
         )}
+
+      <Dialog
+        open={scenarioEditorOpen}
+        fullWidth
+        maxWidth="sm"
+        onClose={() => {
+          if (
+            !savingScenarioEdit
+          ) {
+            setScenarioEditorOpen(
+              false,
+            );
+          }
+        }}
+      >
+        <DialogTitle>
+          Modifica scenario salvato
+        </DialogTitle>
+
+        <DialogContent
+          dividers
+          sx={{
+            pt: 2.5,
+            display: "grid",
+            gap: 2,
+          }}
+        >
+          <TextField
+            autoFocus
+            required
+            fullWidth
+            label="Nome scenario"
+            value={editingScenarioName}
+            slotProps={{
+              htmlInput: {
+                maxLength: 160,
+              },
+            }}
+            helperText={`${editingScenarioName.length}/160 caratteri`}
+            onChange={(event) =>
+              setEditingScenarioName(
+                event.target.value,
+              )
+            }
+          />
+
+          <TextField
+            fullWidth
+            multiline
+            minRows={4}
+            label="Descrizione"
+            value={
+              editingScenarioDescription
+            }
+            slotProps={{
+              htmlInput: {
+                maxLength: 2000,
+              },
+            }}
+            helperText={`${editingScenarioDescription.length}/2000 caratteri`}
+            onChange={(event) =>
+              setEditingScenarioDescription(
+                event.target.value,
+              )
+            }
+          />
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            disabled={
+              savingScenarioEdit
+            }
+            onClick={() =>
+              setScenarioEditorOpen(
+                false,
+              )
+            }
+          >
+            Annulla
+          </Button>
+
+          <Button
+            variant="contained"
+            disabled={
+              savingScenarioEdit ||
+              !editingScenarioName.trim()
+            }
+            startIcon={
+              savingScenarioEdit ? (
+                <CircularProgress
+                  size={16}
+                  color="inherit"
+                />
+              ) : (
+                <EditRoundedIcon />
+              )
+            }
+            onClick={() =>
+              void saveScenarioEdit()
+            }
+          >
+            Salva modifiche
+          </Button>
+        </DialogActions>
+      </Dialog>
 
     </Paper>
   );
