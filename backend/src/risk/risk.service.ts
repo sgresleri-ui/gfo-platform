@@ -17,6 +17,31 @@ type ExposureAccumulator = {
 export class RiskService
   implements OnModuleDestroy
 {
+  private normalizeCountry(
+    value: string | null | undefined,
+  ): string {
+    const country = value?.trim() ?? '';
+
+    const aliases: Record<string, string> = {
+      italy: 'Italia',
+      italia: 'Italia',
+      spain: 'Spagna',
+      spagna: 'Spagna',
+      uae: 'Emirati Arabi Uniti',
+      'united arab emirates': 'Emirati Arabi Uniti',
+      'emirati arabi uniti': 'Emirati Arabi Uniti',
+      ireland: 'Irlanda',
+      irlanda: 'Irlanda',
+      lithuania: 'Lituania',
+      lituania: 'Lituania',
+    };
+
+    return (
+      aliases[country.toLowerCase()] ??
+      (country || 'Non specificato')
+    );
+  }
+
   private readonly prisma =
     new PrismaClient();
 
@@ -195,8 +220,9 @@ export class RiskService
         }
 
         const country =
-          position.country?.trim() ||
-          'Non specificato';
+          this.normalizeCountry(
+            position.country,
+          );
 
         const countryExposure =
           countryMap.get(country) ?? {
