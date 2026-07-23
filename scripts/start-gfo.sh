@@ -9,6 +9,15 @@ mkdir -p "$LOG_DIR"
 
 "$PROJECT/scripts/stop-gfo.sh" --silent
 
+if ! "$PROJECT/scripts/backup-gfo-db.sh"; then
+  open "$LOG_DIR"
+
+  osascript -e \
+    'display alert "GFO Platform" message "Backup automatico del database non riuscito. Avvio interrotto per sicurezza." as warning'
+
+  exit 1
+fi
+
 # NestJS ricostruirà dist da zero, senza watcher concorrenti.
 rm -rf "$PROJECT/backend/dist"
 
