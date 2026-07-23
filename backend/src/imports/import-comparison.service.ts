@@ -314,10 +314,10 @@ export class ImportComparisonService {
       sheet,
       headerRow,
       [
-        'descrizione',
-        'strumento',
-        'nome',
         'titolo',
+        'descrizione',
+        'nome',
+        'strumento',
       ],
     );
 
@@ -728,6 +728,19 @@ export class ImportComparisonService {
     const differences: FieldDifference[] =
       [];
 
+    if (
+      databasePosition.name !==
+      workbookPosition.name
+    ) {
+      differences.push({
+        field: 'name',
+        databaseValue:
+          databasePosition.name,
+        workbookValue:
+          workbookPosition.name,
+      });
+    }
+
     const databaseValue = this.round(
       Number(
         databasePosition.valueBase,
@@ -976,7 +989,7 @@ export class ImportComparisonService {
 
       items.push({
         code: workbookPosition.code,
-        name: databasePosition.name,
+        name: workbookPosition.name,
         category:
           databasePosition.category,
 
