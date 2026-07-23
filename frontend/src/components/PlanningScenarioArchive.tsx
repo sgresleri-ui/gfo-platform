@@ -26,6 +26,7 @@ import ArchiveRoundedIcon from "@mui/icons-material/ArchiveRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import FolderOpenRoundedIcon from "@mui/icons-material/FolderOpenRounded";
+import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
@@ -39,11 +40,13 @@ import {
   duplicateStoredPlanningScenario,
   getEconomicAssumptionProfiles,
   getStoredPlanningScenario,
+  getStoredPlanningScenarioActivities,
   getStoredPlanningScenarios,
   rerunStoredPlanningScenario,
   restoreStoredPlanningScenario,
   updateStoredPlanningScenario,
   type EconomicAssumptionProfile,
+  type PlanningScenarioActivity,
   type PlanningScenarioResponse,
   type SimulatePlanningScenarioInput,
   type StoredEconomicProfileSnapshot,
@@ -108,6 +111,141 @@ function formatDateTime(
       minute: "2-digit",
     },
   );
+}
+
+type ActivityChipColor =
+  | "default"
+  | "primary"
+  | "secondary"
+  | "success"
+  | "warning"
+  | "info";
+
+function getActivityLabel(
+  action: string,
+): string {
+  switch (action) {
+    case "CREATED":
+      return "Creazione";
+
+    case "UPDATED":
+      return "Modifica";
+
+    case "DUPLICATED":
+      return "Duplicazione";
+
+    case "RECALCULATED":
+      return "Ricalcolo";
+
+    case "ARCHIVED":
+      return "Archiviazione";
+
+    case "RESTORED":
+      return "Ripristino";
+
+    default:
+      return action;
+  }
+}
+
+function getActivityColor(
+  action: string,
+): ActivityChipColor {
+  switch (action) {
+    case "CREATED":
+    case "RESTORED":
+      return "success";
+
+    case "UPDATED":
+      return "info";
+
+    case "DUPLICATED":
+      return "secondary";
+
+    case "RECALCULATED":
+      return "primary";
+
+    case "ARCHIVED":
+      return "warning";
+
+    default:
+      return "default";
+  }
+}
+
+function getActivityDetailLabel(
+  key: string,
+): string {
+  const labels:
+    Record<string, string> = {
+      status: "Stato",
+      previousStatus:
+        "Stato precedente",
+      currentStatus:
+        "Stato attuale",
+      previousName:
+        "Nome precedente",
+      currentName:
+        "Nome attuale",
+      descriptionChanged:
+        "Descrizione modificata",
+      sourceScenarioName:
+        "Scenario origine",
+      sourceScenarioStatus:
+        "Stato origine",
+      economicProfileName:
+        "Profilo economico",
+      baselineAsOfDate:
+        "Data baseline",
+      previousBaselineAsOfDate:
+        "Baseline precedente",
+      currentBaselineAsOfDate:
+        "Baseline attuale",
+      previousSustainabilityStatus:
+        "Stato patrimoniale precedente",
+      currentSustainabilityStatus:
+        "Stato patrimoniale attuale",
+      previousFinalCapital:
+        "Capitale finale precedente",
+      currentFinalCapital:
+        "Capitale finale attuale",
+    };
+
+  return labels[key] ?? key;
+}
+
+function formatActivityDetail(
+  key: string,
+  value: unknown,
+): string {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return "—";
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "Sì" : "No";
+  }
+
+  if (
+    typeof value === "number" &&
+    key
+      .toLocaleLowerCase("it-IT")
+      .includes("capital")
+  ) {
+    return formatCurrency(value);
+  }
+
+  if (
+    typeof value === "object"
+  ) {
+    return JSON.stringify(value);
+  }
+
+  return String(value);
 }
 
 type EconomicProfileDrift = {
@@ -384,6 +522,33 @@ export default function PlanningScenarioArchive({
 
   const [success, setSuccess] =
     useState("");
+
+  const [
+    scenarioActivityOpen,
+    setScenarioActivityOpen,
+  ] = useState(false);
+
+  const [
+    scenarioActivityName,
+    setScenarioActivityName,
+  ] = useState("");
+
+  const [
+    scenarioActivities,
+    setScenarioActivities,
+  ] = useState<
+    PlanningScenarioActivity[]
+  >([]);
+
+  const [
+    loadingScenarioActivities,
+    setLoadingScenarioActivities,
+  ] = useState(false);
+
+  const [
+    scenarioActivityError,
+    setScenarioActivityError,
+  ] = useState("");
 
   const [
     scenarioEditorOpen,
@@ -886,6 +1051,49 @@ export default function PlanningScenarioArchive({
       );
     } finally {
       setActiveId(null);
+    }
+  }
+
+  async function openScenarioActivities(
+    scenario:
+      StoredPlanningScenarioSummary,
+  ) {
+    setScenarioActivityOpen(true);
+
+    setScenarioActivityName(
+      scenario.name,
+    );
+
+    setScenarioActivities([]);
+    setScenarioActivityError("");
+
+    setLoadingScenarioActivities(
+      true,
+    );
+
+    try {
+      const response =
+        await getStoredPlanningScenarioActivities(
+          scenario.id,
+        );
+
+      setScenarioActivityName(
+        response.scenario.name,
+      );
+
+      setScenarioActivities(
+        response.activities,
+      );
+    } catch (requestError) {
+      console.error(requestError);
+
+      setScenarioActivityError(
+        "Impossibile caricare il registro delle attività.",
+      );
+    } finally {
+      setLoadingScenarioActivities(
+        false,
+      );
     }
   }
 
@@ -1713,6 +1921,22 @@ export default function PlanningScenarioArchive({
                       size="small"
                       variant="outlined"
                       startIcon={
+                        <HistoryRoundedIcon />
+                      }
+                      disabled={busy}
+                      onClick={() =>
+                        void openScenarioActivities(
+                          scenario,
+                        )
+                      }
+                    >
+                      Attività
+                    </Button>
+
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={
                         busy ? (
                           <CircularProgress
                             size={15}
@@ -1916,6 +2140,192 @@ export default function PlanningScenarioArchive({
             }
           >
             Salva modifiche
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={scenarioActivityOpen}
+        fullWidth
+        maxWidth="md"
+        onClose={() =>
+          setScenarioActivityOpen(
+            false,
+          )
+        }
+      >
+        <DialogTitle>
+          Registro attività
+          {scenarioActivityName
+            ? ` · ${scenarioActivityName}`
+            : ""}
+        </DialogTitle>
+
+        <DialogContent
+          dividers
+          sx={{
+            minHeight: 220,
+          }}
+        >
+          {loadingScenarioActivities ? (
+            <Box
+              sx={{
+                minHeight: 180,
+                display: "grid",
+                placeItems: "center",
+              }}
+            >
+              <CircularProgress
+                size={28}
+              />
+            </Box>
+          ) : scenarioActivityError ? (
+            <Alert severity="error">
+              {scenarioActivityError}
+            </Alert>
+          ) : scenarioActivities.length ===
+            0 ? (
+            <Alert severity="info">
+              Nessuna attività registrata
+              per questo scenario.
+            </Alert>
+          ) : (
+            <Box
+              sx={{
+                display: "grid",
+                gap: 1.2,
+              }}
+            >
+              {scenarioActivities.map(
+                (activity) => {
+                  const details =
+                    activity.details
+                      ? Object.entries(
+                          activity.details,
+                        ).filter(
+                          ([key]) =>
+                            key !==
+                              "sourceScenarioId" &&
+                            key !==
+                              "economicProfileId",
+                        )
+                      : [];
+
+                  return (
+                    <Paper
+                      key={activity.id}
+                      variant="outlined"
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          alignItems:
+                            "center",
+                          gap: 1,
+                        }}
+                      >
+                        <Chip
+                          size="small"
+                          color={
+                            getActivityColor(
+                              activity.action,
+                            )
+                          }
+                          label={
+                            getActivityLabel(
+                              activity.action,
+                            )
+                          }
+                        />
+
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                        >
+                          {formatDateTime(
+                            activity.createdAt,
+                          )}
+                        </Typography>
+                      </Box>
+
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          mt: 1,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {activity.summary}
+                      </Typography>
+
+                      {activity.scenarioName ? (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{
+                            display:
+                              "block",
+                            mt: 0.4,
+                          }}
+                        >
+                          Nome registrato:{" "}
+                          {
+                            activity.scenarioName
+                          }
+                        </Typography>
+                      ) : null}
+
+                      {details.length > 0 ? (
+                        <Box
+                          sx={{
+                            mt: 1.2,
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: 0.7,
+                          }}
+                        >
+                          {details.map(
+                            ([
+                              key,
+                              value,
+                            ]) => (
+                              <Chip
+                                key={key}
+                                size="small"
+                                variant="outlined"
+                                label={`${getActivityDetailLabel(
+                                  key,
+                                )}: ${formatActivityDetail(
+                                  key,
+                                  value,
+                                )}`}
+                              />
+                            ),
+                          )}
+                        </Box>
+                      ) : null}
+                    </Paper>
+                  );
+                },
+              )}
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            onClick={() =>
+              setScenarioActivityOpen(
+                false,
+              )
+            }
+          >
+            Chiudi
           </Button>
         </DialogActions>
       </Dialog>

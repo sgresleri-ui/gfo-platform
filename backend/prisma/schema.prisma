@@ -8,18 +8,19 @@ datasource db {
 }
 
 model Household {
-  id                       Int                       @id @default(autoincrement())
-  name                     String
-  currency                 String                    @default("EUR")
-  createdAt                DateTime                  @default(now())
-  updatedAt                DateTime                  @updatedAt
-  wealthPositions          WealthPosition[]
-  wealthTransactions       WealthTransaction[]
-  netWorthSnapshots        NetWorthSnapshot[]
-  operationalTasks         OperationalTask[]
-  documents                DocumentRecord[]
-  executiveReportSnapshots ExecutiveReportSnapshot[]
-  planningScenarios        PlanningScenario[]
+  id                         Int                        @id @default(autoincrement())
+  name                       String
+  currency                   String                     @default("EUR")
+  createdAt                  DateTime                   @default(now())
+  updatedAt                  DateTime                   @updatedAt
+  wealthPositions            WealthPosition[]
+  wealthTransactions         WealthTransaction[]
+  netWorthSnapshots          NetWorthSnapshot[]
+  operationalTasks           OperationalTask[]
+  documents                  DocumentRecord[]
+  executiveReportSnapshots   ExecutiveReportSnapshot[]
+  planningScenarios          PlanningScenario[]
+  planningScenarioActivities PlanningScenarioActivity[]
 }
 
 model Institution {
@@ -437,12 +438,12 @@ model ExecutiveReportSnapshot {
 }
 
 model PlanningScenario {
-  id                       String    @id @default(cuid())
-  householdId              Int
-  name                     String
-  description              String?
-  status                   String    @default("ACTIVE")
-  assumptionsJson          String
+  id              String  @id @default(cuid())
+  householdId     Int
+  name            String
+  description     String?
+  status          String  @default("ACTIVE")
+  assumptionsJson String
 
   economicProfileId           String?
   economicProfileCode         String?
@@ -466,12 +467,31 @@ model PlanningScenario {
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
 
-  household Household @relation(fields: [householdId], references: [id])
+  household  Household                  @relation(fields: [householdId], references: [id])
+  activities PlanningScenarioActivity[]
 
   @@index([householdId, status])
   @@index([householdId, updatedAt])
   @@index([sustainabilityStatus])
   @@index([economicProfileId])
+}
+
+model PlanningScenarioActivity {
+  id           String   @id @default(cuid())
+  householdId  Int
+  scenarioId   String
+  action       String
+  scenarioName String
+  summary      String
+  detailsJson  String?
+  createdAt    DateTime @default(now())
+
+  household Household        @relation(fields: [householdId], references: [id])
+  scenario  PlanningScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  @@index([householdId, createdAt])
+  @@index([scenarioId, createdAt])
+  @@index([action])
 }
 
 model EconomicAssumptionProfile {

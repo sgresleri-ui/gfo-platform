@@ -143,6 +143,14 @@ export class PlanningScenariosController {
       .createScenario(input);
   }
 
+  @Get(':id/activities')
+  getScenarioActivities(
+    @Param('id') id: string,
+  ) {
+    return this.storageService
+      .getScenarioActivities(id);
+  }
+
   @Get(':id')
   getScenario(
     @Param('id') id: string,

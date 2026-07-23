@@ -2688,6 +2688,33 @@ export type StoredPlanningScenarioDetail =
       PlanningScenarioResponse | null;
   };
 
+export type PlanningScenarioActivity = {
+  id: string;
+  action: string;
+  scenarioName: string;
+  summary: string;
+
+  details:
+    Record<string, unknown> | null;
+
+  createdAt: string;
+};
+
+export type StoredPlanningScenarioActivitiesResponse = {
+  generatedAt: string;
+
+  scenario: {
+    id: string;
+    name: string;
+    status: string;
+  };
+
+  count: number;
+
+  activities:
+    PlanningScenarioActivity[];
+};
+
 export type StoredPlanningScenariosResponse = {
   generatedAt: string;
   count: number;
@@ -2779,6 +2806,19 @@ export async function getStoredPlanningScenario(
   return readJson<StoredPlanningScenarioDetail>(
     response,
     "Unable to load planning scenario",
+  );
+}
+
+export async function getStoredPlanningScenarioActivities(
+  id: string,
+): Promise<StoredPlanningScenarioActivitiesResponse> {
+  const response = await fetch(
+    `${API_URL}/planning/scenarios/${id}/activities`,
+  );
+
+  return readJson<StoredPlanningScenarioActivitiesResponse>(
+    response,
+    "Unable to load planning scenario activity log",
   );
 }
 

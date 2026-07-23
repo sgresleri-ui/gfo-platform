@@ -321,6 +321,46 @@ export class PlanningScenarioStorageService {
               new Date(
                 result.generatedAt,
               ),
+
+            activities: {
+              create: {
+                action:
+                  'CREATED',
+
+                scenarioName:
+                  result.scenario.name,
+
+                summary:
+                  'Scenario salvato nell’archivio permanente.',
+
+                detailsJson:
+                  JSON.stringify({
+                    status:
+                      'ACTIVE',
+
+                    economicProfileId:
+                      economicProfile
+                        ?.profileId ??
+                      null,
+
+                    economicProfileName:
+                      economicProfile
+                        ?.name ??
+                      null,
+
+                    baselineAsOfDate:
+                      result
+                        .baselineSource
+                        .asOfDate,
+                  }),
+
+                household: {
+                  connect: {
+                    id: householdId,
+                  },
+                },
+              },
+            },
           },
         });
 
@@ -369,6 +409,67 @@ export class PlanningScenarioStorageService {
             this.serializeScenario(
               scenario,
             ),
+        ),
+    };
+  }
+
+  async getScenarioActivities(
+    id: string,
+  ) {
+    const scenario =
+      await this.findScenario(id);
+
+    const activities =
+      await this.prisma
+        .planningScenarioActivity
+        .findMany({
+          where: {
+            scenarioId: id,
+          },
+
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+
+    return {
+      generatedAt:
+        new Date().toISOString(),
+
+      scenario: {
+        id: scenario.id,
+        name: scenario.name,
+        status: scenario.status,
+      },
+
+      count:
+        activities.length,
+
+      activities:
+        activities.map(
+          (activity) => ({
+            id: activity.id,
+            action:
+              activity.action,
+            scenarioName:
+              activity.scenarioName,
+            summary:
+              activity.summary,
+
+            details:
+              this.parseJson<
+                Record<
+                  string,
+                  unknown
+                >
+              >(
+                activity.detailsJson,
+              ),
+
+            createdAt:
+              activity.createdAt
+                .toISOString(),
+          }),
         ),
     };
   }
@@ -503,6 +604,41 @@ export class PlanningScenarioStorageService {
                   )
                 : current
                     .lastResultJson,
+
+            activities: {
+              create: {
+                action:
+                  'UPDATED',
+
+                scenarioName:
+                  name,
+
+                summary:
+                  current.name !== name
+                    ? `Scenario rinominato da “${current.name}” a “${name}”.`
+                    : 'Descrizione o metadati dello scenario aggiornati.',
+
+                detailsJson:
+                  JSON.stringify({
+                    previousName:
+                      current.name,
+
+                    currentName:
+                      name,
+
+                    descriptionChanged:
+                      current.description !==
+                      description,
+                  }),
+
+                household: {
+                  connect: {
+                    id:
+                      current.householdId,
+                  },
+                },
+              },
+            },
           },
         });
 
@@ -657,6 +793,38 @@ export class PlanningScenarioStorageService {
 
             lastSimulatedAt:
               current.lastSimulatedAt,
+
+            activities: {
+              create: {
+                action:
+                  'DUPLICATED',
+
+                scenarioName:
+                  copyName,
+
+                summary:
+                  `Scenario duplicato da “${current.name}”.`,
+
+                detailsJson:
+                  JSON.stringify({
+                    sourceScenarioId:
+                      current.id,
+
+                    sourceScenarioName:
+                      current.name,
+
+                    sourceScenarioStatus:
+                      current.status,
+                  }),
+
+                household: {
+                  connect: {
+                    id:
+                      current.householdId,
+                  },
+                },
+              },
+            },
           },
         });
 
@@ -772,6 +940,56 @@ export class PlanningScenarioStorageService {
               new Date(
                 result.generatedAt,
               ),
+
+            activities: {
+              create: {
+                action:
+                  'RECALCULATED',
+
+                scenarioName:
+                  result.scenario.name,
+
+                summary:
+                  'Scenario ricalcolato sulla baseline corrente.',
+
+                detailsJson:
+                  JSON.stringify({
+                    previousBaselineAsOfDate:
+                      storedScenario
+                        .baselineAsOfDate,
+
+                    currentBaselineAsOfDate:
+                      result
+                        .baselineSource
+                        .asOfDate,
+
+                    previousSustainabilityStatus:
+                      storedScenario
+                        .sustainabilityStatus,
+
+                    currentSustainabilityStatus:
+                      result.summary.status,
+
+                    previousFinalCapital:
+                      this.numberOrNull(
+                        storedScenario
+                          .finalCapital,
+                      ),
+
+                    currentFinalCapital:
+                      result.summary
+                        .finalCapital,
+                  }),
+
+                household: {
+                  connect: {
+                    id:
+                      storedScenario
+                        .householdId,
+                  },
+                },
+              },
+            },
           },
         });
 
@@ -789,7 +1007,8 @@ export class PlanningScenarioStorageService {
   async archiveScenario(
     id: string,
   ) {
-    await this.findScenario(id);
+    const current =
+      await this.findScenario(id);
 
     const scenario =
       await this.prisma
@@ -800,6 +1019,35 @@ export class PlanningScenarioStorageService {
 
           data: {
             status: 'ARCHIVED',
+
+            activities: {
+              create: {
+                action:
+                  'ARCHIVED',
+
+                scenarioName:
+                  current.name,
+
+                summary:
+                  'Scenario spostato nell’archivio.',
+
+                detailsJson:
+                  JSON.stringify({
+                    previousStatus:
+                      current.status,
+
+                    currentStatus:
+                      'ARCHIVED',
+                  }),
+
+                household: {
+                  connect: {
+                    id:
+                      current.householdId,
+                  },
+                },
+              },
+            },
           },
         });
 
@@ -816,7 +1064,8 @@ export class PlanningScenarioStorageService {
   async restoreScenario(
     id: string,
   ) {
-    await this.findScenario(id);
+    const current =
+      await this.findScenario(id);
 
     const scenario =
       await this.prisma
@@ -827,6 +1076,35 @@ export class PlanningScenarioStorageService {
 
           data: {
             status: 'ACTIVE',
+
+            activities: {
+              create: {
+                action:
+                  'RESTORED',
+
+                scenarioName:
+                  current.name,
+
+                summary:
+                  'Scenario ripristinato tra gli scenari attivi.',
+
+                detailsJson:
+                  JSON.stringify({
+                    previousStatus:
+                      current.status,
+
+                    currentStatus:
+                      'ACTIVE',
+                  }),
+
+                household: {
+                  connect: {
+                    id:
+                      current.householdId,
+                  },
+                },
+              },
+            },
           },
         });
 
