@@ -579,6 +579,34 @@ export default function Performance() {
       [financialHistory],
     );
 
+  const attributionChartData =
+    useMemo(
+      () =>
+        (
+          attribution?.items ?? []
+        )
+          .filter(
+            (item) =>
+              item.comparisonStatus !==
+                "UNCHANGED" &&
+              Math.abs(
+                item.contributionChange,
+              ) >= 0.01,
+          )
+          .map((item) => ({
+            name: item.name,
+            positivo:
+              item.contributionChange > 0
+                ? item.contributionChange
+                : 0,
+            negativo:
+              item.contributionChange < 0
+                ? item.contributionChange
+                : 0,
+          })),
+      [attribution],
+    );
+
   function requestAnalysis() {
     if (
       !fromSnapshot ||
@@ -1359,6 +1387,81 @@ export default function Performance() {
                     />
                   </Box>
                   <Box sx={{ mt: 3 }}>
+                    <Typography
+                      variant="h6"
+                      sx={{ mb: 1.5 }}
+                    >
+                      Contributo alla variazione patrimoniale
+                    </Typography>
+
+                    <Box
+                      sx={{
+                        height: Math.max(
+                          280,
+                          attributionChartData.length *
+                            55,
+                        ),
+                        mb: 3,
+                      }}
+                    >
+                      <ResponsiveContainer
+                        width="100%"
+                        height="100%"
+                      >
+                        <BarChart
+                          data={attributionChartData}
+                          layout="vertical"
+                          margin={{
+                            top: 5,
+                            right: 35,
+                            left: 25,
+                            bottom: 5,
+                          }}
+                        >
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                          />
+
+                          <XAxis
+                            type="number"
+                            tickFormatter={(value) =>
+                              shortEuro(
+                                Number(value),
+                              )
+                            }
+                          />
+
+                          <YAxis
+                            type="category"
+                            dataKey="name"
+                            width={145}
+                          />
+
+                          <Tooltip
+                            formatter={(value) =>
+                              signedEuro(
+                                Number(value),
+                              )
+                            }
+                          />
+
+                          <Legend />
+
+                          <Bar
+                            dataKey="positivo"
+                            name="Contributo positivo"
+                            fill="#4d8b74"
+                          />
+
+                          <Bar
+                            dataKey="negativo"
+                            name="Contributo negativo"
+                            fill="#b84c4c"
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </Box>
+
                     <Typography
                       variant="h6"
                       sx={{ mb: 1.5 }}
