@@ -812,6 +812,98 @@ export default function Performance() {
               </ResponsiveContainer>
             </Box>
 
+              <Paper
+                elevation={0}
+                sx={{
+                  mt: 3,
+                  p: 2.5,
+                  border: "1px solid",
+                  borderColor: "divider",
+                }}
+              >
+                <Typography
+                  variant="h6"
+                  sx={{ fontWeight: 750 }}
+                >
+                  Composizione mensile degli investimenti
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 0.5, mb: 2 }}
+                >
+                  Evoluzione di Advice, Advice+, Aviva e
+                  polizza assicurativa.
+                </Typography>
+
+                <Box sx={{ height: 340 }}>
+                  <ResponsiveContainer
+                    width="100%"
+                    height="100%"
+                  >
+                    <BarChart
+                      data={financialHistory.points}
+                      margin={{
+                        top: 10,
+                        right: 25,
+                        left: 25,
+                        bottom: 10,
+                      }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                      />
+
+                      <XAxis dataKey="label" />
+
+                      <YAxis
+                        width={85}
+                        tickFormatter={(value) =>
+                          shortEuro(Number(value))
+                        }
+                      />
+
+                      <Tooltip
+                        formatter={(value) =>
+                          euro(Number(value))
+                        }
+                      />
+
+                      <Legend />
+
+                      <Bar
+                        dataKey="components.advicePlus"
+                        name="Advice+"
+                        stackId="investimenti"
+                        fill="#1d4f7a"
+                      />
+
+                      <Bar
+                        dataKey="components.advice"
+                        name="Advice"
+                        stackId="investimenti"
+                        fill="#4d8b74"
+                      />
+
+                      <Bar
+                        dataKey="components.aviva"
+                        name="Aviva"
+                        stackId="investimenti"
+                        fill="#8a6fb0"
+                      />
+
+                      <Bar
+                        dataKey="components.insurance"
+                        name="Polizza assicurativa"
+                        stackId="investimenti"
+                        fill="#b7791f"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
+              </Paper>
+
               <Typography
                 variant="h6"
                 sx={{ mt: 3, mb: 1.5, fontWeight: 750 }}
