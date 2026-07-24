@@ -286,6 +286,13 @@ export default function Performance() {
   const [notice, setNotice] =
     useState<Notice | null>(null);
 
+  const [
+    attributionFilter,
+    setAttributionFilter,
+  ] = useState<
+    "ALL" | "POSITIVE" | "NEGATIVE"
+  >("ALL");
+
   function exportFinancialHistoryCsv() {
     if (!financialHistory) {
       return;
@@ -690,6 +697,32 @@ export default function Performance() {
         })),
       [financialHistory],
     );
+
+  const filteredAttributionItems =
+    useMemo(() => {
+      const changedItems =
+        attribution?.items.filter(
+          (item) =>
+            item.comparisonStatus !==
+            "UNCHANGED",
+        ) ?? [];
+
+      if (attributionFilter === "POSITIVE") {
+        return changedItems.filter(
+          (item) =>
+            item.contributionChange > 0,
+        );
+      }
+
+      if (attributionFilter === "NEGATIVE") {
+        return changedItems.filter(
+          (item) =>
+            item.contributionChange < 0,
+        );
+      }
+
+      return changedItems;
+    }, [attribution, attributionFilter]);
 
   const attributionChartData =
     useMemo(
@@ -1603,7 +1636,51 @@ export default function Performance() {
                       Posizioni variate nel periodo
                     </Typography>
 
-                    <TableContainer
+                    <Box
+                        sx={{
+                          display: "flex",
+                          gap: 1,
+                          flexWrap: "wrap",
+                          mb: 1.5,
+                        }}
+                      >
+                        {(
+                          [
+                            {
+                              value: "ALL",
+                              label: "Tutti",
+                            },
+                            {
+                              value: "POSITIVE",
+                              label: "Positivi",
+                            },
+                            {
+                              value: "NEGATIVE",
+                              label: "Negativi",
+                            },
+                          ] as const
+                        ).map((filter) => (
+                          <Button
+                            key={filter.value}
+                            size="small"
+                            variant={
+                              attributionFilter ===
+                              filter.value
+                                ? "contained"
+                                : "outlined"
+                            }
+                            onClick={() =>
+                              setAttributionFilter(
+                                filter.value,
+                              )
+                            }
+                          >
+                            {filter.label}
+                          </Button>
+                        ))}
+                      </Box>
+
+                      <TableContainer
                       sx={{
                         border: "1px solid",
                         borderColor: "divider",
@@ -1644,13 +1721,8 @@ export default function Performance() {
                         </TableHead>
 
                         <TableBody>
-                          {attribution.items
-                            .filter(
-                              (item) =>
-                                item.comparisonStatus !==
-                                "UNCHANGED",
-                            )
-                            .map((item) => (
+                          {filteredAttributionItems.map(
+                              (item) => (
                               <TableRow
                                 key={item.positionId}
                                 hover
