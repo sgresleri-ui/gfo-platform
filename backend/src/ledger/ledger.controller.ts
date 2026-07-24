@@ -16,6 +16,10 @@ import {
   type CreateWealthTransactionInput,
 } from './transaction-ledger.service';
 
+import {
+  TransactionImportService,
+} from './transaction-import.service';
+
 @Controller('ledger')
 export class LedgerController {
   constructor(
@@ -24,6 +28,9 @@ export class LedgerController {
 
     private readonly transactionService:
       TransactionLedgerService,
+
+    private readonly transactionImportService:
+      TransactionImportService,
   ) {}
 
   @Get('summary')
@@ -50,6 +57,20 @@ export class LedgerController {
   getTransactionTypes() {
     return this.transactionService
       .getTransactionTypes();
+  }
+
+  @Get('transactions/import/preview/bbva')
+  previewBbvaTransactions() {
+    return this.transactionImportService
+      .previewBbva();
+  }
+
+  @Post('transactions/import/bbva')
+  importBbvaTransactions(
+    @Body('confirm') confirm: boolean,
+  ) {
+    return this.transactionImportService
+      .importBbva(confirm);
   }
 
   @Get('transactions/summary')

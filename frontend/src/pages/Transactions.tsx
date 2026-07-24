@@ -1215,9 +1215,71 @@ export default function Transactions() {
         sx={{
           border: "1px solid",
           borderColor: "divider",
+          overflowX: "auto",
+          overflowY: "auto",
+          maxHeight: "65vh",
+
+          "&::-webkit-scrollbar": {
+            height: 10,
+            width: 10,
+          },
+
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor:
+              "rgba(26, 45, 75, 0.28)",
+            borderRadius: 10,
+          },
         }}
       >
-        <Table>
+        <Table
+          stickyHeader
+          sx={{
+            minWidth: 1720,
+
+            "& th, & td": {
+              verticalAlign: "top",
+            },
+
+            "& th:nth-of-type(1), & td:nth-of-type(1)": {
+              minWidth: 105,
+              whiteSpace: "nowrap",
+            },
+
+            "& th:nth-of-type(2), & td:nth-of-type(2)": {
+              minWidth: 135,
+            },
+
+            "& th:nth-of-type(3), & td:nth-of-type(3)": {
+              minWidth: 170,
+            },
+
+            "& th:nth-of-type(4), & td:nth-of-type(4)": {
+              minWidth: 105,
+            },
+
+            "& th:nth-of-type(5), & td:nth-of-type(5)": {
+              minWidth: 105,
+            },
+
+            "& th:nth-of-type(6), & td:nth-of-type(6), & th:nth-of-type(7), & td:nth-of-type(7), & th:nth-of-type(8), & td:nth-of-type(8), & th:nth-of-type(9), & td:nth-of-type(9)": {
+              minWidth: 115,
+              whiteSpace: "nowrap",
+            },
+
+            "& th:nth-of-type(10), & td:nth-of-type(10)": {
+              minWidth: 430,
+              maxWidth: 520,
+              whiteSpace: "normal",
+              overflowWrap: "anywhere",
+              lineHeight: 1.4,
+            },
+
+            "& th:nth-of-type(11), & td:nth-of-type(11)": {
+              minWidth: 115,
+              whiteSpace: "nowrap",
+            },
+          }}
+        >
           <TableHead>
             <TableRow>
               <TableCell>Data</TableCell>
