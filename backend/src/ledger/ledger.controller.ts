@@ -101,6 +101,20 @@ export class LedgerController {
       .importRakBankAed(confirm);
   }
 
+  @Get('transactions/import/preview/revolut')
+  previewRevolutTransactions() {
+    return this.transactionImportService
+      .previewRevolut();
+  }
+
+  @Post('transactions/import/revolut')
+  importRevolutTransactions(
+    @Body('confirm') confirm: boolean,
+  ) {
+    return this.transactionImportService
+      .importRevolut(confirm);
+  }
+
   @Get('transactions/summary')
   getTransactionSummary() {
     return this.transactionService

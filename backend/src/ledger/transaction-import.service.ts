@@ -848,4 +848,224 @@ export class TransactionImportService
     };
   }
 
+  async previewRevolut() {
+    const workbook = new ExcelJS.Workbook();
+
+    await workbook.xlsx.readFile(
+      await this.workbookPath(),
+    );
+
+    const sheet = workbook.getWorksheet('Revolut');
+
+    if (!sheet) {
+      throw new Error('Foglio Revolut non trovato.');
+    }
+
+    const occurrences = new Map<string, number>();
+
+    const items: Array<{
+      date: string;
+      type: string;
+      amount: number;
+      description: string;
+      category: string;
+      externalReference: string;
+      alreadyImported: boolean;
+    }> = [];
+
+    for (
+      let rowNumber = 2;
+      rowNumber <= sheet.rowCount;
+      rowNumber += 1
+    ) {
+      const row = sheet.getRow(rowNumber);
+
+      const transactionDate =
+        this.date(row.getCell(2));
+
+      const income =
+        this.number(row.getCell(4));
+
+      const expense =
+        this.number(row.getCell(5));
+
+      const amount =
+        income && income > 0
+          ? income
+          : expense && expense > 0
+            ? expense
+            : null;
+
+      if (!transactionDate || amount === null) {
+        continue;
+      }
+
+      const description =
+        row.getCell(6).text.trim();
+
+      const category =
+        row.getCell(7).text.trim();
+
+      const normalizedCategory =
+        category.toLowerCase();
+
+      if (
+        normalizedCategory === 'giroconto' ||
+        normalizedCategory === 'prelievo contante'
+      ) {
+        continue;
+      }
+
+      const type =
+        income && income > 0
+          ? 'OTHER_INCOME'
+          : 'OTHER_EXPENSE';
+
+      const signature = [
+        'REVOLUT',
+        transactionDate.toISOString().slice(0, 10),
+        type,
+        amount.toFixed(2),
+        description,
+        category,
+      ].join('|');
+
+      const occurrence =
+        (occurrences.get(signature) ?? 0) + 1;
+
+      occurrences.set(signature, occurrence);
+
+      items.push({
+        date: transactionDate.toISOString(),
+        type,
+        amount,
+        description,
+        category,
+        externalReference:
+          this.reference(
+            `${signature}|${occurrence}`,
+          ),
+        alreadyImported: false,
+      });
+    }
+
+    const existing =
+      await this.prisma.wealthTransaction.findMany({
+        where: {
+          source: IMPORT_SOURCE,
+          externalReference: {
+            in: items.map(
+              (item) => item.externalReference,
+            ),
+          },
+        },
+        select: {
+          externalReference: true,
+        },
+      });
+
+    const references = new Set(
+      existing.map(
+        (item) => item.externalReference,
+      ),
+    );
+
+    for (const item of items) {
+      item.alreadyImported =
+        references.has(item.externalReference);
+    }
+
+    return {
+      sheet: 'Revolut',
+      extracted: items.length,
+      newTransactions:
+        items.filter(
+          (item) => !item.alreadyImported,
+        ).length,
+      alreadyImported:
+        items.filter(
+          (item) => item.alreadyImported,
+        ).length,
+      items,
+    };
+  }
+
+  async importRevolut(confirm: boolean) {
+    if (!confirm) {
+      throw new BadRequestException(
+        'L’importazione richiede conferma esplicita.',
+      );
+    }
+
+    const preview = await this.previewRevolut();
+
+    const pending = preview.items.filter(
+      (item) => !item.alreadyImported,
+    );
+
+    const household =
+      await this.prisma.household.findFirst({
+        orderBy: { id: 'asc' },
+        select: {
+          id: true,
+          currency: true,
+        },
+      });
+
+    if (!household) {
+      throw new NotFoundException(
+        'Household principale non trovato.',
+      );
+    }
+
+    await this.prisma.$transaction(
+      pending.map((item) => {
+        const inflow =
+          item.type === 'OTHER_INCOME';
+
+        return this.prisma.wealthTransaction.create({
+          data: {
+            householdId: household.id,
+            transactionDate: new Date(item.date),
+            transactionType: item.type,
+            direction: inflow
+              ? 'INFLOW'
+              : 'OUTFLOW',
+            grossAmount: item.amount,
+            fees: 0,
+            taxes: 0,
+            netAmount: item.amount,
+            currency: 'EUR',
+            fxRateToBase: 1,
+            baseAmount: item.amount,
+            baseCurrency: household.currency,
+            sourceAccountCode: inflow
+              ? null
+              : 'CASH_REVOLUT',
+            destinationAccountCode: inflow
+              ? 'CASH_REVOLUT'
+              : null,
+            source: IMPORT_SOURCE,
+            status: 'POSTED',
+            externalReference:
+              item.externalReference,
+            notes: [
+              'Revolut',
+              item.category,
+              item.description,
+            ]
+              .filter(Boolean)
+              .join(' | '),
+          },
+        });
+      }),
+    );
+
+    return {
+      imported: pending.length,
+      skipped: preview.alreadyImported,
+      total: preview.extracted,
+    };
+  }
+
 }
