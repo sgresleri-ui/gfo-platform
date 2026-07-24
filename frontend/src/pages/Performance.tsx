@@ -84,13 +84,16 @@ function percentage(
     return "Non disponibile";
   }
 
+  const normalizedValue =
+    Math.abs(value) < 0.005 ? 0 : value;
+
   const formatted =
-    value.toLocaleString("it-IT", {
+    normalizedValue.toLocaleString("it-IT", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
 
-  return value > 0
+  return normalizedValue > 0
     ? `+${formatted}%`
     : `${formatted}%`;
 }
@@ -728,7 +731,14 @@ export default function Performance() {
                   subtitle={`${report.period.days} giorni`}
                   valueColor={valueColor(
                     report.performance
-                      .modifiedDietzReturn,
+                        .modifiedDietzReturn !== null &&
+                      Math.abs(
+                        report.performance
+                          .modifiedDietzReturn,
+                      ) < 0.005
+                      ? 0
+                      : report.performance
+                          .modifiedDietzReturn,
                   )}
                 />
 
@@ -764,7 +774,7 @@ export default function Performance() {
                     report.performance
                       .netExternalFlow,
                   )}
-                  subtitle="Versamenti meno prelievi"
+                  subtitle="Entrate meno uscite esterne"
                   valueColor={valueColor(
                     report.performance
                       .netExternalFlow,
@@ -981,14 +991,14 @@ export default function Performance() {
                     {[
                       {
                         label:
-                          "Versamenti",
+                          "Entrate esterne",
                         value:
                           report.performance
                             .contributions,
                       },
                       {
                         label:
-                          "Prelievi",
+                          "Uscite esterne",
                         value:
                           report.performance
                             .withdrawals,
