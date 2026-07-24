@@ -349,6 +349,118 @@ export default function Performance() {
     URL.revokeObjectURL(url);
   }
 
+  function exportPositionAttributionCsv() {
+    if (!attribution) {
+      return;
+    }
+
+    const decimal = (
+      value: number | null,
+    ) =>
+      value === null
+        ? ""
+        : value
+            .toFixed(2)
+            .replace(".", ",");
+
+    const statusLabel = (
+      status:
+        | "UNCHANGED"
+        | "CHANGED"
+        | "NEW"
+        | "CLOSED",
+    ) => {
+      if (status === "UNCHANGED") {
+        return "Invariata";
+      }
+
+      if (status === "CHANGED") {
+        return "Variata";
+      }
+
+      if (status === "NEW") {
+        return "Nuova";
+      }
+
+      return "Chiusa";
+    };
+
+    const rows = [
+      [
+        "Posizione",
+        "Codice",
+        "Categoria",
+        "Stato",
+        "Valore iniziale",
+        "Valore finale",
+        "Variazione valore",
+        "Contributo patrimoniale",
+        "Variazione percentuale",
+        "Valuta base",
+      ].join(";"),
+
+      ...attribution.items.map(
+        (item) =>
+          [
+            item.name,
+            item.code,
+            categoryLabel(
+              item.category,
+            ),
+            statusLabel(
+              item.comparisonStatus,
+            ),
+            decimal(item.startValue),
+            decimal(item.endValue),
+            decimal(item.valueChange),
+            decimal(
+              item.contributionChange,
+            ),
+            decimal(
+              item.percentageChange,
+            ),
+            item.baseCurrency,
+          ].join(";"),
+      ),
+    ];
+
+    const blob = new Blob(
+      ["\uFEFF" + rows.join("\n")],
+      {
+        type:
+          "text/csv;charset=utf-8;",
+      },
+    );
+
+    const url =
+      URL.createObjectURL(blob);
+
+    const link =
+      document.createElement("a");
+
+    const startDate =
+      attribution.period.start.slice(
+        0,
+        10,
+      );
+
+    const endDate =
+      attribution.period.end.slice(
+        0,
+        10,
+      );
+
+    link.href = url;
+    link.download =
+      `attribuzione-posizioni-${startDate}-${endDate}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+  }
+
   const analyzePeriod = useCallback(
     async (
       fromValue: string,
@@ -1323,18 +1435,40 @@ export default function Performance() {
                       </Typography>
                     </Box>
 
-                    <Chip
-                      color={
-                        attribution.summary.reconciled
-                          ? "success"
-                          : "warning"
-                      }
-                      label={
-                        attribution.summary.reconciled
-                          ? "Riconciliato"
-                          : "Da verificare"
-                      }
-                    />
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <Chip
+                        color={
+                          attribution.summary.reconciled
+                            ? "success"
+                            : "warning"
+                        }
+                        label={
+                          attribution.summary.reconciled
+                            ? "Riconciliato"
+                            : "Da verificare"
+                        }
+                      />
+
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={
+                          <DownloadRoundedIcon />
+                        }
+                        onClick={
+                          exportPositionAttributionCsv
+                        }
+                      >
+                        Esporta CSV
+                      </Button>
+                    </Box>
                   </Box>
 
                   <Box
