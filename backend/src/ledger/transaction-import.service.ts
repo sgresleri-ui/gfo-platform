@@ -1940,4 +1940,263 @@ export class TransactionImportService
     };
   }
 
+  async previewAmex() {
+    const workbook = new ExcelJS.Workbook();
+
+    await workbook.xlsx.readFile(
+      await this.workbookPath(),
+    );
+
+    const sheet = workbook.getWorksheet('Amex');
+
+    if (!sheet) {
+      throw new Error('Foglio Amex non trovato.');
+    }
+
+    const occurrences = new Map<string, number>();
+
+    const items: Array<{
+      date: string;
+      type: string;
+      direction: string;
+      amount: number;
+      description: string;
+      category: string;
+      travel: string;
+      notes: string;
+      externalReference: string;
+      alreadyImported: boolean;
+    }> = [];
+
+    for (
+      let rowNumber = 2;
+      rowNumber <= sheet.rowCount;
+      rowNumber += 1
+    ) {
+      const row = sheet.getRow(rowNumber);
+
+      const transactionDate =
+        this.date(row.getCell(2));
+
+      if (!transactionDate) {
+        continue;
+      }
+
+      const income =
+        this.number(row.getCell(3)) ?? 0;
+
+      const expense =
+        this.number(row.getCell(4)) ?? 0;
+
+      const amount =
+        income > 0
+          ? income
+          : expense > 0
+            ? expense
+            : null;
+
+      if (amount === null) {
+        continue;
+      }
+
+      const description =
+        row.getCell(5).text.trim();
+
+      const category =
+        row.getCell(6).text.trim();
+
+      const travel =
+        row.getCell(7).text.trim();
+
+      const notes =
+        row.getCell(8).text.trim();
+
+      if (
+        category ===
+        'Spese da non contabilizzare'
+      ) {
+        continue;
+      }
+
+      let type: string;
+
+      if (income > 0) {
+        type = 'OTHER_INCOME';
+      } else if (
+        category ===
+          'Imposta di Bollo Titoli e CC' ||
+        category === 'Imposte Italia'
+      ) {
+        type = 'TAX';
+      } else if (
+        category === 'Amex' &&
+        description.includes(
+          'Membership Rewards',
+        )
+      ) {
+        type = 'FEE';
+      } else if (
+        category === 'Affitto Dubai' ||
+        category === 'Manutenzione Immobile'
+      ) {
+        type = 'PROPERTY_EXPENSE';
+      } else {
+        type = 'OTHER_EXPENSE';
+      }
+
+      const direction =
+        income > 0 ? 'INFLOW' : 'OUTFLOW';
+
+      const signature = [
+        'AMEX',
+        transactionDate
+          .toISOString()
+          .slice(0, 10),
+        type,
+        direction,
+        amount.toFixed(2),
+        description,
+        category,
+      ].join('|');
+
+      const occurrence =
+        (occurrences.get(signature) ?? 0) + 1;
+
+      occurrences.set(signature, occurrence);
+
+      items.push({
+        date: transactionDate.toISOString(),
+        type,
+        direction,
+        amount,
+        description,
+        category,
+        travel,
+        notes,
+        externalReference:
+          this.reference(
+            `${signature}|${occurrence}`,
+          ),
+        alreadyImported: false,
+      });
+    }
+
+    const existing =
+      await this.prisma.wealthTransaction.findMany({
+        where: {
+          source: IMPORT_SOURCE,
+          externalReference: {
+            in: items.map(
+              (item) => item.externalReference,
+            ),
+          },
+        },
+        select: {
+          externalReference: true,
+        },
+      });
+
+    const references = new Set(
+      existing.map(
+        (item) => item.externalReference,
+      ),
+    );
+
+    for (const item of items) {
+      item.alreadyImported =
+        references.has(item.externalReference);
+    }
+
+    return {
+      sheet: 'Amex',
+      extracted: items.length,
+      newTransactions:
+        items.filter(
+          (item) => !item.alreadyImported,
+        ).length,
+      alreadyImported:
+        items.filter(
+          (item) => item.alreadyImported,
+        ).length,
+      items,
+    };
+  }
+
+  async importAmex(confirm: boolean) {
+    if (!confirm) {
+      throw new BadRequestException(
+        'L’importazione richiede conferma esplicita.',
+      );
+    }
+
+    const preview = await this.previewAmex();
+
+    const pending = preview.items.filter(
+      (item) => !item.alreadyImported,
+    );
+
+    const household =
+      await this.prisma.household.findFirst({
+        orderBy: { id: 'asc' },
+        select: {
+          id: true,
+          currency: true,
+        },
+      });
+
+    if (!household) {
+      throw new NotFoundException(
+        'Household principale non trovato.',
+      );
+    }
+
+    await this.prisma.$transaction(
+      pending.map((item) => {
+        const inflow = item.direction === 'INFLOW';
+
+        return this.prisma.wealthTransaction.create({
+          data: {
+            householdId: household.id,
+            transactionDate: new Date(item.date),
+            transactionType: item.type,
+            direction: item.direction,
+            grossAmount: item.amount,
+            fees: 0,
+            taxes: 0,
+            netAmount: item.amount,
+            currency: 'EUR',
+            fxRateToBase: 1,
+            baseAmount: item.amount,
+            baseCurrency: household.currency,
+            sourceAccountCode: inflow
+              ? null
+              : 'AMEX',
+            destinationAccountCode: inflow
+              ? 'AMEX'
+              : null,
+            source: IMPORT_SOURCE,
+            status: 'POSTED',
+            externalReference:
+              item.externalReference,
+            notes: [
+              'Amex',
+              item.category,
+              item.travel,
+              item.description,
+              item.notes,
+            ]
+              .filter(Boolean)
+              .join(' | '),
+          },
+        });
+      }),
+    );
+
+    return {
+      imported: pending.length,
+      skipped: preview.alreadyImported,
+      total: preview.extracted,
+    };
+  }
+
 }

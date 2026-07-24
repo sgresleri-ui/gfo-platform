@@ -157,6 +157,20 @@ export class LedgerController {
       .importFinecoSt(confirm);
   }
 
+  @Get('transactions/import/preview/amex')
+  previewAmexTransactions() {
+    return this.transactionImportService
+      .previewAmex();
+  }
+
+  @Post('transactions/import/amex')
+  importAmexTransactions(
+    @Body('confirm') confirm: boolean,
+  ) {
+    return this.transactionImportService
+      .importAmex(confirm);
+  }
+
   @Get('transactions/summary')
   getTransactionSummary() {
     return this.transactionService
