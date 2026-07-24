@@ -117,6 +117,25 @@ function dateTimeLabel(
   );
 }
 
+function monthYearLabel(
+  value: string,
+): string {
+  const label =
+    new Date(value).toLocaleDateString(
+      "it-IT",
+      {
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC",
+      },
+    );
+
+  return (
+    label.charAt(0).toUpperCase() +
+    label.slice(1)
+  );
+}
+
 function shortEuro(value: number): string {
   const absoluteValue =
     Math.abs(value);
@@ -625,9 +644,17 @@ export default function Performance() {
                   color="text.secondary"
                   sx={{ mt: 0.5 }}
                 >
-                  Serie mensile Excel
-                  gennaio–luglio{" "}
-                  {financialHistory.year}.
+                  Serie mensile Excel da{" "}
+                  {monthYearLabel(
+                    financialHistory.points[0]
+                      .date,
+                  )}{" "}
+                  a{" "}
+                  {monthYearLabel(
+                    financialHistory.points[
+                      financialHistory.points.length - 1
+                    ].date,
+                  )}.
                   Sono esclusi immobili,
                   passività e valore storico
                   IBKR.
@@ -662,7 +689,10 @@ export default function Performance() {
                     financialHistorySummary
                       .initial,
                   )}
-                  subtitle="Gennaio 2026"
+                  subtitle={monthYearLabel(
+                    financialHistory.points[0]
+                      .date,
+                  )}
                 />
 
                 <KpiCard
@@ -671,7 +701,12 @@ export default function Performance() {
                     financialHistorySummary
                       .final,
                   )}
-                  subtitle="Luglio 2026"
+                  subtitle={monthYearLabel(
+                    financialHistory.points[
+                      financialHistory.points
+                        .length - 1
+                    ].date,
+                  )}
                 />
 
                 <KpiCard
