@@ -159,10 +159,11 @@ export class IpsClassificationService
 
     if (
       [
-        'GOLD',
         'ORO',
         'PHYSICAL GOLD',
         'XETRA-GOLD',
+        'GOLD ETC',
+        'GOLD ETF',
       ].some((token) =>
         searchableText.includes(
           token,
@@ -251,6 +252,21 @@ export class IpsClassificationService
 
         reason:
           'Il nome contiene riferimenti a investimenti alternativi.',
+      };
+    }
+
+    if (
+      (position.subcategory ?? '')
+        .trim()
+        .toUpperCase() === 'ETF'
+    ) {
+      return {
+        code: 'EQUITY_GLOBAL',
+
+        confidence: 'MEDIUM',
+
+        reason:
+          'La posizione è un ETF e non presenta indicatori di obbligazionario, monetario, oro o investimenti alternativi.',
       };
     }
 
