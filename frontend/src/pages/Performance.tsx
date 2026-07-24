@@ -446,6 +446,23 @@ export default function Performance() {
       };
     }, [financialHistory]);
 
+  const financialHistoryTableData =
+    useMemo(
+      () =>
+        (
+          financialHistory?.points ?? []
+        ).map((point, index, points) => ({
+          ...point,
+          monthlyChange:
+            index === 0
+              ? null
+              : point.financialAssets -
+                points[index - 1]
+                  .financialAssets,
+        })),
+      [financialHistory],
+    );
+
   function requestAnalysis() {
     if (
       !fromSnapshot ||
@@ -759,6 +776,84 @@ export default function Performance() {
                 </LineChart>
               </ResponsiveContainer>
             </Box>
+
+              <Typography
+                variant="h6"
+                sx={{ mt: 3, mb: 1.5, fontWeight: 750 }}
+              >
+                Dettaglio mensile
+              </Typography>
+
+              <TableContainer
+                sx={{
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 1,
+                }}
+              >
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Mese</TableCell>
+                      <TableCell align="right">
+                        Patrimonio finanziario
+                      </TableCell>
+                      <TableCell align="right">
+                        Investimenti
+                      </TableCell>
+                      <TableCell align="right">
+                        Liquidità
+                      </TableCell>
+                      <TableCell align="right">
+                        Variazione mensile
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+
+                  <TableBody>
+                    {financialHistoryTableData.map(
+                      (point) => (
+                        <TableRow
+                          key={point.date}
+                          hover
+                        >
+                          <TableCell sx={{ fontWeight: 700 }}>
+                            {point.label}{" "}
+                            {financialHistory.year}
+                          </TableCell>
+
+                          <TableCell align="right">
+                            {euro(point.financialAssets)}
+                          </TableCell>
+
+                          <TableCell align="right">
+                            {euro(point.investments)}
+                          </TableCell>
+
+                          <TableCell align="right">
+                            {euro(point.liquidity)}
+                          </TableCell>
+
+                          <TableCell
+                            align="right"
+                            sx={{
+                              fontWeight: 700,
+                              color:
+                                point.monthlyChange === null
+                                  ? "text.secondary"
+                                  : valueColor(point.monthlyChange),
+                            }}
+                          >
+                            {point.monthlyChange === null
+                              ? "—"
+                              : signedEuro(point.monthlyChange)}
+                          </TableCell>
+                        </TableRow>
+                      ),
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
             <Alert
               severity="info"
