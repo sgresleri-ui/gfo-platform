@@ -1068,4 +1068,258 @@ export class TransactionImportService
     };
   }
 
+  async previewIbkr() {
+    const workbook = new ExcelJS.Workbook();
+
+    await workbook.xlsx.readFile(
+      await this.workbookPath(),
+    );
+
+    const sheet = workbook.getWorksheet('IBKR');
+
+    if (!sheet) {
+      throw new Error('Foglio IBKR non trovato.');
+    }
+
+    const positions =
+      await this.prisma.wealthPosition.findMany({
+        where: {
+          code: {
+            in: [
+              'INVESTMENT_IBKR_LU1681047236',
+              'INVESTMENT_IBKR_IE00BP3QZB59',
+            ],
+          },
+        },
+        select: {
+          id: true,
+          code: true,
+          name: true,
+        },
+      });
+
+    const positionByTicker = new Map(
+      positions.map((position) => [
+        position.code ===
+        'INVESTMENT_IBKR_LU1681047236'
+          ? 'C50'
+          : 'IWVL',
+        position,
+      ]),
+    );
+
+    if (
+      !positionByTicker.has('C50') ||
+      !positionByTicker.has('IWVL')
+    ) {
+      throw new Error(
+        'Posizioni IBKR C50 o IWVL non trovate.',
+      );
+    }
+
+    const occurrences = new Map<string, number>();
+
+    const items: Array<{
+      date: string;
+      type: string;
+      amount: number;
+      ticker: string;
+      positionId: number;
+      positionCode: string;
+      description: string;
+      category: string;
+      externalReference: string;
+      alreadyImported: boolean;
+    }> = [];
+
+    for (
+      let rowNumber = 2;
+      rowNumber <= sheet.rowCount;
+      rowNumber += 1
+    ) {
+      const row = sheet.getRow(rowNumber);
+
+      const transactionDate =
+        this.date(row.getCell(2));
+
+      const expense =
+        this.number(row.getCell(5));
+
+      const description =
+        row.getCell(6).text.trim();
+
+      const category =
+        row.getCell(7).text.trim();
+
+      if (
+        !transactionDate ||
+        !expense ||
+        expense <= 0 ||
+        category.toLowerCase() === 'giroconto'
+      ) {
+        continue;
+      }
+
+      const upperDescription =
+        description.toUpperCase();
+
+      const ticker =
+        upperDescription.includes('C50')
+          ? 'C50'
+          : upperDescription.includes('IWVL')
+            ? 'IWVL'
+            : null;
+
+      if (!ticker) {
+        throw new Error(
+          `Strumento IBKR non riconosciuto alla riga ${rowNumber}.`,
+        );
+      }
+
+      const position =
+        positionByTicker.get(ticker)!;
+
+      const signature = [
+        'IBKR',
+        transactionDate.toISOString().slice(0, 10),
+        'BUY',
+        expense.toFixed(2),
+        ticker,
+        description,
+        category,
+      ].join('|');
+
+      const occurrence =
+        (occurrences.get(signature) ?? 0) + 1;
+
+      occurrences.set(signature, occurrence);
+
+      items.push({
+        date: transactionDate.toISOString(),
+        type: 'BUY',
+        amount: expense,
+        ticker,
+        positionId: position.id,
+        positionCode: position.code,
+        description,
+        category,
+        externalReference:
+          this.reference(
+            `${signature}|${occurrence}`,
+          ),
+        alreadyImported: false,
+      });
+    }
+
+    const existing =
+      await this.prisma.wealthTransaction.findMany({
+        where: {
+          source: IMPORT_SOURCE,
+          externalReference: {
+            in: items.map(
+              (item) => item.externalReference,
+            ),
+          },
+        },
+        select: {
+          externalReference: true,
+        },
+      });
+
+    const references = new Set(
+      existing.map(
+        (item) => item.externalReference,
+      ),
+    );
+
+    for (const item of items) {
+      item.alreadyImported =
+        references.has(item.externalReference);
+    }
+
+    return {
+      sheet: 'IBKR',
+      extracted: items.length,
+      newTransactions:
+        items.filter(
+          (item) => !item.alreadyImported,
+        ).length,
+      alreadyImported:
+        items.filter(
+          (item) => item.alreadyImported,
+        ).length,
+      items,
+    };
+  }
+
+  async importIbkr(confirm: boolean) {
+    if (!confirm) {
+      throw new BadRequestException(
+        'L’importazione richiede conferma esplicita.',
+      );
+    }
+
+    const preview = await this.previewIbkr();
+
+    const pending = preview.items.filter(
+      (item) => !item.alreadyImported,
+    );
+
+    const household =
+      await this.prisma.household.findFirst({
+        orderBy: { id: 'asc' },
+        select: {
+          id: true,
+          currency: true,
+        },
+      });
+
+    if (!household) {
+      throw new NotFoundException(
+        'Household principale non trovato.',
+      );
+    }
+
+    await this.prisma.$transaction(
+      pending.map((item) =>
+        this.prisma.wealthTransaction.create({
+          data: {
+            householdId: household.id,
+            positionId: item.positionId,
+            transactionDate: new Date(item.date),
+            transactionType: 'BUY',
+            direction: 'OUTFLOW',
+            grossAmount: item.amount,
+            fees: 0,
+            taxes: 0,
+            netAmount: item.amount,
+            currency: 'EUR',
+            fxRateToBase: 1,
+            baseAmount: item.amount,
+            baseCurrency: household.currency,
+            sourceAccountCode: 'CASH_IBKR',
+            source: IMPORT_SOURCE,
+            status: 'POSTED',
+            externalReference:
+              item.externalReference,
+            notes: [
+              'IBKR',
+              item.ticker,
+              item.category,
+              item.description,
+            ]
+              .filter(Boolean)
+              .join(' | '),
+          },
+        }),
+      ),
+    );
+
+    return {
+      imported: pending.length,
+      skipped: preview.alreadyImported,
+      total: preview.extracted,
+    };
+  }
+
 }

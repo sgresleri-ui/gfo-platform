@@ -115,6 +115,20 @@ export class LedgerController {
       .importRevolut(confirm);
   }
 
+  @Get('transactions/import/preview/ibkr')
+  previewIbkrTransactions() {
+    return this.transactionImportService
+      .previewIbkr();
+  }
+
+  @Post('transactions/import/ibkr')
+  importIbkrTransactions(
+    @Body('confirm') confirm: boolean,
+  ) {
+    return this.transactionImportService
+      .importIbkr(confirm);
+  }
+
   @Get('transactions/summary')
   getTransactionSummary() {
     return this.transactionService
