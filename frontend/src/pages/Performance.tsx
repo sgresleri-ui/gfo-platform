@@ -44,9 +44,11 @@ import {
   getFinancialHistory,
   getPerformancePeriods,
   getPerformanceSummary,
+  getPositionAttribution,
   type FinancialHistoryResponse,
   type PerformancePeriodSnapshot,
   type PerformanceSummaryResponse,
+  type PositionAttributionResponse,
 } from "../services/api";
 
 type Notice = {
@@ -168,6 +170,20 @@ function valueColor(
     : "error.main";
 }
 
+function categoryLabel(
+  category: string,
+): string {
+  const labels: Record<string, string> = {
+    LIQUIDITY: "Liquidità",
+    INVESTMENT: "Investimenti",
+    REAL_ESTATE: "Immobili",
+    OTHER_ASSET: "Altri attivi",
+    LIABILITY: "Passività",
+  };
+
+  return labels[category] ?? category;
+}
+
 function sourceLabel(
   source: string,
 ): string {
@@ -247,6 +263,11 @@ export default function Performance() {
 
   const [financialHistory, setFinancialHistory] =
     useState<FinancialHistoryResponse | null>(
+      null,
+    );
+
+  const [attribution, setAttribution] =
+    useState<PositionAttributionResponse | null>(
       null,
     );
 
@@ -337,13 +358,24 @@ export default function Performance() {
       setNotice(null);
 
       try {
-        const result =
-          await getPerformanceSummary(
+        const [
+          result,
+          attributionResult,
+        ] = await Promise.all([
+          getPerformanceSummary(
             fromValue,
             toValue,
-          );
+          ),
+          getPositionAttribution(
+            fromValue,
+            toValue,
+          ),
+        ]);
 
         setReport(result);
+        setAttribution(
+          attributionResult,
+        );
       } catch (error) {
         console.error(error);
 
@@ -403,6 +435,7 @@ export default function Performance() {
           );
         } else {
           setReport(null);
+          setAttribution(null);
         }
       } catch (error) {
         console.error(error);
@@ -1218,6 +1251,254 @@ export default function Performance() {
                     {warning}
                   </Alert>
                 ),
+              )}
+
+              {attribution && (
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2.5,
+                    mb: 3,
+                    border: "1px solid",
+                    borderColor: "divider",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent:
+                        "space-between",
+                      alignItems: {
+                        xs: "flex-start",
+                        md: "center",
+                      },
+                      flexDirection: {
+                        xs: "column",
+                        md: "row",
+                      },
+                      gap: 2,
+                      mb: 2,
+                    }}
+                  >
+                    <Box>
+                      <Typography variant="h6">
+                        Attribuzione per posizione
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mt: 0.5 }}
+                      >
+                        Posizioni che hanno contribuito
+                        alla variazione patrimoniale.
+                      </Typography>
+                    </Box>
+
+                    <Chip
+                      color={
+                        attribution.summary.reconciled
+                          ? "success"
+                          : "warning"
+                      }
+                      label={
+                        attribution.summary.reconciled
+                          ? "Riconciliato"
+                          : "Da verificare"
+                      }
+                    />
+                  </Box>
+
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "1fr",
+                        sm:
+                          "repeat(2, minmax(0, 1fr))",
+                        xl:
+                          "repeat(4, minmax(0, 1fr))",
+                      },
+                      gap: 2,
+                    }}
+                  >
+                    <KpiCard
+                      label="Posizioni analizzate"
+                      value={String(
+                        attribution.summary.positions,
+                      )}
+                      subtitle={`${attribution.summary.unchanged} invariate`}
+                    />
+
+                    <KpiCard
+                      label="Posizioni variate"
+                      value={String(
+                        attribution.summary.changed,
+                      )}
+                      subtitle="Nel periodo selezionato"
+                    />
+
+                    <KpiCard
+                      label="Contributori positivi"
+                      value={String(
+                        attribution.summary
+                          .positiveContributors,
+                      )}
+                      subtitle="Variazione positiva"
+                      valueColor="success.main"
+                    />
+
+                    <KpiCard
+                      label="Contributori negativi"
+                      value={String(
+                        attribution.summary
+                          .negativeContributors,
+                      )}
+                      subtitle="Variazione negativa"
+                      valueColor="error.main"
+                    />
+                  </Box>
+                  <Box sx={{ mt: 3 }}>
+                    <Typography
+                      variant="h6"
+                      sx={{ mb: 1.5 }}
+                    >
+                      Posizioni variate nel periodo
+                    </Typography>
+
+                    <TableContainer
+                      sx={{
+                        border: "1px solid",
+                        borderColor: "divider",
+                        borderRadius: 1,
+                        maxHeight: 420,
+                      }}
+                    >
+                      <Table
+                        size="small"
+                        stickyHeader
+                      >
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>
+                              Posizione
+                            </TableCell>
+
+                            <TableCell>
+                              Categoria
+                            </TableCell>
+
+                            <TableCell align="right">
+                              Valore iniziale
+                            </TableCell>
+
+                            <TableCell align="right">
+                              Valore finale
+                            </TableCell>
+
+                            <TableCell align="right">
+                              Contributo
+                            </TableCell>
+
+                            <TableCell align="center">
+                              Stato
+                            </TableCell>
+                          </TableRow>
+                        </TableHead>
+
+                        <TableBody>
+                          {attribution.items
+                            .filter(
+                              (item) =>
+                                item.comparisonStatus !==
+                                "UNCHANGED",
+                            )
+                            .map((item) => (
+                              <TableRow
+                                key={item.positionId}
+                                hover
+                              >
+                                <TableCell>
+                                  <Typography
+                                    sx={{
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    {item.name}
+                                  </Typography>
+
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
+                                    {item.code}
+                                  </Typography>
+                                </TableCell>
+
+                                <TableCell>
+                                  {categoryLabel(
+                                    item.category,
+                                  )}
+                                </TableCell>
+
+                                <TableCell align="right">
+                                  {euro(
+                                    item.startValue,
+                                  )}
+                                </TableCell>
+
+                                <TableCell align="right">
+                                  {euro(
+                                    item.endValue,
+                                  )}
+                                </TableCell>
+
+                                <TableCell
+                                  align="right"
+                                  sx={{
+                                    fontWeight: 800,
+                                    color: valueColor(
+                                      item.contributionChange,
+                                    ),
+                                  }}
+                                >
+                                  {signedEuro(
+                                    item.contributionChange,
+                                  )}
+                                </TableCell>
+
+                                <TableCell align="center">
+                                  <Chip
+                                    size="small"
+                                    color={
+                                      item.comparisonStatus ===
+                                      "NEW"
+                                        ? "success"
+                                        : item.comparisonStatus ===
+                                            "CLOSED"
+                                          ? "warning"
+                                          : "primary"
+                                    }
+                                    variant="outlined"
+                                    label={
+                                      item.comparisonStatus ===
+                                      "NEW"
+                                        ? "Nuova"
+                                        : item.comparisonStatus ===
+                                            "CLOSED"
+                                          ? "Chiusa"
+                                          : "Variata"
+                                    }
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+
+                </Paper>
               )}
 
               <Paper

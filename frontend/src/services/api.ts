@@ -1258,6 +1258,99 @@ export async function getPerformanceSummary(
   );
 }
 
+export type PositionAttributionItem = {
+  positionId: number;
+  code: string;
+  name: string;
+  category: string;
+  subcategory: string | null;
+  currency: string;
+  baseCurrency: string;
+  isLiability: boolean;
+  source: string;
+  currentStatus: string;
+  comparisonStatus:
+    | "UNCHANGED"
+    | "CHANGED"
+    | "NEW"
+    | "CLOSED";
+  startValue: number;
+  endValue: number;
+  signedStartValue: number;
+  signedEndValue: number;
+  valueChange: number;
+  contributionChange: number;
+  percentageChange: number | null;
+  startValuationDate: string | null;
+  endValuationDate: string | null;
+};
+
+export type PositionAttributionCategory = {
+  category: string;
+  positions: number;
+  startValue: number;
+  endValue: number;
+  contributionChange: number;
+  percentageChange: number | null;
+};
+
+export type PositionAttributionResponse = {
+  period: {
+    start: string;
+    end: string;
+    days: number;
+    startSnapshotId: string;
+    endSnapshotId: string;
+  };
+
+  summary: {
+    positions: number;
+    unchanged: number;
+    changed: number;
+    new: number;
+    closed: number;
+    positiveContributors: number;
+    negativeContributors: number;
+    totalContributionChange: number;
+    snapshotNetWorthChange: number;
+    reconciled: boolean;
+  };
+
+  categories: PositionAttributionCategory[];
+  items: PositionAttributionItem[];
+  warnings: string[];
+};
+
+export async function getPositionAttribution(
+  from?: string,
+  to?: string,
+): Promise<PositionAttributionResponse> {
+  const parameters =
+    new URLSearchParams();
+
+  if (from) {
+    parameters.set("from", from);
+  }
+
+  if (to) {
+    parameters.set("to", to);
+  }
+
+  const query =
+    parameters.toString();
+
+  const response = await fetch(
+    `${API_URL}/performance/positions${
+      query ? `?${query}` : ""
+    }`,
+  );
+
+  return readJson<PositionAttributionResponse>(
+    response,
+    "Unable to load position attribution",
+  );
+}
+
 export type RiskAssetClass = {
   category: string;
   label: string;
