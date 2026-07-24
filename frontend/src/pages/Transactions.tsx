@@ -193,9 +193,9 @@ function transactionStatusLabel(
 
 function transactionStatusColor(
   status: string,
-): "success" | "default" | "warning" {
+): "primary" | "default" | "warning" {
   if (status === "POSTED") {
-    return "success";
+    return "primary";
   }
 
   if (status === "VOIDED") {

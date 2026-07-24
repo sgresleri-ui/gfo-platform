@@ -1322,4 +1322,311 @@ export class TransactionImportService
     };
   }
 
+  async previewFinecoSa() {
+    const workbook = new ExcelJS.Workbook();
+
+    await workbook.xlsx.readFile(
+      await this.workbookPath(),
+    );
+
+    const sheet = workbook.getWorksheet('Fineco Sa');
+
+    if (!sheet) {
+      throw new Error('Foglio Fineco Sa non trovato.');
+    }
+
+    const positions =
+      await this.prisma.wealthPosition.findMany({
+        where: {
+          code: { startsWith: 'INVESTMENT_' },
+        },
+        select: {
+          id: true,
+          code: true,
+          name: true,
+        },
+      });
+
+    const positionByIsin = new Map(
+      positions
+        .map((position) => {
+          const isin =
+            position.code.match(
+              /[A-Z]{2}[A-Z0-9]{10}$/,
+            )?.[0];
+
+          return isin
+            ? [isin, position] as const
+            : null;
+        })
+        .filter(
+          (
+            item,
+          ): item is readonly [
+            string,
+            (typeof positions)[number],
+          ] => item !== null,
+        ),
+    );
+
+    const occurrences = new Map<string, number>();
+
+    const items: Array<{
+      date: string;
+      type: string;
+      direction: string;
+      amount: number;
+      isin: string | null;
+      positionId: number | null;
+      positionCode: string | null;
+      description: string;
+      category: string;
+      externalReference: string;
+      alreadyImported: boolean;
+    }> = [];
+
+    for (
+      let rowNumber = 2;
+      rowNumber <= sheet.rowCount;
+      rowNumber += 1
+    ) {
+      const row = sheet.getRow(rowNumber);
+
+      const transactionDate =
+        this.date(row.getCell(2));
+
+      if (!transactionDate) {
+        continue;
+      }
+
+      const income =
+        this.number(row.getCell(4)) ?? 0;
+
+      const expense =
+        this.number(row.getCell(5)) ?? 0;
+
+      const amount =
+        income > 0
+          ? income
+          : expense > 0
+            ? expense
+            : null;
+
+      if (amount === null) {
+        continue;
+      }
+
+      const description =
+        row.getCell(7).text.trim();
+
+      const category =
+        row.getCell(8).text.trim();
+
+      let type: string | null = null;
+
+      if (category === 'Acquisto Fondi/Titoli') {
+        type = 'BUY';
+      } else if (category === 'Quote da investimenti') {
+        type = 'SELL';
+      } else if (
+        category === 'Imposta di Bollo Titoli e CC'
+      ) {
+        type = 'TAX';
+      } else if (
+        category === 'Altre Commissioni Bancarie' ||
+        category ===
+          'Commissioni Bancarie su Investimenti'
+      ) {
+        type = 'FEE';
+      } else if (
+        category === 'Project Plan Dubai II'
+      ) {
+        type = 'PROPERTY_EXPENSE';
+      } else if (
+        category === 'Successione Vanzini'
+      ) {
+        type =
+          income > 0
+            ? 'OTHER_INCOME'
+            : 'OTHER_EXPENSE';
+      } else if (
+        category === 'Giroconto' &&
+        description.includes(
+          'Spese Bonifico Estero',
+        )
+      ) {
+        type = 'FEE';
+      }
+
+      if (!type) {
+        continue;
+      }
+
+      const direction =
+        income > 0 ? 'INFLOW' : 'OUTFLOW';
+
+      const isin =
+        description.match(
+          /\b[A-Z]{2}[A-Z0-9]{10}\b/,
+        )?.[0] ?? null;
+
+      const position =
+        isin
+          ? positionByIsin.get(isin) ?? null
+          : null;
+
+      const signature = [
+        'FINECO_SA',
+        transactionDate
+          .toISOString()
+          .slice(0, 10),
+        type,
+        direction,
+        amount.toFixed(2),
+        isin ?? '',
+        description,
+        category,
+      ].join('|');
+
+      const occurrence =
+        (occurrences.get(signature) ?? 0) + 1;
+
+      occurrences.set(signature, occurrence);
+
+      items.push({
+        date: transactionDate.toISOString(),
+        type,
+        direction,
+        amount,
+        isin,
+        positionId: position?.id ?? null,
+        positionCode: position?.code ?? null,
+        description,
+        category,
+        externalReference:
+          this.reference(
+            `${signature}|${occurrence}`,
+          ),
+        alreadyImported: false,
+      });
+    }
+
+    const existing =
+      await this.prisma.wealthTransaction.findMany({
+        where: {
+          source: IMPORT_SOURCE,
+          externalReference: {
+            in: items.map(
+              (item) => item.externalReference,
+            ),
+          },
+        },
+        select: {
+          externalReference: true,
+        },
+      });
+
+    const references = new Set(
+      existing.map(
+        (item) => item.externalReference,
+      ),
+    );
+
+    for (const item of items) {
+      item.alreadyImported =
+        references.has(item.externalReference);
+    }
+
+    return {
+      sheet: 'Fineco Sa',
+      extracted: items.length,
+      newTransactions:
+        items.filter(
+          (item) => !item.alreadyImported,
+        ).length,
+      alreadyImported:
+        items.filter(
+          (item) => item.alreadyImported,
+        ).length,
+      items,
+    };
+  }
+
+  async importFinecoSa(confirm: boolean) {
+    if (!confirm) {
+      throw new BadRequestException(
+        'L’importazione richiede conferma esplicita.',
+      );
+    }
+
+    const preview = await this.previewFinecoSa();
+
+    const pending = preview.items.filter(
+      (item) => !item.alreadyImported,
+    );
+
+    const household =
+      await this.prisma.household.findFirst({
+        orderBy: { id: 'asc' },
+        select: {
+          id: true,
+          currency: true,
+        },
+      });
+
+    if (!household) {
+      throw new NotFoundException(
+        'Household principale non trovato.',
+      );
+    }
+
+    await this.prisma.$transaction(
+      pending.map((item) => {
+        const inflow = item.direction === 'INFLOW';
+
+        return this.prisma.wealthTransaction.create({
+          data: {
+            householdId: household.id,
+            positionId: item.positionId,
+            transactionDate: new Date(item.date),
+            transactionType: item.type,
+            direction: item.direction,
+            grossAmount: item.amount,
+            fees: 0,
+            taxes: 0,
+            netAmount: item.amount,
+            currency: 'EUR',
+            fxRateToBase: 1,
+            baseAmount: item.amount,
+            baseCurrency: household.currency,
+            sourceAccountCode: inflow
+              ? null
+              : 'CASH_FINECO_SA',
+            destinationAccountCode: inflow
+              ? 'CASH_FINECO_SA'
+              : null,
+            source: IMPORT_SOURCE,
+            status: 'POSTED',
+            externalReference:
+              item.externalReference,
+            notes: [
+              'Fineco SA',
+              item.isin,
+              item.category,
+              item.description,
+            ]
+              .filter(Boolean)
+              .join(' | '),
+          },
+        });
+      }),
+    );
+
+    return {
+      imported: pending.length,
+      skipped: preview.alreadyImported,
+      total: preview.extracted,
+    };
+  }
+
 }

@@ -129,6 +129,20 @@ export class LedgerController {
       .importIbkr(confirm);
   }
 
+  @Get('transactions/import/preview/fineco-sa')
+  previewFinecoSaTransactions() {
+    return this.transactionImportService
+      .previewFinecoSa();
+  }
+
+  @Post('transactions/import/fineco-sa')
+  importFinecoSaTransactions(
+    @Body('confirm') confirm: boolean,
+  ) {
+    return this.transactionImportService
+      .importFinecoSa(confirm);
+  }
+
   @Get('transactions/summary')
   getTransactionSummary() {
     return this.transactionService
