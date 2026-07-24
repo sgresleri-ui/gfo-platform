@@ -1116,6 +1116,31 @@ export type PerformancePeriodsResponse = {
   snapshots: PerformancePeriodSnapshot[];
 };
 
+export type FinancialHistoryPoint = {
+  date: string;
+  label: string;
+  financialAssets: number;
+  liquidity: number;
+  investments: number;
+  components: {
+    aviva: number;
+    advice: number;
+    advicePlus: number;
+    insurance: number;
+  };
+};
+
+export type FinancialHistoryResponse = {
+  source: string;
+  sheet: string;
+  scope: string;
+  year: number;
+  count: number;
+  points: FinancialHistoryPoint[];
+  excluded: string[];
+  warnings: string[];
+};
+
 export type PerformanceSnapshot = {
   id: string;
   snapshotDate: string;
@@ -1189,6 +1214,17 @@ export async function getPerformancePeriods(): Promise<PerformancePeriodsRespons
   return readJson<PerformancePeriodsResponse>(
     response,
     "Unable to load performance periods",
+  );
+}
+
+export async function getFinancialHistory(): Promise<FinancialHistoryResponse> {
+  const response = await fetch(
+    `${API_URL}/performance/financial-history`,
+  );
+
+  return readJson<FinancialHistoryResponse>(
+    response,
+    "Unable to load financial history",
   );
 }
 

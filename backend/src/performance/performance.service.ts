@@ -8,6 +8,9 @@ import {
   PrismaClient,
 } from '@prisma/client';
 
+import * as ExcelJS from 'exceljs';
+import * as path from 'path';
+
 const EXTERNAL_CONTRIBUTIONS = [
   'DEPOSIT',
   'OTHER_INCOME',
@@ -45,6 +48,57 @@ export class PerformanceService
 
   async onModuleDestroy() {
     await this.prisma.$disconnect();
+  }
+
+  private async workbookPath() {
+    const settings =
+      await this.prisma.platformSetting.findUnique(
+        {
+          where: { id: 1 },
+        },
+      );
+
+    const folder =
+      (
+        settings?.dataFolder ??
+        '/data'
+      ).replace(/^[/\\]+/, '');
+
+    return path.join(
+      path.resolve(process.cwd(), '..'),
+      folder,
+      settings?.sourceWorkbook ??
+        'Gresleri2026.xlsm',
+    );
+  }
+
+  private excelNumber(
+    cell: ExcelJS.Cell,
+  ): number | null {
+    const value = cell.value;
+
+    if (typeof value === 'number') {
+      return value;
+    }
+
+    if (
+      value &&
+      typeof value === 'object' &&
+      'result' in value &&
+      typeof value.result === 'number'
+    ) {
+      return value.result;
+    }
+
+    const parsed = Number(
+      String(cell.text ?? '')
+        .replace(/\./g, '')
+        .replace(',', '.'),
+    );
+
+    return Number.isFinite(parsed)
+      ? parsed
+      : null;
   }
 
   private roundCurrency(
@@ -1172,6 +1226,195 @@ export class PerformanceService
         ): warning is string =>
           warning !== null,
       ),
+    };
+  }
+
+  async getFinancialHistory() {
+    const workbook =
+      new ExcelJS.Workbook();
+
+    await workbook.xlsx.readFile(
+      await this.workbookPath(),
+    );
+
+    const sheet =
+      workbook.getWorksheet(
+        'Conto Economico',
+      );
+
+    if (!sheet) {
+      throw new BadRequestException(
+        'Foglio Conto Economico non trovato.',
+      );
+    }
+
+    const configuredYear =
+      this.excelNumber(
+        sheet.getRow(2).getCell(1),
+      );
+
+    const workbookDate =
+      sheet.getRow(3).getCell(1)
+        .value;
+
+    const year =
+      configuredYear ??
+      (
+        workbookDate instanceof Date
+          ? workbookDate.getFullYear()
+          : new Date().getFullYear()
+      );
+
+    const monthLabels = [
+      'GEN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAG',
+      'GIU',
+      'LUG',
+      'AGO',
+      'SET',
+      'OTT',
+      'NOV',
+      'DIC',
+    ];
+
+    const points: Array<{
+      date: string;
+      label: string;
+      financialAssets: number;
+      liquidity: number;
+      investments: number;
+      components: {
+        aviva: number;
+        advice: number;
+        advicePlus: number;
+        insurance: number;
+      };
+    }> = [];
+
+    for (
+      let monthIndex = 0;
+      monthIndex < 12;
+      monthIndex++
+    ) {
+      const column =
+        monthIndex + 3;
+
+      const total =
+        this.excelNumber(
+          sheet.getRow(12)
+            .getCell(column),
+        );
+
+      if (
+        total === null ||
+        total === 0
+      ) {
+        continue;
+      }
+
+      const liquidity =
+        this.excelNumber(
+          sheet.getRow(13)
+            .getCell(column),
+        ) ?? 0;
+
+      const aviva =
+        this.excelNumber(
+          sheet.getRow(14)
+            .getCell(column),
+        ) ?? 0;
+
+      const advice =
+        this.excelNumber(
+          sheet.getRow(15)
+            .getCell(column),
+        ) ?? 0;
+
+      const advicePlus =
+        this.excelNumber(
+          sheet.getRow(16)
+            .getCell(column),
+        ) ?? 0;
+
+      const insurance =
+        this.excelNumber(
+          sheet.getRow(17)
+            .getCell(column),
+        ) ?? 0;
+
+      points.push({
+        date:
+          new Date(
+            Date.UTC(
+              year,
+              monthIndex,
+              1,
+            ),
+          ).toISOString(),
+
+        label:
+          monthLabels[monthIndex],
+
+        financialAssets:
+          this.roundCurrency(total),
+
+        liquidity:
+          this.roundCurrency(
+            liquidity,
+          ),
+
+        investments:
+          this.roundCurrency(
+            total - liquidity,
+          ),
+
+        components: {
+          aviva:
+            this.roundCurrency(aviva),
+
+          advice:
+            this.roundCurrency(advice),
+
+          advicePlus:
+            this.roundCurrency(
+              advicePlus,
+            ),
+
+          insurance:
+            this.roundCurrency(
+              insurance,
+            ),
+        },
+      });
+    }
+
+    return {
+      source:
+        'EXCEL_GRESLERI2026',
+
+      sheet:
+        'Conto Economico',
+
+      scope:
+        'FINANCIAL_ASSETS_ONLY',
+
+      year,
+      count: points.length,
+      points,
+
+      excluded: [
+        'Immobili',
+        'Passività',
+        'Valore di mercato storico IBKR',
+      ],
+
+      warnings: [
+        'La serie rappresenta esclusivamente il patrimonio finanziario registrato nel riepilogo mensile Excel.',
+        'Non deve essere interpretata come patrimonio netto familiare complessivo.',
+      ],
     };
   }
 

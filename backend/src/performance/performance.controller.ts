@@ -21,6 +21,12 @@ export class PerformanceController {
       .getAvailablePeriods();
   }
 
+  @Get('financial-history')
+  getFinancialHistory() {
+    return this.performanceService
+      .getFinancialHistory();
+  }
+
   @Get('positions')
   getPositionAttribution(
     @Query('from') from?: string,

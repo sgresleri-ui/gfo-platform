@@ -31,6 +31,8 @@ import {
   BarChart,
   CartesianGrid,
   Legend,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -38,8 +40,10 @@ import {
 } from "recharts";
 
 import {
+  getFinancialHistory,
   getPerformancePeriods,
   getPerformanceSummary,
+  type FinancialHistoryResponse,
   type PerformancePeriodSnapshot,
   type PerformanceSummaryResponse,
 } from "../services/api";
@@ -221,6 +225,11 @@ export default function Performance() {
       PerformanceSummaryResponse | null
     >(null);
 
+  const [financialHistory, setFinancialHistory] =
+    useState<FinancialHistoryResponse | null>(
+      null,
+    );
+
   const [fromSnapshot, setFromSnapshot] =
     useState("");
 
@@ -273,10 +282,18 @@ export default function Performance() {
       setNotice(null);
 
       try {
-        const result =
-          await getPerformancePeriods();
+        const [
+          result,
+          historyResult,
+        ] = await Promise.all([
+          getPerformancePeriods(),
+          getFinancialHistory(),
+        ]);
 
         setPeriods(result.snapshots);
+        setFinancialHistory(
+          historyResult,
+        );
 
         if (
           result.snapshots.length >= 2
@@ -515,6 +532,151 @@ export default function Performance() {
           {notice.text}
         </Alert>
       )}
+
+      {financialHistory &&
+        financialHistory.points.length >
+          0 && (
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              mb: 3,
+              border: "1px solid",
+              borderColor: "divider",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent:
+                  "space-between",
+                alignItems: {
+                  xs: "flex-start",
+                  md: "center",
+                },
+                flexDirection: {
+                  xs: "column",
+                  md: "row",
+                },
+                gap: 1.5,
+                mb: 2,
+              }}
+            >
+              <Box>
+                <Typography
+                  variant="h6"
+                  sx={{ fontWeight: 750 }}
+                >
+                  Patrimonio finanziario
+                  storico
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 0.5 }}
+                >
+                  Serie mensile Excel
+                  gennaio–luglio{" "}
+                  {financialHistory.year}.
+                  Sono esclusi immobili,
+                  passività e valore storico
+                  IBKR.
+                </Typography>
+              </Box>
+
+              <Chip
+                color="primary"
+                variant="outlined"
+                label={`${financialHistory.count} rilevazioni`}
+              />
+            </Box>
+
+            <Box sx={{ height: 360 }}>
+              <ResponsiveContainer
+                width="100%"
+                height="100%"
+              >
+                <LineChart
+                  data={
+                    financialHistory.points
+                  }
+                  margin={{
+                    top: 10,
+                    right: 25,
+                    left: 25,
+                    bottom: 10,
+                  }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                  />
+
+                  <XAxis
+                    dataKey="label"
+                  />
+
+                  <YAxis
+                    width={85}
+                    tickFormatter={(
+                      value:
+                        | number
+                        | string,
+                    ) =>
+                      shortEuro(
+                        Number(value),
+                      )
+                    }
+                  />
+
+                  <Tooltip
+                    formatter={(value) =>
+                      euro(Number(value))
+                    }
+                  />
+
+                  <Legend />
+
+                  <Line
+                    type="monotone"
+                    dataKey="financialAssets"
+                    name="Patrimonio finanziario"
+                    stroke="#1d4f7a"
+                    strokeWidth={3}
+                    dot={{ r: 4 }}
+                  />
+
+                  <Line
+                    type="monotone"
+                    dataKey="investments"
+                    name="Investimenti"
+                    stroke="#4d8b74"
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                  />
+
+                  <Line
+                    type="monotone"
+                    dataKey="liquidity"
+                    name="Liquidità"
+                    stroke="#b7791f"
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </Box>
+
+            <Alert
+              severity="info"
+              sx={{ mt: 2 }}
+            >
+              Questa serie non rappresenta
+              il patrimonio netto familiare
+              complessivo.
+            </Alert>
+          </Paper>
+        )}
 
       {periods.length < 2 ? (
         <Alert severity="info">
