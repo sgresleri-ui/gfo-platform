@@ -73,6 +73,34 @@ export class LedgerController {
       .importBbva(confirm);
   }
 
+  @Get('transactions/import/preview/rakbank-eur')
+  previewRakBankEurTransactions() {
+    return this.transactionImportService
+      .previewRakBankEur();
+  }
+
+  @Post('transactions/import/rakbank-eur')
+  importRakBankEurTransactions(
+    @Body('confirm') confirm: boolean,
+  ) {
+    return this.transactionImportService
+      .importRakBankEur(confirm);
+  }
+
+  @Get('transactions/import/preview/rakbank-aed')
+  previewRakBankAedTransactions() {
+    return this.transactionImportService
+      .previewRakBankAed();
+  }
+
+  @Post('transactions/import/rakbank-aed')
+  importRakBankAedTransactions(
+    @Body('confirm') confirm: boolean,
+  ) {
+    return this.transactionImportService
+      .importRakBankAed(confirm);
+  }
+
   @Get('transactions/summary')
   getTransactionSummary() {
     return this.transactionService
