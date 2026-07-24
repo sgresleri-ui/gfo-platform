@@ -293,6 +293,13 @@ export default function Performance() {
     "ALL" | "POSITIVE" | "NEGATIVE"
   >("ALL");
 
+  const [
+    attributionSort,
+    setAttributionSort,
+  ] = useState<
+    "IMPACT_DESC" | "IMPACT_ASC"
+  >("IMPACT_DESC");
+
   function exportFinancialHistoryCsv() {
     if (!financialHistory) {
       return;
@@ -707,22 +714,36 @@ export default function Performance() {
             "UNCHANGED",
         ) ?? [];
 
-      if (attributionFilter === "POSITIVE") {
-        return changedItems.filter(
-          (item) =>
-            item.contributionChange > 0,
-        );
-      }
+      const filteredItems =
+        attributionFilter === "POSITIVE"
+          ? changedItems.filter(
+              (item) =>
+                item.contributionChange > 0,
+            )
+          : attributionFilter === "NEGATIVE"
+            ? changedItems.filter(
+                (item) =>
+                  item.contributionChange < 0,
+              )
+            : changedItems;
 
-      if (attributionFilter === "NEGATIVE") {
-        return changedItems.filter(
-          (item) =>
-            item.contributionChange < 0,
-        );
-      }
+      return [...filteredItems].sort(
+        (first, second) => {
+          const difference =
+            second.contributionChange -
+            first.contributionChange;
 
-      return changedItems;
-    }, [attribution, attributionFilter]);
+          return attributionSort ===
+            "IMPACT_DESC"
+            ? difference
+            : -difference;
+        },
+      );
+    }, [
+      attribution,
+      attributionFilter,
+      attributionSort,
+    ]);
 
   const attributionChartData =
     useMemo(
@@ -1679,6 +1700,35 @@ export default function Performance() {
                           </Button>
                         ))}
                       </Box>
+
+                      <TextField
+                        select
+                        size="small"
+                        label="Ordinamento"
+                        value={attributionSort}
+                        onChange={(event) =>
+                          setAttributionSort(
+                            event.target.value as
+                              | "IMPACT_DESC"
+                              | "IMPACT_ASC",
+                          )
+                        }
+                        sx={{
+                          width: {
+                            xs: "100%",
+                            sm: 230,
+                          },
+                          mb: 1.5,
+                        }}
+                      >
+                        <MenuItem value="IMPACT_DESC">
+                          Contributo maggiore
+                        </MenuItem>
+
+                        <MenuItem value="IMPACT_ASC">
+                          Contributo minore
+                        </MenuItem>
+                      </TextField>
 
                       <TableContainer
                       sx={{
