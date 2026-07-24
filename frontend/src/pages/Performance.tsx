@@ -24,6 +24,7 @@ import {
 } from "@mui/material";
 
 import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded";
+import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 
 import {
@@ -263,6 +264,69 @@ export default function Performance() {
 
   const [notice, setNotice] =
     useState<Notice | null>(null);
+
+  function exportFinancialHistoryCsv() {
+    if (!financialHistory) {
+      return;
+    }
+
+    const decimal = (value: number) =>
+      value.toFixed(2).replace(".", ",");
+
+    const rows = [
+      [
+        "Mese",
+        "Patrimonio finanziario",
+        "Investimenti",
+        "Liquidità",
+        "Variazione mensile",
+      ].join(";"),
+      ...financialHistory.points.map(
+        (point, index, points) => {
+          const monthlyChange =
+            index === 0
+              ? ""
+              : decimal(
+                  point.financialAssets -
+                    points[index - 1]
+                      .financialAssets,
+                );
+
+          return [
+            `${point.label} ${financialHistory.year}`,
+            decimal(point.financialAssets),
+            decimal(point.investments),
+            decimal(point.liquidity),
+            monthlyChange,
+          ].join(";");
+        },
+      ),
+    ];
+
+    const blob = new Blob(
+      ["\uFEFF" + rows.join("\n")],
+      {
+        type:
+          "text/csv;charset=utf-8;",
+      },
+    );
+
+    const url =
+      URL.createObjectURL(blob);
+
+    const link =
+      document.createElement("a");
+
+    link.href = url;
+    link.download =
+      `patrimonio-finanziario-${financialHistory.year}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+  }
 
   const analyzePeriod = useCallback(
     async (
@@ -661,11 +725,33 @@ export default function Performance() {
                 </Typography>
               </Box>
 
-              <Chip
-                color="primary"
-                variant="outlined"
-                label={`${financialHistory.count} rilevazioni`}
-              />
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  flexWrap: "wrap",
+                }}
+              >
+                <Chip
+                  color="primary"
+                  variant="outlined"
+                  label={`${financialHistory.count} rilevazioni`}
+                />
+
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={
+                    <DownloadRoundedIcon />
+                  }
+                  onClick={
+                    exportFinancialHistoryCsv
+                  }
+                >
+                  Esporta CSV
+                </Button>
+              </Box>
             </Box>
 
             {financialHistorySummary && (
