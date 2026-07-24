@@ -171,6 +171,20 @@ export class LedgerController {
       .importAmex(confirm);
   }
 
+  @Get('transactions/import/preview/cash')
+  previewCashTransactions() {
+    return this.transactionImportService
+      .previewCash();
+  }
+
+  @Post('transactions/import/cash')
+  importCashTransactions(
+    @Body('confirm') confirm: boolean,
+  ) {
+    return this.transactionImportService
+      .importCash(confirm);
+  }
+
   @Get('transactions/summary')
   getTransactionSummary() {
     return this.transactionService

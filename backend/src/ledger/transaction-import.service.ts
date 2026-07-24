@@ -2199,4 +2199,278 @@ export class TransactionImportService
     };
   }
 
+  async previewCash() {
+    const workbook = new ExcelJS.Workbook();
+
+    await workbook.xlsx.readFile(
+      await this.workbookPath(),
+    );
+
+    const sheet = workbook.getWorksheet('Contanti');
+
+    if (!sheet) {
+      throw new Error('Foglio Contanti non trovato.');
+    }
+
+    const monthColumns = [
+      { month: 0, euroColumn: 2 },
+      { month: 1, euroColumn: 6 },
+      { month: 2, euroColumn: 10 },
+      { month: 3, euroColumn: 14 },
+      { month: 4, euroColumn: 18 },
+      { month: 5, euroColumn: 22 },
+      { month: 6, euroColumn: 26 },
+      { month: 7, euroColumn: 30 },
+      { month: 8, euroColumn: 34 },
+      { month: 9, euroColumn: 38 },
+      { month: 10, euroColumn: 42 },
+      { month: 11, euroColumn: 46 },
+    ];
+
+    const excludedRows = new Set([
+      52,
+      136,
+      137,
+      140,
+    ]);
+
+    const occurrences = new Map<string, number>();
+
+    const items: Array<{
+      date: string;
+      type: string;
+      direction: string;
+      amount: number;
+      category: string;
+      travel: string;
+      description: string;
+      externalReference: string;
+      alreadyImported: boolean;
+    }> = [];
+
+    for (
+      let rowNumber = 3;
+      rowNumber <= 135;
+      rowNumber += 1
+    ) {
+      if (excludedRows.has(rowNumber)) {
+        continue;
+      }
+
+      const row = sheet.getRow(rowNumber);
+      const category = row.getCell(1).text.trim();
+
+      if (!category) {
+        continue;
+      }
+
+      for (const monthData of monthColumns) {
+        const amountCell =
+          row.getCell(monthData.euroColumn);
+
+        const rawAmount = amountCell.value;
+
+        const signedAmount =
+          typeof rawAmount === 'number'
+            ? rawAmount
+            : rawAmount &&
+                typeof rawAmount === 'object' &&
+                'result' in rawAmount &&
+                typeof rawAmount.result === 'number'
+              ? rawAmount.result
+              : Number(
+                  amountCell.text
+                    .replace(/\./g, '')
+                    .replace(',', '.'),
+                ) || 0;
+
+        if (signedAmount === 0) {
+          continue;
+        }
+
+        const inflow = signedAmount < 0;
+        const amount = Math.abs(signedAmount);
+
+        const transactionDate = new Date(
+          Date.UTC(
+            2026,
+            monthData.month + 1,
+            0,
+            12,
+          ),
+        );
+
+        const travel =
+          row
+            .getCell(monthData.euroColumn + 3)
+            .text
+            .trim();
+
+        const type = inflow
+          ? 'OTHER_INCOME'
+          : 'OTHER_EXPENSE';
+
+        const direction = inflow
+          ? 'INFLOW'
+          : 'OUTFLOW';
+
+        const description = [
+          'Riepilogo contanti',
+          category,
+          travel,
+        ]
+          .filter(Boolean)
+          .join(' | ');
+
+        const signature = [
+          'CASH_SUMMARY',
+          transactionDate
+            .toISOString()
+            .slice(0, 10),
+          type,
+          direction,
+          amount.toFixed(2),
+          category,
+          travel,
+        ].join('|');
+
+        const occurrence =
+          (occurrences.get(signature) ?? 0) + 1;
+
+        occurrences.set(signature, occurrence);
+
+        items.push({
+          date: transactionDate.toISOString(),
+          type,
+          direction,
+          amount,
+          category,
+          travel,
+          description,
+          externalReference:
+            this.reference(
+              `${signature}|${occurrence}`,
+            ),
+          alreadyImported: false,
+        });
+      }
+    }
+
+    const existing =
+      await this.prisma.wealthTransaction.findMany({
+        where: {
+          source: IMPORT_SOURCE,
+          externalReference: {
+            in: items.map(
+              (item) => item.externalReference,
+            ),
+          },
+        },
+        select: {
+          externalReference: true,
+        },
+      });
+
+    const references = new Set(
+      existing.map(
+        (item) => item.externalReference,
+      ),
+    );
+
+    for (const item of items) {
+      item.alreadyImported =
+        references.has(item.externalReference);
+    }
+
+    return {
+      sheet: 'Contanti',
+      extracted: items.length,
+      newTransactions:
+        items.filter(
+          (item) => !item.alreadyImported,
+        ).length,
+      alreadyImported:
+        items.filter(
+          (item) => item.alreadyImported,
+        ).length,
+      items,
+    };
+  }
+
+  async importCash(confirm: boolean) {
+    if (!confirm) {
+      throw new BadRequestException(
+        'L’importazione richiede conferma esplicita.',
+      );
+    }
+
+    const preview = await this.previewCash();
+
+    const pending = preview.items.filter(
+      (item) => !item.alreadyImported,
+    );
+
+    const household =
+      await this.prisma.household.findFirst({
+        orderBy: { id: 'asc' },
+        select: {
+          id: true,
+          currency: true,
+        },
+      });
+
+    if (!household) {
+      throw new NotFoundException(
+        'Household principale non trovato.',
+      );
+    }
+
+    await this.prisma.$transaction(
+      pending.map((item) => {
+        const inflow = item.direction === 'INFLOW';
+
+        return this.prisma.wealthTransaction.create({
+          data: {
+            householdId: household.id,
+            transactionDate: new Date(item.date),
+            transactionType: item.type,
+            direction: item.direction,
+            grossAmount: item.amount,
+            fees: 0,
+            taxes: 0,
+            netAmount: item.amount,
+            currency: 'EUR',
+            fxRateToBase: 1,
+            baseAmount: item.amount,
+            baseCurrency: household.currency,
+            sourceAccountCode: inflow
+              ? null
+              : 'CASH_PHYSICAL',
+            destinationAccountCode: inflow
+              ? 'CASH_PHYSICAL'
+              : null,
+            source: IMPORT_SOURCE,
+            status: 'POSTED',
+            externalReference:
+              item.externalReference,
+            notes: [
+              'Contanti',
+              item.category,
+              item.travel,
+              item.description,
+            ]
+              .filter(Boolean)
+              .join(' | '),
+          },
+        });
+      }),
+    );
+
+    return {
+      imported: pending.length,
+      skipped: preview.alreadyImported,
+      total: preview.extracted,
+    };
+  }
+
 }
