@@ -143,6 +143,20 @@ export class LedgerController {
       .importFinecoSa(confirm);
   }
 
+  @Get('transactions/import/preview/fineco-st')
+  previewFinecoStTransactions() {
+    return this.transactionImportService
+      .previewFinecoSt();
+  }
+
+  @Post('transactions/import/fineco-st')
+  importFinecoStTransactions(
+    @Body('confirm') confirm: boolean,
+  ) {
+    return this.transactionImportService
+      .importFinecoSt(confirm);
+  }
+
   @Get('transactions/summary')
   getTransactionSummary() {
     return this.transactionService
