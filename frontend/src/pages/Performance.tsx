@@ -414,6 +414,38 @@ export default function Performance() {
     [report],
   );
 
+  const financialHistorySummary =
+    useMemo(() => {
+      const points =
+        financialHistory?.points ?? [];
+
+      if (points.length < 2) {
+        return null;
+      }
+
+      const initial =
+        points[0].financialAssets;
+
+      const final =
+        points[points.length - 1]
+          .financialAssets;
+
+      const change =
+        final - initial;
+
+      const changePercentage =
+        initial !== 0
+          ? (change / initial) * 100
+          : null;
+
+      return {
+        initial,
+        final,
+        change,
+        changePercentage,
+      };
+    }, [financialHistory]);
+
   function requestAnalysis() {
     if (
       !fromSnapshot ||
@@ -591,6 +623,67 @@ export default function Performance() {
                 label={`${financialHistory.count} rilevazioni`}
               />
             </Box>
+
+            {financialHistorySummary && (
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    sm:
+                      "repeat(2, minmax(0, 1fr))",
+                    xl:
+                      "repeat(4, minmax(0, 1fr))",
+                  },
+                  gap: 2,
+                  mb: 3,
+                }}
+              >
+                <KpiCard
+                  label="Valore iniziale"
+                  value={euro(
+                    financialHistorySummary
+                      .initial,
+                  )}
+                  subtitle="Gennaio 2026"
+                />
+
+                <KpiCard
+                  label="Valore finale"
+                  value={euro(
+                    financialHistorySummary
+                      .final,
+                  )}
+                  subtitle="Luglio 2026"
+                />
+
+                <KpiCard
+                  label="Variazione finanziaria"
+                  value={signedEuro(
+                    financialHistorySummary
+                      .change,
+                  )}
+                  subtitle="Differenza assoluta"
+                  valueColor={valueColor(
+                    financialHistorySummary
+                      .change,
+                  )}
+                />
+
+                <KpiCard
+                  label="Variazione percentuale"
+                  value={percentage(
+                    financialHistorySummary
+                      .changePercentage,
+                  )}
+                  subtitle="Non depurata dai flussi"
+                  valueColor={valueColor(
+                    financialHistorySummary
+                      .changePercentage,
+                  )}
+                />
+              </Box>
+            )}
 
             <Box sx={{ height: 360 }}>
               <ResponsiveContainer
