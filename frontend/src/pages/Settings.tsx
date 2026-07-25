@@ -158,7 +158,71 @@ export default function Settings() {
   }
 
   useEffect(() => {
-    void loadSettings();
+    let cancelled = false;
+
+    void Promise.allSettled([
+      getPlatformSettings(),
+      getBudgetOverview(),
+      getPropertiesOverview(),
+    ]).then(([
+      settingsResult,
+      budgetResult,
+      propertiesResult,
+    ]) => {
+      if (cancelled) {
+        return;
+      }
+
+      if (
+        settingsResult.status ===
+        "fulfilled"
+      ) {
+        setSettings(
+          toSettingsForm(
+            settingsResult.value,
+          ),
+        );
+
+        setUpdatedAt(
+          settingsResult.value
+            .updatedAt,
+        );
+      } else {
+        setError(
+          "Impossibile caricare le impostazioni dal database.",
+        );
+      }
+
+      setConnection({
+        backendOnline:
+          settingsResult.status ===
+            "fulfilled" ||
+          budgetResult.status ===
+            "fulfilled" ||
+          propertiesResult.status ===
+            "fulfilled",
+
+        budgetAsOfDate:
+          budgetResult.status ===
+          "fulfilled"
+            ? budgetResult.value
+                .asOfDate
+            : null,
+
+        propertiesAsOfDate:
+          propertiesResult.status ===
+          "fulfilled"
+            ? propertiesResult.value
+                .asOfDate
+            : null,
+      });
+
+      setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function updateSetting<
