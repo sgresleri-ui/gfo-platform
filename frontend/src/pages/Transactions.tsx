@@ -380,8 +380,54 @@ export default function Transactions() {
   );
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    let cancelled = false;
+
+    void Promise.all([
+      getLedgerTransactionTypes(),
+      getLedgerPositions(),
+      getLedgerTransactions(500),
+      getLedgerTransactionSummary(),
+    ])
+      .then(
+        ([
+          typeResult,
+          positionResult,
+          transactionResult,
+          summaryResult,
+        ]) => {
+          if (!cancelled) {
+            setTypes(typeResult.types);
+            setPositions(
+              positionResult.positions,
+            );
+            setTransactions(
+              transactionResult.transactions,
+            );
+            setSummary(summaryResult);
+          }
+        },
+      )
+      .catch((error) => {
+        console.error(error);
+
+        if (!cancelled) {
+          setNotice({
+            severity: "error",
+            text:
+              "Impossibile caricare il Registro Movimenti.",
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const transactionTypeLabels =
     useMemo(
