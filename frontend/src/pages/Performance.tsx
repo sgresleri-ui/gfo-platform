@@ -30,6 +30,7 @@ import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import {
   Bar,
   BarChart,
+  Cell,
   CartesianGrid,
   Legend,
   Line,
@@ -848,6 +849,142 @@ export default function Performance() {
             ),
         );
     }, [attribution]);
+
+
+  const attributionWaterfallData =
+    useMemo(() => {
+      if (!attribution) {
+        return {
+          points: [],
+          axisMin: 0,
+          axisMax: 1,
+        };
+      }
+
+      type RawPoint = {
+        name: string;
+        kind: "TOTAL" | "CHANGE";
+        start: number;
+        end: number;
+        displayValue: number;
+      };
+
+      const initial =
+        attribution.categories.reduce(
+          (total, category) =>
+            total + category.startValue,
+          0,
+        );
+
+      let running = initial;
+
+      const rawPoints: RawPoint[] = [
+        {
+          name: "Patrimonio iniziale",
+          kind: "TOTAL",
+          start: initial,
+          end: initial,
+          displayValue: initial,
+        },
+      ];
+
+      for (
+        const group of
+          attributionChangeTypeSummary
+      ) {
+        const start = running;
+
+        running +=
+          group.contributionChange;
+
+        rawPoints.push({
+          name: changeTypeLabel(
+            group.changeType,
+          ),
+          kind: "CHANGE",
+          start,
+          end: running,
+          displayValue:
+            group.contributionChange,
+        });
+      }
+
+      const final =
+        initial +
+        attribution.summary
+          .snapshotNetWorthChange;
+
+      rawPoints.push({
+        name: "Patrimonio finale",
+        kind: "TOTAL",
+        start: final,
+        end: final,
+        displayValue: final,
+      });
+
+      const values = rawPoints.flatMap(
+        (point) => [
+          point.start,
+          point.end,
+        ],
+      );
+
+      const minimum = Math.min(...values);
+      const maximum = Math.max(...values);
+
+      const span = Math.max(
+        maximum - minimum,
+        Math.abs(maximum) * 0.001,
+        1,
+      );
+
+      const axisMin =
+        Math.floor(
+          (minimum - span * 0.15) /
+            1000,
+        ) * 1000;
+
+      const axisMax =
+        Math.ceil(
+          (maximum + span * 0.15) /
+            1000,
+        ) * 1000;
+
+      return {
+        axisMin,
+        axisMax,
+        points: rawPoints.map(
+          (point) => ({
+            ...point,
+            range:
+              point.kind === "TOTAL"
+                ? [
+                    axisMin,
+                    point.end,
+                  ]
+                : [
+                    Math.min(
+                      point.start,
+                      point.end,
+                    ),
+                    Math.max(
+                      point.start,
+                      point.end,
+                    ),
+                  ],
+            fill:
+              point.kind === "TOTAL"
+                ? "#5f769f"
+                : point.displayValue > 0
+                  ? "#4d8b74"
+                  : "#b84c4c",
+          }),
+        ),
+      };
+    }, [
+      attribution,
+      attributionChangeTypeSummary,
+    ]);
 
   const topAttributionContributors =
     useMemo(() => {
@@ -1989,6 +2126,168 @@ export default function Performance() {
                         </BarChart>
                       </ResponsiveContainer>
                     </Box>
+
+
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2,
+                        mb: 3,
+                        border: "1px solid",
+                        borderColor: "divider",
+                      }}
+                    >
+                      <Typography variant="h6">
+                        Waterfall variazione patrimoniale
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mt: 0.5 }}
+                      >
+                        Raccordo tra patrimonio iniziale,
+                        variazioni per tipologia e
+                        patrimonio finale. L’asse verticale
+                        è adattato per rendere leggibili le
+                        variazioni.
+                      </Typography>
+
+                      <Box
+                        sx={{
+                          height: 380,
+                          mt: 2,
+                        }}
+                      >
+                        <ResponsiveContainer
+                          width="100%"
+                          height="100%"
+                        >
+                          <BarChart
+                            data={
+                              attributionWaterfallData.points
+                            }
+                            margin={{
+                              top: 20,
+                              right: 25,
+                              left: 20,
+                              bottom: 75,
+                            }}
+                          >
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                            />
+
+                            <XAxis
+                              dataKey="name"
+                              interval={0}
+                              angle={-18}
+                              textAnchor="end"
+                              height={85}
+                              tick={{
+                                fontSize: 11,
+                              }}
+                            />
+
+                            <YAxis
+                              domain={[
+                                attributionWaterfallData.axisMin,
+                                attributionWaterfallData.axisMax,
+                              ]}
+                              tickFormatter={(value) =>
+                                `${(
+                                  Number(value) /
+                                  1_000_000
+                                ).toLocaleString(
+                                  "it-IT",
+                                  {
+                                    minimumFractionDigits: 3,
+                                    maximumFractionDigits: 3,
+                                  },
+                                )} M€`
+                              }
+                              width={85}
+                            />
+
+                            <Tooltip
+                              content={({
+                                active,
+                                payload,
+                              }) => {
+                                const point =
+                                  payload?.[0]
+                                    ?.payload as
+                                    | {
+                                        name: string;
+                                        kind:
+                                          | "TOTAL"
+                                          | "CHANGE";
+                                        displayValue: number;
+                                      }
+                                    | undefined;
+
+                                if (
+                                  !active ||
+                                  !point
+                                ) {
+                                  return null;
+                                }
+
+                                return (
+                                  <Paper
+                                    elevation={3}
+                                    sx={{ p: 1.5 }}
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      sx={{
+                                        fontWeight: 800,
+                                      }}
+                                    >
+                                      {point.name}
+                                    </Typography>
+
+                                    <Typography
+                                      variant="body2"
+                                      color={valueColor(
+                                        point.kind ===
+                                          "TOTAL"
+                                          ? null
+                                          : point.displayValue,
+                                      )}
+                                    >
+                                      {point.kind ===
+                                      "TOTAL"
+                                        ? euro(
+                                            point.displayValue,
+                                          )
+                                        : signedEuro(
+                                            point.displayValue,
+                                          )}
+                                    </Typography>
+                                  </Paper>
+                                );
+                              }}
+                            />
+
+                            <Bar
+                              dataKey="range"
+                              name="Variazione"
+                              radius={[4, 4, 0, 0]}
+                            >
+                              {attributionWaterfallData.points.map(
+                                (point) => (
+                                  <Cell
+                                    key={`${point.name}-${point.displayValue}`}
+                                    fill={point.fill}
+                                  />
+                                ),
+                              )}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </Box>
+                    </Paper>
 
                     <Typography
                       variant="h6"
