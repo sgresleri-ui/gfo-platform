@@ -1,7 +1,4 @@
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useState } from "react";
 
 import {
   Alert,
@@ -215,6 +212,28 @@ export default function EconomicAssumptionProfileDialog({
   open,
   mode,
   profile,
+  ...props
+}: Props) {
+  const draftKey =
+    open
+      ? `${mode}:${profile?.id ?? "new"}`
+      : "closed";
+
+  return (
+    <EconomicAssumptionProfileDialogContent
+      key={draftKey}
+      open={open}
+      mode={mode}
+      profile={profile}
+      {...props}
+    />
+  );
+}
+
+function EconomicAssumptionProfileDialogContent({
+  open,
+  mode,
+  profile,
   sourceValues,
   saving,
   onClose,
@@ -237,27 +256,6 @@ export default function EconomicAssumptionProfileDialog({
     validationError,
     setValidationError,
   ] = useState("");
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    setDraft(
-      createDraft(
-        mode,
-        profile,
-        sourceValues,
-      ),
-    );
-
-    setValidationError("");
-  }, [
-    open,
-    mode,
-    profile,
-    sourceValues,
-  ]);
 
   function updateDraft(
     field:
