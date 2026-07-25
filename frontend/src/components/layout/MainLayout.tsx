@@ -3,6 +3,7 @@ import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
+import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import {
   Suspense,
   useMemo,
@@ -154,10 +155,20 @@ const navigation = [
   },
 ];
 
+function normalizeSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("it");
+}
+
 export default function MainLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [activeSearchIndex, setActiveSearchIndex] = useState(0);
 
   const currentTitle = useMemo(() => {
     return (
@@ -165,6 +176,26 @@ export default function MainLayout() {
       "GFO Platform"
     );
   }, [location.pathname]);
+
+  const searchResults = useMemo(() => {
+    const query = normalizeSearchText(searchValue.trim());
+
+    if (!query) {
+      return navigation;
+    }
+
+    return navigation.filter((item) =>
+      normalizeSearchText(item.label).includes(query),
+    );
+  }, [searchValue]);
+
+  const openSearchResult = (path: string) => {
+    navigate(path);
+    setSearchValue("");
+    setSearchOpen(false);
+    setActiveSearchIndex(0);
+    setMobileOpen(false);
+  };
 
   const drawer = (
     <Box
@@ -348,20 +379,178 @@ export default function MainLayout() {
             {currentTitle}
           </Typography>
 
-          <TextField
-            size="small"
-            placeholder="Cerca nella piattaforma..."
+          <Box
             sx={{
+              position: "relative",
               display: { xs: "none", sm: "block" },
               ml: "auto",
               width: { sm: 250, lg: 360 },
-
-              "& .MuiOutlinedInput-root": {
-                backgroundColor: "#F6F8FC",
-                borderRadius: 3,
-              },
             }}
-          />
+          >
+            <TextField
+              fullWidth
+              size="small"
+              value={searchValue}
+              placeholder="Vai a una sezione..."
+              onFocus={() => {
+                setSearchOpen(true);
+                setActiveSearchIndex(0);
+              }}
+              onBlur={() => setSearchOpen(false)}
+              onChange={(event) => {
+                setSearchValue(event.target.value);
+                setSearchOpen(true);
+                setActiveSearchIndex(0);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  setSearchOpen(false);
+                  event.currentTarget.blur();
+                  return;
+                }
+
+                if (searchResults.length === 0) {
+                  return;
+                }
+
+                if (event.key === "ArrowDown") {
+                  event.preventDefault();
+                  setSearchOpen(true);
+                  setActiveSearchIndex(
+                    (index) => (index + 1) % searchResults.length,
+                  );
+                  return;
+                }
+
+                if (event.key === "ArrowUp") {
+                  event.preventDefault();
+                  setSearchOpen(true);
+                  setActiveSearchIndex(
+                    (index) =>
+                      (index - 1 + searchResults.length) %
+                      searchResults.length,
+                  );
+                  return;
+                }
+
+                if (event.key === "Enter" && searchOpen) {
+                  event.preventDefault();
+                  openSearchResult(
+                    searchResults[
+                      Math.min(
+                        activeSearchIndex,
+                        searchResults.length - 1,
+                      )
+                    ].path,
+                  );
+                }
+              }}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <SearchRoundedIcon
+                      sx={{
+                        mr: 1,
+                        color: "text.secondary",
+                        fontSize: 20,
+                      }}
+                    />
+                  ),
+                },
+                htmlInput: {
+                  role: "combobox",
+                  "aria-label": "Cerca una sezione della piattaforma",
+                  "aria-autocomplete": "list",
+                  "aria-expanded": searchOpen,
+                  "aria-controls": searchOpen
+                    ? "platform-search-results"
+                    : undefined,
+                  "aria-activedescendant":
+                    searchOpen && searchResults.length > 0
+                      ? `platform-search-option-${activeSearchIndex}`
+                      : undefined,
+                },
+              }}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  backgroundColor: "#F6F8FC",
+                  borderRadius: 3,
+                },
+              }}
+            />
+
+            {searchOpen && (
+              <Box
+                id="platform-search-results"
+                role="listbox"
+                onMouseDown={(event) => event.preventDefault()}
+                sx={{
+                  position: "absolute",
+                  zIndex: 2,
+                  top: "calc(100% + 8px)",
+                  left: 0,
+                  right: 0,
+                  maxHeight: 380,
+                  overflowY: "auto",
+                  p: 0.75,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2.5,
+                  bgcolor: "background.paper",
+                  boxShadow: "0 18px 48px rgba(15, 36, 68, 0.18)",
+                }}
+              >
+                {searchResults.length === 0 ? (
+                  <Typography
+                    color="text.secondary"
+                    sx={{ px: 1.5, py: 1.25, fontSize: 14 }}
+                  >
+                    Nessuna sezione trovata
+                  </Typography>
+                ) : (
+                  searchResults.map((item, index) => (
+                    <ListItemButton
+                      key={item.path}
+                      id={`platform-search-option-${index}`}
+                      role="option"
+                      aria-selected={index === activeSearchIndex}
+                      selected={index === activeSearchIndex}
+                      onMouseEnter={() => setActiveSearchIndex(index)}
+                      onClick={() => openSearchResult(item.path)}
+                      sx={{
+                        minHeight: 42,
+                        borderRadius: 2,
+
+                        "&.Mui-selected": {
+                          bgcolor: "action.selected",
+                        },
+                      }}
+                    >
+                      <ListItemIcon
+                        sx={{
+                          minWidth: 36,
+                          color: "primary.main",
+                        }}
+                      >
+                        {item.icon}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={item.label}
+                        slotProps={{
+                          primary: {
+                            sx: {
+                              fontSize: 14,
+                              fontWeight: 600,
+                            },
+                          },
+                        }}
+                      />
+                    </ListItemButton>
+                  ))
+                )}
+              </Box>
+            )}
+          </Box>
 
           <Box
             sx={{
