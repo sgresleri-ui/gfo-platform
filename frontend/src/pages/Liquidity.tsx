@@ -67,7 +67,32 @@ export default function Liquidity() {
   }
 
   useEffect(() => {
-    void loadLiquidity();
+    let cancelled = false;
+
+    void getLiquidityOverview()
+      .then((result) => {
+        if (!cancelled) {
+          setData(result);
+        }
+      })
+      .catch((requestError) => {
+        console.error(requestError);
+
+        if (!cancelled) {
+          setError(
+            "Impossibile caricare i dati della liquidità.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const euro = (value: number) =>
