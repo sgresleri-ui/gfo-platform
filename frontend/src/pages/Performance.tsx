@@ -700,6 +700,20 @@ export default function Performance() {
     [report],
   );
 
+  const modifiedDietzDenominator =
+    report
+      ? Math.round(
+          (
+            report.performance
+              .startingNetWorth +
+            report.performance
+              .weightedExternalFlows +
+            Number.EPSILON
+          ) *
+            100,
+        ) / 100
+      : null;
+
   const financialHistorySummary =
     useMemo(() => {
       const points =
@@ -3166,6 +3180,222 @@ export default function Performance() {
                   )}
                 />
               </Box>
+
+              {modifiedDietzDenominator !==
+                null && (
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2.5,
+                    mb: 3,
+                    border: "1px solid",
+                    borderColor: "divider",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent:
+                        "space-between",
+                      alignItems: {
+                        xs: "flex-start",
+                        md: "center",
+                      },
+                      flexDirection: {
+                        xs: "column",
+                        md: "row",
+                      },
+                      gap: 1.5,
+                      mb: 2,
+                    }}
+                  >
+                    <Box>
+                      <Typography variant="h6">
+                        Dettaglio Modified Dietz
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mt: 0.5 }}
+                      >
+                        Verifica del numeratore,
+                        del capitale ponderato e
+                        del rendimento risultante.
+                      </Typography>
+                    </Box>
+
+                    <Chip
+                      variant="outlined"
+                      color={
+                        report.performance
+                          .modifiedDietzReturn ===
+                          null ||
+                        report.performance
+                          .modifiedDietzReturn ===
+                          0
+                          ? "default"
+                          : report.performance
+                                .modifiedDietzReturn >
+                              0
+                            ? "success"
+                            : "error"
+                      }
+                      label={percentage(
+                        report.performance
+                          .modifiedDietzReturn,
+                      )}
+                    />
+                  </Box>
+
+                  <TableContainer
+                    sx={{
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 1,
+                    }}
+                  >
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>
+                            Componente
+                          </TableCell>
+
+                          <TableCell>
+                            Calcolo
+                          </TableCell>
+
+                          <TableCell align="right">
+                            Risultato
+                          </TableCell>
+                        </TableRow>
+                      </TableHead>
+
+                      <TableBody>
+                        <TableRow hover>
+                          <TableCell
+                            sx={{
+                              fontWeight: 700,
+                            }}
+                          >
+                            Numeratore
+                          </TableCell>
+
+                          <TableCell>
+                            Variazione patrimonio{" "}
+                            {signedEuro(
+                              report.performance
+                                .netWorthChange,
+                            )}{" "}
+                            meno flussi esterni
+                            netti{" "}
+                            {signedEuro(
+                              report.performance
+                                .netExternalFlow,
+                            )}
+                          </TableCell>
+
+                          <TableCell
+                            align="right"
+                            sx={{
+                              fontWeight: 800,
+                              color: valueColor(
+                                report.performance
+                                  .investmentResult,
+                              ),
+                            }}
+                          >
+                            {signedEuro(
+                              report.performance
+                                .investmentResult,
+                            )}
+                          </TableCell>
+                        </TableRow>
+
+                        <TableRow hover>
+                          <TableCell
+                            sx={{
+                              fontWeight: 700,
+                            }}
+                          >
+                            Denominatore
+                          </TableCell>
+
+                          <TableCell>
+                            Patrimonio iniziale{" "}
+                            {euro(
+                              report.performance
+                                .startingNetWorth,
+                            )}{" "}
+                            più flussi ponderati{" "}
+                            {signedEuro(
+                              report.performance
+                                .weightedExternalFlows,
+                            )}
+                          </TableCell>
+
+                          <TableCell
+                            align="right"
+                            sx={{
+                              fontWeight: 800,
+                            }}
+                          >
+                            {euro(
+                              modifiedDietzDenominator,
+                            )}
+                          </TableCell>
+                        </TableRow>
+
+                        <TableRow hover>
+                          <TableCell
+                            sx={{
+                              fontWeight: 700,
+                            }}
+                          >
+                            Rendimento
+                          </TableCell>
+
+                          <TableCell>
+                            Numeratore diviso
+                            denominatore
+                          </TableCell>
+
+                          <TableCell
+                            align="right"
+                            sx={{
+                              fontWeight: 800,
+                              color: valueColor(
+                                report.performance
+                                  .modifiedDietzReturn,
+                              ),
+                            }}
+                          >
+                            {percentage(
+                              report.performance
+                                .modifiedDietzReturn,
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{
+                      display: "block",
+                      mt: 1.2,
+                    }}
+                  >
+                    I flussi ponderati riflettono
+                    il tempo trascorso tra ciascun
+                    versamento o prelievo e la
+                    fotografia finale.
+                  </Typography>
+                </Paper>
+              )}
 
               <Box
                 sx={{
