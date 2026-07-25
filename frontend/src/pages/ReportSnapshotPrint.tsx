@@ -93,6 +93,21 @@ export default function ReportSnapshotPrint() {
     id: string;
   }>();
 
+  return (
+    <ReportSnapshotPrintContent
+      key={id ?? "missing"}
+      snapshotId={id}
+    />
+  );
+}
+
+type ReportSnapshotPrintContentProps = {
+  snapshotId?: string;
+};
+
+function ReportSnapshotPrintContent({
+  snapshotId: id,
+}: ReportSnapshotPrintContentProps) {
   const navigate = useNavigate();
 
   const [
@@ -103,26 +118,19 @@ export default function ReportSnapshotPrint() {
   >(null);
 
   const [loading, setLoading] =
-    useState(true);
+    useState(Boolean(id));
 
   const [error, setError] =
     useState("");
 
   useEffect(() => {
     if (!id) {
-      setError(
-        "Identificativo dello snapshot non disponibile.",
-      );
-      setLoading(false);
       return;
     }
 
     let active = true;
 
-    setLoading(true);
-    setError("");
-
-    getExecutiveReportSnapshot(id)
+    void getExecutiveReportSnapshot(id)
       .then((result) => {
         if (active) {
           setSnapshot(result);
@@ -147,6 +155,11 @@ export default function ReportSnapshotPrint() {
       active = false;
     };
   }, [id]);
+
+  const displayError =
+    id
+      ? error
+      : "Identificativo dello snapshot non disponibile.";
 
   const allocation =
     useMemo<AllocationItem[]>(() => {
@@ -231,7 +244,7 @@ export default function ReportSnapshotPrint() {
     );
   }
 
-  if (error || !snapshot) {
+  if (displayError || !snapshot) {
     return (
       <Box
         sx={{
@@ -241,7 +254,7 @@ export default function ReportSnapshotPrint() {
         }}
       >
         <Alert severity="error">
-          {error ||
+          {displayError ||
             "Report archiviato non disponibile."}
         </Alert>
 
