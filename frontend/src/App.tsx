@@ -1,28 +1,98 @@
-import Ips from "./pages/Ips";
-import DataQuality from "./pages/DataQuality";
-import Risk from "./pages/Risk";
-import Performance from "./pages/Performance";
-import Transactions from "./pages/Transactions";
-import WealthHistory from "./pages/WealthHistory";
+import {
+  lazy,
+  Suspense,
+} from "react";
+import {
+  Box,
+  CircularProgress,
+} from "@mui/material";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import MainLayout from "./components/layout/MainLayout";
 
-import Dashboard from "./pages/Dashboard";
-import DataCatalog from "./pages/DataCatalog";
-import ImportCenter from "./pages/ImportCenter";
-import Budget from "./pages/Budget";
-import Planning from "./pages/Planning";
-import OperationalCalendar from "./pages/OperationalCalendar";
-import Reports from "./pages/Reports";
-import ReportSnapshotPrint from "./pages/ReportSnapshotPrint";
-import Decisions from "./pages/Decisions";
-import Documents from "./pages/Documents";
-import Settings from "./pages/Settings";
-import Investments from "./pages/Investments";
-import Liquidity from "./pages/Liquidity";
-import Properties from "./pages/Properties";
-import Wealth from "./pages/Wealth";
+const Budget = lazy(
+  () => import("./pages/Budget"),
+);
+const Dashboard = lazy(
+  () => import("./pages/Dashboard"),
+);
+const DataCatalog = lazy(
+  () => import("./pages/DataCatalog"),
+);
+const DataQuality = lazy(
+  () => import("./pages/DataQuality"),
+);
+const Decisions = lazy(
+  () => import("./pages/Decisions"),
+);
+const Documents = lazy(
+  () => import("./pages/Documents"),
+);
+const ImportCenter = lazy(
+  () => import("./pages/ImportCenter"),
+);
+const Investments = lazy(
+  () => import("./pages/Investments"),
+);
+const Ips = lazy(
+  () => import("./pages/Ips"),
+);
+const Liquidity = lazy(
+  () => import("./pages/Liquidity"),
+);
+const OperationalCalendar = lazy(
+  () =>
+    import(
+      "./pages/OperationalCalendar"
+    ),
+);
+const Performance = lazy(
+  () => import("./pages/Performance"),
+);
+const Planning = lazy(
+  () => import("./pages/Planning"),
+);
+const Properties = lazy(
+  () => import("./pages/Properties"),
+);
+const Reports = lazy(
+  () => import("./pages/Reports"),
+);
+const ReportSnapshotPrint = lazy(
+  () =>
+    import(
+      "./pages/ReportSnapshotPrint"
+    ),
+);
+const Risk = lazy(
+  () => import("./pages/Risk"),
+);
+const Settings = lazy(
+  () => import("./pages/Settings"),
+);
+const Transactions = lazy(
+  () => import("./pages/Transactions"),
+);
+const Wealth = lazy(
+  () => import("./pages/Wealth"),
+);
+const WealthHistory = lazy(
+  () => import("./pages/WealthHistory"),
+);
+
+function FullPageLoading() {
+  return (
+    <Box
+      sx={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+      }}
+    >
+      <CircularProgress />
+    </Box>
+  );
+}
 
 function App() {
   return (
@@ -127,7 +197,15 @@ function App() {
 
       <Route
         path="/reports/snapshots/:id/print"
-        element={<ReportSnapshotPrint />}
+        element={
+          <Suspense
+            fallback={
+              <FullPageLoading />
+            }
+          >
+            <ReportSnapshotPrint />
+          </Suspense>
+        }
       />
 
       <Route

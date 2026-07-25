@@ -3,11 +3,16 @@ import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
-import { useMemo, useState } from "react";
+import {
+  Suspense,
+  useMemo,
+  useState,
+} from "react";
 import {
   AppBar,
   Avatar,
   Box,
+  CircularProgress,
   Divider,
   Drawer,
   IconButton,
@@ -454,7 +459,21 @@ export default function MainLayout() {
             p: { xs: 2, sm: 3, lg: 4 },
           }}
         >
-          <Outlet />
+          <Suspense
+            fallback={
+              <Box
+                sx={{
+                  minHeight: 420,
+                  display: "grid",
+                  placeItems: "center",
+                }}
+              >
+                <CircularProgress />
+              </Box>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </Box>
       </Box>
     </Box>
