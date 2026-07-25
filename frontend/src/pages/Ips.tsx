@@ -289,8 +289,35 @@ export default function Ips() {
   );
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    let cancelled = false;
+
+    void getIpsCompliance()
+      .then((result) => {
+        if (!cancelled) {
+          setData(result);
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+
+        if (!cancelled) {
+          setNotice({
+            severity: "error",
+            text:
+              "Impossibile caricare la conformità IPS.",
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const dimensions = useMemo(
     () =>
