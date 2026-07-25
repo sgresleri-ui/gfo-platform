@@ -1014,6 +1014,99 @@ export default function Performance() {
       attributionChangeTypeSummary,
     ]);
 
+  function exportAttributionWaterfallCsv() {
+    if (!attribution) {
+      return;
+    }
+
+    const decimal = (value: number) =>
+      value.toFixed(2).replace(".", ",");
+
+    const baseCurrency =
+      attribution.items[0]
+        ?.baseCurrency ?? "EUR";
+
+    const kindLabel = (
+      kind:
+        | "TOTAL"
+        | "CHANGE"
+        | "RECONCILIATION",
+    ) => {
+      if (kind === "TOTAL") {
+        return "Saldo";
+      }
+
+      if (kind === "RECONCILIATION") {
+        return "Scarto di riconciliazione";
+      }
+
+      return "Variazione";
+    };
+
+    const rows = [
+      [
+        "Passaggio",
+        "Natura",
+        "Saldo prima",
+        "Variazione",
+        "Saldo dopo",
+        "Valuta",
+      ].join(";"),
+
+      ...attributionWaterfallData.points.map(
+        (point) =>
+          [
+            point.name,
+            kindLabel(point.kind),
+            decimal(point.start),
+            point.kind === "TOTAL"
+              ? ""
+              : decimal(
+                  point.displayValue,
+                ),
+            decimal(point.end),
+            baseCurrency,
+          ].join(";"),
+      ),
+    ];
+
+    const blob = new Blob(
+      ["\uFEFF" + rows.join("\n")],
+      {
+        type:
+          "text/csv;charset=utf-8;",
+      },
+    );
+
+    const url =
+      URL.createObjectURL(blob);
+
+    const link =
+      document.createElement("a");
+
+    const startDate =
+      attribution.period.start.slice(
+        0,
+        10,
+      );
+
+    const endDate =
+      attribution.period.end.slice(
+        0,
+        10,
+      );
+
+    link.href = url;
+    link.download =
+      `waterfall-patrimoniale-${startDate}-${endDate}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+  }
+
   const topAttributionContributors =
     useMemo(() => {
       const changedItems =
@@ -2186,21 +2279,53 @@ export default function Performance() {
                         borderColor: "divider",
                       }}
                     >
-                      <Typography variant="h6">
-                        Waterfall variazione patrimoniale
-                      </Typography>
-
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ mt: 0.5 }}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent:
+                            "space-between",
+                          alignItems: {
+                            xs: "flex-start",
+                            md: "center",
+                          },
+                          flexDirection: {
+                            xs: "column",
+                            md: "row",
+                          },
+                          gap: 1.5,
+                        }}
                       >
-                        Raccordo tra patrimonio iniziale,
-                        variazioni per tipologia e
-                        patrimonio finale. L’asse verticale
-                        è adattato per rendere leggibili le
-                        variazioni.
-                      </Typography>
+                        <Box>
+                          <Typography variant="h6">
+                            Waterfall variazione patrimoniale
+                          </Typography>
+
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ mt: 0.5 }}
+                          >
+                            Raccordo tra patrimonio iniziale,
+                            variazioni per tipologia e
+                            patrimonio finale. L’asse verticale
+                            è adattato per rendere leggibili le
+                            variazioni.
+                          </Typography>
+                        </Box>
+
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={
+                            <DownloadRoundedIcon />
+                          }
+                          onClick={
+                            exportAttributionWaterfallCsv
+                          }
+                        >
+                          Esporta CSV
+                        </Button>
+                      </Box>
 
                       <Box
                         sx={{
@@ -2399,6 +2524,135 @@ export default function Performance() {
                           </BarChart>
                         </ResponsiveContainer>
                       </Box>
+
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
+                          mt: 2,
+                          mb: 1,
+                          fontWeight: 750,
+                        }}
+                      >
+                        Riconciliazione analitica
+                      </Typography>
+
+                      <TableContainer
+                        sx={{
+                          border: "1px solid",
+                          borderColor: "divider",
+                          borderRadius: 1,
+                        }}
+                      >
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell>
+                                Passaggio
+                              </TableCell>
+
+                              <TableCell>
+                                Natura
+                              </TableCell>
+
+                              <TableCell align="right">
+                                Saldo prima
+                              </TableCell>
+
+                              <TableCell align="right">
+                                Variazione
+                              </TableCell>
+
+                              <TableCell align="right">
+                                Saldo dopo
+                              </TableCell>
+                            </TableRow>
+                          </TableHead>
+
+                          <TableBody>
+                            {attributionWaterfallData.points.map(
+                              (point) => (
+                                <TableRow
+                                  key={`waterfall-row-${point.name}`}
+                                  hover
+                                >
+                                  <TableCell
+                                    sx={{
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    {point.name}
+                                  </TableCell>
+
+                                  <TableCell>
+                                    <Chip
+                                      size="small"
+                                      variant="outlined"
+                                      color={
+                                        point.kind ===
+                                        "RECONCILIATION"
+                                          ? "warning"
+                                          : point.kind ===
+                                              "CHANGE"
+                                            ? point.displayValue >
+                                              0
+                                              ? "success"
+                                              : "error"
+                                            : "default"
+                                      }
+                                      label={
+                                        point.kind ===
+                                        "RECONCILIATION"
+                                          ? "Scarto"
+                                          : point.kind ===
+                                              "CHANGE"
+                                            ? "Variazione"
+                                            : "Saldo"
+                                      }
+                                    />
+                                  </TableCell>
+
+                                  <TableCell align="right">
+                                    {euro(point.start)}
+                                  </TableCell>
+
+                                  <TableCell
+                                    align="right"
+                                    sx={{
+                                      fontWeight: 700,
+                                      color:
+                                        point.kind ===
+                                        "RECONCILIATION"
+                                          ? "warning.main"
+                                          : valueColor(
+                                              point.kind ===
+                                                "TOTAL"
+                                                ? null
+                                                : point.displayValue,
+                                            ),
+                                    }}
+                                  >
+                                    {point.kind ===
+                                    "TOTAL"
+                                      ? "—"
+                                      : signedEuro(
+                                          point.displayValue,
+                                        )}
+                                  </TableCell>
+
+                                  <TableCell
+                                    align="right"
+                                    sx={{
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    {euro(point.end)}
+                                  </TableCell>
+                                </TableRow>
+                              ),
+                            )}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
                     </Paper>
 
                     <Typography
