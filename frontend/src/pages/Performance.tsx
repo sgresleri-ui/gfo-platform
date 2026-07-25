@@ -72,6 +72,70 @@ type KpiCardProps = {
   valueColor?: string;
 };
 
+type PerformancePageData = {
+  periods: PerformancePeriodSnapshot[];
+  financialHistory: FinancialHistoryResponse;
+  report: PerformanceSummaryResponse | null;
+  attribution: PositionAttributionResponse | null;
+  fromSnapshot: string;
+  toSnapshot: string;
+};
+
+async function fetchPerformancePageData(): Promise<PerformancePageData> {
+  const [
+    periodResult,
+    financialHistory,
+  ] = await Promise.all([
+    getPerformancePeriods(),
+    getFinancialHistory(),
+  ]);
+
+  const periods =
+    periodResult.snapshots;
+
+  if (periods.length < 2) {
+    return {
+      periods,
+      financialHistory,
+      report: null,
+      attribution: null,
+      fromSnapshot: "",
+      toSnapshot: "",
+    };
+  }
+
+  const fromSnapshot =
+    periods[0].snapshotDate;
+
+  const toSnapshot =
+    periods[
+      periods.length - 1
+    ].snapshotDate;
+
+  const [
+    report,
+    attribution,
+  ] = await Promise.all([
+    getPerformanceSummary(
+      fromSnapshot,
+      toSnapshot,
+    ),
+    getPositionAttribution(
+      fromSnapshot,
+      toSnapshot,
+    ),
+  ]);
+
+  return {
+    periods,
+    financialHistory,
+    report,
+    attribution,
+    fromSnapshot,
+    toSnapshot,
+  };
+}
+
 function euro(value: number): string {
   return value.toLocaleString("it-IT", {
     style: "currency",
@@ -591,52 +655,33 @@ export default function Performance() {
     [],
   );
 
+  const applyPageData = useCallback(
+    (data: PerformancePageData) => {
+      setPeriods(data.periods);
+      setFinancialHistory(
+        data.financialHistory,
+      );
+      setFromSnapshot(
+        data.fromSnapshot,
+      );
+      setToSnapshot(
+        data.toSnapshot,
+      );
+      setReport(data.report);
+      setAttribution(
+        data.attribution,
+      );
+    },
+    [],
+  );
+
   const loadPage = useCallback(
     async () => {
-      setLoading(true);
-      setNotice(null);
-
       try {
-        const [
-          result,
-          historyResult,
-        ] = await Promise.all([
-          getPerformancePeriods(),
-          getFinancialHistory(),
-        ]);
+        const data =
+          await fetchPerformancePageData();
 
-        setPeriods(result.snapshots);
-        setFinancialHistory(
-          historyResult,
-        );
-
-        if (
-          result.snapshots.length >= 2
-        ) {
-          const first =
-            result.snapshots[0];
-
-          const last =
-            result.snapshots[
-              result.snapshots.length - 1
-            ];
-
-          setFromSnapshot(
-            first.snapshotDate,
-          );
-
-          setToSnapshot(
-            last.snapshotDate,
-          );
-
-          await analyzePeriod(
-            first.snapshotDate,
-            last.snapshotDate,
-          );
-        } else {
-          setReport(null);
-          setAttribution(null);
-        }
+        applyPageData(data);
       } catch (error) {
         console.error(error);
 
@@ -649,10 +694,44 @@ export default function Performance() {
         setLoading(false);
       }
     },
-    [analyzePeriod],
+    [applyPageData],
   );
 
   useEffect(() => {
+    let cancelled = false;
+
+    void fetchPerformancePageData()
+      .then((data) => {
+        if (!cancelled) {
+          applyPageData(data);
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+
+        if (!cancelled) {
+          setNotice({
+            severity: "error",
+            text:
+              "Impossibile caricare il motore Performance.",
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applyPageData]);
+
+  const refreshPage = useCallback(() => {
+    setLoading(true);
+    setNotice(null);
+
     void loadPage();
   }, [loadPage]);
 
@@ -1541,9 +1620,7 @@ export default function Performance() {
             <RefreshRoundedIcon />
           }
           disabled={loading || analyzing}
-          onClick={() =>
-            void loadPage()
-          }
+          onClick={refreshPage}
         >
           Aggiorna
         </Button>
