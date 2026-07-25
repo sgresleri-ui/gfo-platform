@@ -52,7 +52,32 @@ export default function Budget() {
   }
 
   useEffect(() => {
-    void loadBudget();
+    let cancelled = false;
+
+    void getBudgetOverview()
+      .then((result) => {
+        if (!cancelled) {
+          setData(result);
+        }
+      })
+      .catch((requestError) => {
+        console.error(requestError);
+
+        if (!cancelled) {
+          setError(
+            "Impossibile caricare il budget.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const euro = (value: number | null) => {
