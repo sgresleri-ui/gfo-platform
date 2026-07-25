@@ -745,6 +745,72 @@ export default function Performance() {
       attributionSort,
     ]);
 
+  const topAttributionContributors =
+    useMemo(() => {
+      const changedItems =
+        attribution?.items.filter(
+          (item) =>
+            item.comparisonStatus !==
+            "UNCHANGED",
+        ) ?? [];
+
+      const positive = changedItems
+        .filter((item) => item.contributionChange > 0)
+        .sort(
+          (a, b) =>
+            b.contributionChange -
+            a.contributionChange,
+        );
+
+      const negative = changedItems
+        .filter((item) => item.contributionChange < 0)
+        .sort(
+          (a, b) =>
+            a.contributionChange -
+            b.contributionChange,
+        );
+
+      const positiveTotal = positive.reduce(
+        (total, item) =>
+          total + item.contributionChange,
+        0,
+      );
+
+      const negativeTotal = negative.reduce(
+        (total, item) =>
+          total +
+          Math.abs(item.contributionChange),
+        0,
+      );
+
+      return {
+        positive: positive.slice(0, 3).map(
+          (item) => ({
+            ...item,
+            share:
+              positiveTotal > 0
+                ? (item.contributionChange /
+                    positiveTotal) *
+                  100
+                : 0,
+          }),
+        ),
+        negative: negative.slice(0, 3).map(
+          (item) => ({
+            ...item,
+            share:
+              negativeTotal > 0
+                ? (Math.abs(
+                    item.contributionChange,
+                  ) /
+                    negativeTotal) *
+                  100
+                : 0,
+          }),
+        ),
+      };
+    }, [attribution]);
+
   const filteredAttributionTotal =
     useMemo(
       () =>
@@ -1582,6 +1648,116 @@ export default function Performance() {
                       valueColor="error.main"
                     />
                   </Box>
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "1fr",
+                        lg:
+                          "repeat(2, minmax(0, 1fr))",
+                      },
+                      gap: 2,
+                      mt: 3,
+                    }}
+                  >
+                    {[
+                      {
+                        title:
+                          "Top contributori positivi",
+                        items:
+                          topAttributionContributors.positive,
+                      },
+                      {
+                        title:
+                          "Top contributori negativi",
+                        items:
+                          topAttributionContributors.negative,
+                      },
+                    ].map((group) => (
+                      <Paper
+                        key={group.title}
+                        elevation={0}
+                        sx={{
+                          p: 2,
+                          border: "1px solid",
+                          borderColor: "divider",
+                        }}
+                      >
+                        <Typography
+                          variant="subtitle1"
+                          sx={{
+                            fontWeight: 800,
+                            mb: 1,
+                          }}
+                        >
+                          {group.title}
+                        </Typography>
+
+                        {group.items.map(
+                          (item, index) => (
+                            <Box
+                              key={item.positionId}
+                              sx={{
+                                display: "flex",
+                                justifyContent:
+                                  "space-between",
+                                gap: 2,
+                                py: 1,
+                                borderTop:
+                                  index === 0
+                                    ? "none"
+                                    : "1px solid",
+                                borderColor:
+                                  "divider",
+                              }}
+                            >
+                              <Box>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {index + 1}.{" "}
+                                  {item.name}
+                                </Typography>
+
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  {item.share.toLocaleString(
+                                    "it-IT",
+                                    {
+                                      minimumFractionDigits: 1,
+                                      maximumFractionDigits: 1,
+                                    },
+                                  )}
+                                  % del totale
+                                </Typography>
+                              </Box>
+
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  fontWeight: 800,
+                                  whiteSpace: "nowrap",
+                                  color: valueColor(
+                                    item.contributionChange,
+                                  ),
+                                }}
+                              >
+                                {signedEuro(
+                                  item.contributionChange,
+                                )}
+                              </Typography>
+                            </Box>
+                          ),
+                        )}
+                      </Paper>
+                    ))}
+                  </Box>
+
                   <Box sx={{ mt: 3 }}>
                     <Typography
                       variant="h6"
