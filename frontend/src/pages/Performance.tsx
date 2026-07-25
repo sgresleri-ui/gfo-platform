@@ -2123,6 +2123,30 @@ export default function Performance() {
                         </MenuItem>
                       </TextField>
 
+                      <Button
+                        size="small"
+                        variant="text"
+                        onClick={() => {
+                          setAttributionFilter("ALL");
+                          setAttributionTypeFilter("ALL");
+                          setAttributionSort(
+                            "IMPACT_DESC",
+                          );
+                        }}
+                        disabled={
+                          attributionFilter === "ALL" &&
+                          attributionTypeFilter === "ALL" &&
+                          attributionSort ===
+                            "IMPACT_DESC"
+                        }
+                        sx={{
+                          mb: 1.5,
+                          alignSelf: "center",
+                        }}
+                      >
+                        Azzera filtri
+                      </Button>
+
                       <Paper
                         elevation={0}
                         sx={{
