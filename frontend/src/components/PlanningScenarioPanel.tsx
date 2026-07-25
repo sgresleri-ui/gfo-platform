@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -633,39 +634,6 @@ export default function PlanningScenarioPanel() {
     loadingEconomicProfiles,
   ]);
 
-  useEffect(() => {
-    if (
-      automaticDraftRestoreStarted
-        .current ||
-      !initialDraft
-        ?.hasRunSimulation ||
-      loadingBaseline ||
-      loadingEconomicProfiles
-    ) {
-      return;
-    }
-
-    automaticDraftRestoreStarted
-      .current = true;
-
-    setEconomicProfileMessage(
-      "Bozza ripristinata. Ricalcolo automatico dell’ultima simulazione in corso.",
-    );
-
-    void runScenario(
-      initialDraft
-        .allocationTransfers,
-    ).then(() => {
-      setEconomicProfileMessage(
-        "Bozza e ultima simulazione ripristinate automaticamente.",
-      );
-    });
-  }, [
-    initialDraft,
-    loadingBaseline,
-    loadingEconomicProfiles,
-  ]);
-
   const chartData = useMemo(
     () =>
       result?.years.map(
@@ -1204,10 +1172,11 @@ export default function PlanningScenarioPanel() {
     );
   }
 
-  async function runScenario(
-    transfersOverride?:
-      PlanningAllocationTransfer[],
-  ) {
+  const runScenario = useCallback(
+    async (
+      transfersOverride?:
+        PlanningAllocationTransfer[],
+    ) => {
     setSimulating(true);
     setError("");
     setAllocationResult(null);
@@ -1384,9 +1353,47 @@ export default function PlanningScenarioPanel() {
     } finally {
       setSimulating(false);
     }
-  }
+  },
+    [
+      allocationTransfers,
+      events,
+      form,
+    ],
+  );
 
+  useEffect(() => {
+    if (
+      automaticDraftRestoreStarted
+        .current ||
+      !initialDraft
+        ?.hasRunSimulation ||
+      loadingBaseline ||
+      loadingEconomicProfiles
+    ) {
+      return;
+    }
 
+    automaticDraftRestoreStarted
+      .current = true;
+
+    setEconomicProfileMessage(
+      "Bozza ripristinata. Ricalcolo automatico dell’ultima simulazione in corso.",
+    );
+
+    void runScenario(
+      initialDraft
+        .allocationTransfers,
+    ).then(() => {
+      setEconomicProfileMessage(
+        "Bozza e ultima simulazione ripristinate automaticamente.",
+      );
+    });
+  }, [
+    initialDraft,
+    loadingBaseline,
+    loadingEconomicProfiles,
+    runScenario,
+  ]);
 
   async function applyIpsRemediation() {
     const plan =
