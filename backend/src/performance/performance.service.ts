@@ -1200,6 +1200,28 @@ export class PerformanceService
         ),
       );
 
+    const startingNetWorth =
+      this.roundCurrency(
+        Number(startSnapshot.netWorth),
+      );
+
+    const endingNetWorth =
+      this.roundCurrency(
+        Number(endSnapshot.netWorth),
+      );
+
+    const snapshotNetWorthChange =
+      this.roundCurrency(
+        endingNetWorth -
+          startingNetWorth,
+      );
+
+    const reconciliationDifference =
+      this.roundCurrency(
+        snapshotNetWorthChange -
+          totalContributionChange,
+      );
+
     const periodMilliseconds =
       endSnapshot.snapshotDate.getTime() -
       startSnapshot.snapshotDate.getTime();
@@ -1277,27 +1299,17 @@ export class PerformanceService
 
         totalContributionChange,
 
-        snapshotNetWorthChange:
-          this.roundCurrency(
-            Number(
-              endSnapshot.netWorth,
-            ) -
-              Number(
-                startSnapshot.netWorth,
-              ),
-          ),
+        startingNetWorth,
+
+        endingNetWorth,
+
+        snapshotNetWorthChange,
+
+        reconciliationDifference,
 
         reconciled:
           Math.abs(
-            totalContributionChange -
-              (
-                Number(
-                  endSnapshot.netWorth,
-                ) -
-                Number(
-                  startSnapshot.netWorth,
-                )
-              ),
+            reconciliationDifference,
           ) < 0.02,
       },
 

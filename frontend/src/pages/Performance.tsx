@@ -865,18 +865,18 @@ export default function Performance() {
 
       type RawPoint = {
         name: string;
-        kind: "TOTAL" | "CHANGE";
+        kind:
+          | "TOTAL"
+          | "CHANGE"
+          | "RECONCILIATION";
         start: number;
         end: number;
         displayValue: number;
       };
 
       const initial =
-        attribution.categories.reduce(
-          (total, category) =>
-            total + category.startValue,
-          0,
-        );
+        attribution.summary
+          .startingNetWorth;
 
       let running = initial;
 
@@ -911,10 +911,33 @@ export default function Performance() {
         });
       }
 
-      const final =
-        initial +
+      const reconciliationDifference =
         attribution.summary
-          .snapshotNetWorthChange;
+          .reconciliationDifference;
+
+      if (
+        Math.abs(
+          reconciliationDifference,
+        ) >= 0.01
+      ) {
+        const start = running;
+
+        running +=
+          reconciliationDifference;
+
+        rawPoints.push({
+          name: "Scarto riconciliazione",
+          kind: "RECONCILIATION",
+          start,
+          end: running,
+          displayValue:
+            reconciliationDifference,
+        });
+      }
+
+      const final =
+        attribution.summary
+          .endingNetWorth;
 
       rawPoints.push({
         name: "Patrimonio finale",
@@ -977,9 +1000,12 @@ export default function Performance() {
             fill:
               point.kind === "TOTAL"
                 ? "#5f769f"
-                : point.displayValue > 0
-                  ? "#4d8b74"
-                  : "#b84c4c",
+                : point.kind ===
+                    "RECONCILIATION"
+                  ? "#b7791f"
+                  : point.displayValue > 0
+                    ? "#4d8b74"
+                    : "#b84c4c",
           }),
         ),
       };
@@ -1823,7 +1849,10 @@ export default function Performance() {
                         label={
                           attribution.summary.reconciled
                             ? "Riconciliato"
-                            : "Da verificare"
+                            : `Scarto ${signedEuro(
+                                attribution.summary
+                                  .reconciliationDifference,
+                              )}`
                         }
                       />
 
@@ -1841,6 +1870,24 @@ export default function Performance() {
                       </Button>
                     </Box>
                   </Box>
+
+                  {!attribution.summary
+                    .reconciled && (
+                      <Alert
+                        severity="warning"
+                        sx={{ mt: 2 }}
+                      >
+                        I contributi per posizione
+                        differiscono dalla variazione
+                        tra le fotografie di{" "}
+                        {signedEuro(
+                          attribution.summary
+                            .reconciliationDifference,
+                        )}
+                        . Il waterfall espone lo
+                        scarto come voce dedicata.
+                      </Alert>
+                    )}
 
                   <Box
                     sx={{
@@ -2223,7 +2270,8 @@ export default function Performance() {
                                         name: string;
                                         kind:
                                           | "TOTAL"
-                                          | "CHANGE";
+                                          | "CHANGE"
+                                          | "RECONCILIATION";
                                         displayValue: number;
                                       }
                                     | undefined;
@@ -2251,12 +2299,17 @@ export default function Performance() {
 
                                     <Typography
                                       variant="body2"
-                                      color={valueColor(
+                                      color={
                                         point.kind ===
-                                          "TOTAL"
-                                          ? null
-                                          : point.displayValue,
-                                      )}
+                                          "RECONCILIATION"
+                                          ? "warning.main"
+                                          : valueColor(
+                                              point.kind ===
+                                                "TOTAL"
+                                                ? null
+                                                : point.displayValue,
+                                            )
+                                      }
                                     >
                                       {point.kind ===
                                       "TOTAL"

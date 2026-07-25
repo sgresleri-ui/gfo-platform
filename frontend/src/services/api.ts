@@ -1319,7 +1319,10 @@ export type PositionAttributionResponse = {
     positiveContributors: number;
     negativeContributors: number;
     totalContributionChange: number;
+    startingNetWorth: number;
+    endingNetWorth: number;
     snapshotNetWorthChange: number;
+    reconciliationDifference: number;
     reconciled: boolean;
   };
 
