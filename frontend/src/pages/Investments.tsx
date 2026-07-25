@@ -66,7 +66,32 @@ export default function Investments() {
   }
 
   useEffect(() => {
-    void loadPortfolio();
+    let cancelled = false;
+
+    void getInvestmentPortfolio()
+      .then((result) => {
+        if (!cancelled) {
+          setData(result);
+        }
+      })
+      .catch((requestError) => {
+        console.error(requestError);
+
+        if (!cancelled) {
+          setError(
+            "Impossibile caricare il portafoglio investimenti.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const filteredPositions = useMemo(() => {
@@ -119,10 +144,6 @@ export default function Investments() {
       start + rowsPerPage,
     );
   }, [filteredPositions, page, rowsPerPage]);
-
-  useEffect(() => {
-    setPage(0);
-  }, [search, portfolio, instrumentType]);
 
   const euro = (value: number) =>
     value.toLocaleString("it-IT", {
@@ -592,9 +613,12 @@ export default function Investments() {
                 label="Cerca strumento"
                 placeholder="Nome, ISIN, mercato..."
                 value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
+                onChange={(event) => {
+                  setSearch(
+                    event.target.value,
+                  );
+                  setPage(0);
+                }}
               />
 
               <FormControl size="small">
@@ -606,9 +630,12 @@ export default function Investments() {
                   labelId="portfolio-filter-label"
                   label="Portafoglio"
                   value={portfolio}
-                  onChange={(event) =>
-                    setPortfolio(event.target.value)
-                  }
+                  onChange={(event) => {
+                    setPortfolio(
+                      event.target.value,
+                    );
+                    setPage(0);
+                  }}
                 >
                   <MenuItem value="ALL">
                     Tutti
@@ -634,9 +661,12 @@ export default function Investments() {
                   labelId="instrument-filter-label"
                   label="Strumento"
                   value={instrumentType}
-                  onChange={(event) =>
-                    setInstrumentType(event.target.value)
-                  }
+                  onChange={(event) => {
+                    setInstrumentType(
+                      event.target.value,
+                    );
+                    setPage(0);
+                  }}
                 >
                   <MenuItem value="ALL">
                     Tutti
