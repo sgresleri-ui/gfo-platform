@@ -20,11 +20,13 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip as MuiTooltip,
   Typography,
 } from "@mui/material";
 
 import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 
 import {
@@ -95,12 +97,20 @@ function percentage(
   }
 
   const normalizedValue =
-    Math.abs(value) < 0.005 ? 0 : value;
+    Object.is(value, -0) ? 0 : value;
+
+  const fractionDigits =
+    normalizedValue !== 0 &&
+    Math.abs(normalizedValue) < 0.01
+      ? 4
+      : 2;
 
   const formatted =
     normalizedValue.toLocaleString("it-IT", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      minimumFractionDigits:
+        fractionDigits,
+      maximumFractionDigits:
+        fractionDigits,
     });
 
   return normalizedValue > 0
@@ -3070,10 +3080,23 @@ export default function Performance() {
                     </Typography>
                   </Box>
 
-                  <Chip
-                    color="primary"
-                    label="Modified Dietz"
-                  />
+                  <MuiTooltip
+                    title="Il metodo separa la performance del patrimonio dai versamenti e dai prelievi esterni, ponderandoli per il tempo trascorso nel periodo."
+                    arrow
+                  >
+                    <Chip
+                      icon={
+                        <InfoOutlinedIcon />
+                      }
+                      variant="outlined"
+                      label="Metodo: Modified Dietz"
+                      sx={{
+                        bgcolor:
+                          "background.paper",
+                        cursor: "help",
+                      }}
+                    />
+                  </MuiTooltip>
                 </Box>
               </Paper>
 
@@ -3100,14 +3123,7 @@ export default function Performance() {
                   subtitle={`${report.period.days} giorni`}
                   valueColor={valueColor(
                     report.performance
-                        .modifiedDietzReturn !== null &&
-                      Math.abs(
-                        report.performance
-                          .modifiedDietzReturn,
-                      ) < 0.005
-                      ? 0
-                      : report.performance
-                          .modifiedDietzReturn,
+                      .modifiedDietzReturn,
                   )}
                 />
 
