@@ -748,13 +748,9 @@ export default function Performance() {
   const attributionChartData =
     useMemo(
       () =>
-        (
-          attribution?.items ?? []
-        )
+        filteredAttributionItems
           .filter(
             (item) =>
-              item.comparisonStatus !==
-                "UNCHANGED" &&
               Math.abs(
                 item.contributionChange,
               ) >= 0.01,
@@ -770,7 +766,7 @@ export default function Performance() {
                 ? item.contributionChange
                 : 0,
           })),
-      [attribution],
+      [filteredAttributionItems],
     );
 
   function requestAnalysis() {
