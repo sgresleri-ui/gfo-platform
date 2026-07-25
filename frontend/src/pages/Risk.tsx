@@ -180,8 +180,33 @@ export default function Risk() {
   );
 
   useEffect(() => {
-    void loadRisk();
-  }, [loadRisk]);
+    let cancelled = false;
+
+    void getRiskOverview()
+      .then((result) => {
+        if (!cancelled) {
+          setData(result);
+        }
+      })
+      .catch((requestError) => {
+        console.error(requestError);
+
+        if (!cancelled) {
+          setError(
+            "Impossibile caricare l’analisi di rischio patrimoniale.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const assetClassData = useMemo(
     () =>
