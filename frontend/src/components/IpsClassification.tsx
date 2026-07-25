@@ -418,8 +418,51 @@ export default function IpsClassification() {
   );
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    let cancelled = false;
+
+    void Promise.all([
+      getIpsClassifications(),
+      getIpsClassificationAudit(),
+      getIpsClassificationReviewAudit(),
+    ])
+      .then(
+        ([
+          overview,
+          auditResult,
+          reviewAuditResult,
+        ]) => {
+          if (!cancelled) {
+            setData(overview);
+            setAudits(
+              auditResult.audits,
+            );
+            setReviewAudits(
+              reviewAuditResult.audits,
+            );
+          }
+        },
+      )
+      .catch((error) => {
+        console.error(error);
+
+        if (!cancelled) {
+          setNotice({
+            severity: "error",
+            text:
+              "Impossibile caricare la classificazione IPS.",
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const classLabels = useMemo(
     () =>
