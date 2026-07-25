@@ -115,8 +115,6 @@ export default function DataQualityCorrections({
 
   const loadHistory = useCallback(
     async () => {
-      setHistoryLoading(true);
-
       try {
         const result =
           await getDataQualityCorrections();
@@ -140,8 +138,37 @@ export default function DataQualityCorrections({
   );
 
   useEffect(() => {
-    void loadHistory();
-  }, [loadHistory]);
+    let cancelled = false;
+
+    void getDataQualityCorrections()
+      .then((result) => {
+        if (!cancelled) {
+          setCorrections(
+            result.corrections,
+          );
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+
+        if (!cancelled) {
+          setNotice({
+            severity: "error",
+            text:
+              "Impossibile caricare lo storico delle correzioni.",
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setHistoryLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function openCorrection(
     item: DataQualityItem,
@@ -214,6 +241,7 @@ export default function DataQualityCorrections({
           "Paese aggiornato. La modifica è stata registrata nell’audit trail.",
       });
 
+      setHistoryLoading(true);
       await loadHistory();
       onCorrectionSaved();
     } catch (error) {
