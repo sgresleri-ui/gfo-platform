@@ -744,6 +744,185 @@ export default function Performance() {
         ) / 100
       : null;
 
+  function exportModifiedDietzAuditCsv() {
+    if (
+      !report ||
+      modifiedDietzDenominator === null
+    ) {
+      return;
+    }
+
+    const decimal = (
+      value: number | null,
+      fractionDigits = 2,
+    ) =>
+      value === null
+        ? ""
+        : value
+            .toFixed(
+              fractionDigits,
+            )
+            .replace(".", ",");
+
+    const currency =
+      report.methodology.currency;
+
+    const rows = [
+      [
+        "Riepilogo Modified Dietz",
+        "",
+        "",
+        "",
+      ].join(";"),
+      [
+        "Componente",
+        "Valore",
+        "Unità",
+        "Descrizione",
+      ].join(";"),
+      [
+        "Patrimonio iniziale",
+        decimal(
+          report.performance
+            .startingNetWorth,
+        ),
+        currency,
+        report.period.start,
+      ].join(";"),
+      [
+        "Patrimonio finale",
+        decimal(
+          report.performance
+            .endingNetWorth,
+        ),
+        currency,
+        report.period.end,
+      ].join(";"),
+      [
+        "Variazione patrimonio",
+        decimal(
+          report.performance
+            .netWorthChange,
+        ),
+        currency,
+        "Valore finale meno valore iniziale",
+      ].join(";"),
+      [
+        "Flussi esterni netti",
+        decimal(
+          report.performance
+            .netExternalFlow,
+        ),
+        currency,
+        "Entrate meno uscite esterne",
+      ].join(";"),
+      [
+        "Flussi esterni ponderati",
+        decimal(
+          report.performance
+            .weightedExternalFlows,
+        ),
+        currency,
+        "Ponderati per il tempo residuo nel periodo",
+      ].join(";"),
+      [
+        "Risultato depurato",
+        decimal(
+          report.performance
+            .investmentResult,
+        ),
+        currency,
+        "Numeratore Modified Dietz",
+      ].join(";"),
+      [
+        "Capitale ponderato",
+        decimal(
+          modifiedDietzDenominator,
+        ),
+        currency,
+        "Denominatore Modified Dietz",
+      ].join(";"),
+      [
+        "Rendimento Modified Dietz",
+        decimal(
+          report.performance
+            .modifiedDietzReturn,
+          4,
+        ),
+        "%",
+        "Numeratore diviso denominatore",
+      ].join(";"),
+      "",
+      [
+        "Dettaglio flussi esterni",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ].join(";"),
+      [
+        "Data",
+        "Tipo",
+        "Importo",
+        "Peso temporale",
+        "Importo ponderato",
+        "Valuta",
+      ].join(";"),
+      ...(
+        report.externalFlows ?? []
+      ).map((flow) =>
+        [
+          flowDateLabel(
+            flow.transactionDate,
+          ),
+          externalFlowTypeLabel(
+            flow.transactionType,
+          ),
+          decimal(flow.amount),
+          decimal(
+            flow.weightPercent,
+            4,
+          ),
+          decimal(
+            flow.weightedAmount,
+          ),
+          flow.baseCurrency,
+        ].join(";"),
+      ),
+    ];
+
+    const blob = new Blob(
+      ["\uFEFF" + rows.join("\n")],
+      {
+        type:
+          "text/csv;charset=utf-8;",
+      },
+    );
+
+    const url =
+      URL.createObjectURL(blob);
+
+    const link =
+      document.createElement("a");
+
+    const startDate =
+      report.period.start.slice(0, 10);
+
+    const endDate =
+      report.period.end.slice(0, 10);
+
+    link.href = url;
+    link.download =
+      `modified-dietz-${startDate}-${endDate}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+  }
+
   const financialHistorySummary =
     useMemo(() => {
       const points =
@@ -3255,27 +3434,49 @@ export default function Performance() {
                       </Typography>
                     </Box>
 
-                    <Chip
-                      variant="outlined"
-                      color={
-                        report.performance
-                          .modifiedDietzReturn ===
-                          null ||
-                        report.performance
-                          .modifiedDietzReturn ===
-                          0
-                          ? "default"
-                          : report.performance
-                                .modifiedDietzReturn >
-                              0
-                            ? "success"
-                            : "error"
-                      }
-                      label={percentage(
-                        report.performance
-                          .modifiedDietzReturn,
-                      )}
-                    />
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <Chip
+                        variant="outlined"
+                        color={
+                          report.performance
+                            .modifiedDietzReturn ===
+                            null ||
+                          report.performance
+                            .modifiedDietzReturn ===
+                            0
+                            ? "default"
+                            : report.performance
+                                  .modifiedDietzReturn >
+                                0
+                              ? "success"
+                              : "error"
+                        }
+                        label={percentage(
+                          report.performance
+                            .modifiedDietzReturn,
+                        )}
+                      />
+
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={
+                          <DownloadRoundedIcon />
+                        }
+                        onClick={
+                          exportModifiedDietzAuditCsv
+                        }
+                      >
+                        Esporta audit
+                      </Button>
+                    </Box>
                   </Box>
 
                   <TableContainer
