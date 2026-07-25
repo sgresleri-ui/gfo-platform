@@ -43,6 +43,15 @@ type Props = {
     StoredPlanningScenarioSummary[];
 };
 
+type ScenarioComparisonState = {
+  key: string;
+  leftScenario:
+    StoredPlanningScenarioDetail | null;
+  rightScenario:
+    StoredPlanningScenarioDetail | null;
+  error: string;
+};
+
 type ComparisonMetric = {
   label: string;
   leftValue: number | null;
@@ -317,34 +326,24 @@ export default function PlanningScenarioComparison({
   >(null);
 
   const [
-    leftId,
-    setLeftId,
+    leftSelection,
+    setLeftSelection,
   ] = useState("");
 
   const [
-    rightId,
-    setRightId,
+    rightSelection,
+    setRightSelection,
   ] = useState("");
 
   const [
-    leftScenario,
-    setLeftScenario,
-  ] = useState<
-    StoredPlanningScenarioDetail | null
-  >(null);
-
-  const [
-    rightScenario,
-    setRightScenario,
-  ] = useState<
-    StoredPlanningScenarioDetail | null
-  >(null);
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
+    comparisonState,
+    setComparisonState,
+  ] = useState<ScenarioComparisonState>({
+    key: "",
+    leftScenario: null,
+    rightScenario: null,
+    error: "",
+  });
 
   useEffect(() => {
     let active = true;
@@ -364,53 +363,43 @@ export default function PlanningScenarioComparison({
     };
   }, []);
 
-  useEffect(() => {
-    if (scenarios.length < 2) {
-      setLeftId("");
-      setRightId("");
-      setLeftScenario(null);
-      setRightScenario(null);
-      return;
-    }
-
-    setLeftId((current) =>
-      scenarios.some(
-        (scenario) =>
-          scenario.id === current,
-      )
-        ? current
-        : scenarios[
+  const leftId =
+    scenarios.some(
+      (scenario) =>
+        scenario.id === leftSelection,
+    )
+      ? leftSelection
+      : scenarios.length >= 2
+        ? scenarios[
             scenarios.length - 1
-          ].id,
-    );
+          ].id
+        : "";
 
-    setRightId((current) =>
-      scenarios.some(
-        (scenario) =>
-          scenario.id === current,
-      )
-        ? current
-        : scenarios[0].id,
-    );
-  }, [scenarios]);
+  const rightId =
+    scenarios.some(
+      (scenario) =>
+        scenario.id === rightSelection,
+    )
+      ? rightSelection
+      : scenarios.length >= 2
+        ? scenarios[0].id
+        : "";
+
+  const comparisonKey =
+    leftId &&
+    rightId &&
+    leftId !== rightId
+      ? `${leftId}:${rightId}`
+      : "";
 
   useEffect(() => {
-    if (
-      !leftId ||
-      !rightId ||
-      leftId === rightId
-    ) {
-      setLeftScenario(null);
-      setRightScenario(null);
+    if (!comparisonKey) {
       return;
     }
 
     let active = true;
 
-    setLoading(true);
-    setError("");
-
-    Promise.all([
+    void Promise.all([
       getStoredPlanningScenario(
         leftId,
       ),
@@ -436,34 +425,63 @@ export default function PlanningScenarioComparison({
             );
           }
 
-          setLeftScenario(
-            leftResponse,
-          );
-
-          setRightScenario(
-            rightResponse,
-          );
+          setComparisonState({
+            key: comparisonKey,
+            leftScenario:
+              leftResponse,
+            rightScenario:
+              rightResponse,
+            error: "",
+          });
         },
       )
       .catch((requestError) => {
         console.error(requestError);
 
         if (active) {
-          setError(
-            "Impossibile confrontare gli scenari selezionati.",
-          );
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
+          setComparisonState({
+            key: comparisonKey,
+            leftScenario: null,
+            rightScenario: null,
+            error:
+              "Impossibile confrontare gli scenari selezionati.",
+          });
         }
       });
 
     return () => {
       active = false;
     };
-  }, [leftId, rightId]);
+  }, [
+    comparisonKey,
+    leftId,
+    rightId,
+  ]);
+
+  const comparisonCurrent =
+    comparisonState.key ===
+    comparisonKey;
+
+  const leftScenario =
+    comparisonCurrent
+      ? comparisonState
+          .leftScenario
+      : null;
+
+  const rightScenario =
+    comparisonCurrent
+      ? comparisonState
+          .rightScenario
+      : null;
+
+  const error =
+    comparisonCurrent
+      ? comparisonState.error
+      : "";
+
+  const loading =
+    Boolean(comparisonKey) &&
+    !comparisonCurrent;
 
   const comparisonMetrics =
     useMemo<
@@ -711,7 +729,7 @@ export default function PlanningScenarioComparison({
               label="Scenario A"
               value={leftId}
               onChange={(event) =>
-                setLeftId(
+                setLeftSelection(
                   event.target.value,
                 )
               }
@@ -734,7 +752,7 @@ export default function PlanningScenarioComparison({
               label="Scenario B"
               value={rightId}
               onChange={(event) =>
-                setRightId(
+                setRightSelection(
                   event.target.value,
                 )
               }
