@@ -106,7 +106,32 @@ export default function Wealth() {
   }
 
   useEffect(() => {
-    void loadRegistry();
+    let cancelled = false;
+
+    void getWealthRegistry()
+      .then((result) => {
+        if (!cancelled) {
+          setRegistry(result);
+        }
+      })
+      .catch((requestError) => {
+        console.error(requestError);
+
+        if (!cancelled) {
+          setError(
+            "Impossibile caricare il registro patrimoniale.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const activePositions = useMemo(() => {
@@ -217,10 +242,6 @@ export default function Wealth() {
       start + rowsPerPage,
     );
   }, [filteredPositions, page, rowsPerPage]);
-
-  useEffect(() => {
-    setPage(0);
-  }, [category, search]);
 
   const euro = (value: number) =>
     value.toLocaleString("it-IT", {
@@ -504,9 +525,12 @@ export default function Wealth() {
                 label="Cerca posizione"
                 placeholder="Nome, ISIN, paese, portafoglio..."
                 value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
+                onChange={(event) => {
+                  setSearch(
+                    event.target.value,
+                  );
+                  setPage(0);
+                }}
               />
 
               <FormControl size="small">
@@ -518,12 +542,13 @@ export default function Wealth() {
                   labelId="wealth-category-label"
                   label="Categoria"
                   value={category}
-                  onChange={(event) =>
+                  onChange={(event) => {
                     setCategory(
                       event.target
                         .value as CategoryFilter,
-                    )
-                  }
+                    );
+                    setPage(0);
+                  }}
                 >
                   <MenuItem value="ALL">
                     Tutte
