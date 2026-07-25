@@ -37,6 +37,7 @@ import {
   Line,
   LineChart,
   ResponsiveContainer,
+  ReferenceLine,
   Tooltip,
   XAxis,
   YAxis,
@@ -2270,6 +2271,32 @@ export default function Performance() {
                                 );
                               }}
                             />
+
+                            {attributionWaterfallData.points
+                              .slice(0, -1)
+                              .map((point, index) => {
+                                const nextPoint =
+                                  attributionWaterfallData
+                                    .points[index + 1];
+
+                                return (
+                                  <ReferenceLine
+                                    key={`connector-${point.name}`}
+                                    segment={[
+                                      {
+                                        x: point.name,
+                                        y: point.end,
+                                      },
+                                      {
+                                        x: nextPoint.name,
+                                        y: point.end,
+                                      },
+                                    ]}
+                                    stroke="#94a3b8"
+                                    strokeWidth={1.2}
+                                  />
+                                );
+                              })}
 
                             <Bar
                               dataKey="range"
