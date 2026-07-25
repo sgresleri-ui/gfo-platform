@@ -428,8 +428,11 @@ export class PerformanceService
     let taxes = 0;
 
     const externalFlows: Array<{
+      id: string;
       amount: number;
       transactionDate: Date;
+      transactionType: string;
+      baseCurrency: string;
     }> = [];
 
     for (
@@ -452,9 +455,13 @@ export class PerformanceService
         contributions += amount;
 
         externalFlows.push({
+          id: transaction.id,
           amount,
           transactionDate:
             transaction.transactionDate,
+          transactionType,
+          baseCurrency:
+            transaction.baseCurrency,
         });
       } else if (
         EXTERNAL_WITHDRAWALS.includes(
@@ -464,9 +471,13 @@ export class PerformanceService
         withdrawals += amount;
 
         externalFlows.push({
+          id: transaction.id,
           amount: -amount,
           transactionDate:
             transaction.transactionDate,
+          transactionType,
+          baseCurrency:
+            transaction.baseCurrency,
         });
       } else if (
         INVESTMENT_INCOME.includes(
@@ -561,6 +572,16 @@ export class PerformanceService
 
     let weightedExternalFlows = 0;
 
+    const externalFlowDetails: Array<{
+      id: string;
+      transactionDate: string;
+      transactionType: string;
+      amount: number;
+      baseCurrency: string;
+      weightPercent: number;
+      weightedAmount: number;
+    }> = [];
+
     for (
       const flow of externalFlows
     ) {
@@ -580,6 +601,29 @@ export class PerformanceService
 
       weightedExternalFlows +=
         weight * flow.amount;
+
+      externalFlowDetails.push({
+        id: flow.id,
+        transactionDate:
+          flow.transactionDate
+            .toISOString(),
+        transactionType:
+          flow.transactionType,
+        amount:
+          this.roundCurrency(
+            flow.amount,
+          ),
+        baseCurrency:
+          flow.baseCurrency,
+        weightPercent:
+          this.roundPercentage(
+            weight * 100,
+          ),
+        weightedAmount:
+          this.roundCurrency(
+            weight * flow.amount,
+          ),
+      });
     }
 
     weightedExternalFlows =
@@ -746,6 +790,9 @@ export class PerformanceService
             sales,
           ),
       },
+
+      externalFlows:
+        externalFlowDetails,
 
       assetClassChanges,
 

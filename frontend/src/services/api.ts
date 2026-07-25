@@ -1195,6 +1195,16 @@ export type PerformanceSummaryResponse = {
     sales: number;
   };
 
+  externalFlows: {
+    id: string;
+    transactionDate: string;
+    transactionType: string;
+    amount: number;
+    baseCurrency: string;
+    weightPercent: number;
+    weightedAmount: number;
+  }[];
+
   assetClassChanges: {
     liquidity: number;
     investments: number;

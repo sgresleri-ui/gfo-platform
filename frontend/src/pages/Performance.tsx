@@ -133,6 +133,20 @@ function dateTimeLabel(
   );
 }
 
+function flowDateLabel(
+  value: string,
+): string {
+  return new Date(value).toLocaleDateString(
+    "it-IT",
+    {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      timeZone: "UTC",
+    },
+  );
+}
+
 function monthYearLabel(
   value: string,
 ): string {
@@ -231,6 +245,22 @@ function sourceLabel(
   }
 
   return source;
+}
+
+function externalFlowTypeLabel(
+  transactionType: string,
+): string {
+  const labels: Record<string, string> = {
+    DEPOSIT: "Versamento",
+    OTHER_INCOME: "Altra entrata",
+    WITHDRAWAL: "Prelievo",
+    OTHER_EXPENSE: "Altra uscita",
+  };
+
+  return (
+    labels[transactionType] ??
+    transactionType
+  );
 }
 
 function KpiCard({
@@ -3382,6 +3412,165 @@ export default function Performance() {
                   </TableContainer>
 
                   <Typography
+                    variant="subtitle1"
+                    sx={{
+                      mt: 2,
+                      mb: 1,
+                      fontWeight: 750,
+                    }}
+                  >
+                    Flussi esterni ponderati
+                  </Typography>
+
+                  {(report.externalFlows
+                    ?.length ?? 0) === 0 ? (
+                    <Alert severity="info">
+                      Nessun versamento o
+                      prelievo esterno nel
+                      periodo selezionato.
+                    </Alert>
+                  ) : (
+                    <TableContainer
+                      sx={{
+                        border: "1px solid",
+                        borderColor: "divider",
+                        borderRadius: 1,
+                        maxHeight: 420,
+                      }}
+                    >
+                      <Table
+                        size="small"
+                        stickyHeader
+                        sx={{ minWidth: 760 }}
+                      >
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>
+                              Data
+                            </TableCell>
+
+                            <TableCell>
+                              Tipo
+                            </TableCell>
+
+                            <TableCell align="right">
+                              Importo
+                            </TableCell>
+
+                            <TableCell align="right">
+                              Peso temporale
+                            </TableCell>
+
+                            <TableCell align="right">
+                              Importo ponderato
+                            </TableCell>
+                          </TableRow>
+                        </TableHead>
+
+                        <TableBody>
+                          {(
+                            report.externalFlows ??
+                            []
+                          ).map((flow) => (
+                            <TableRow
+                              key={flow.id}
+                              hover
+                            >
+                              <TableCell>
+                                {flowDateLabel(
+                                  flow.transactionDate,
+                                )}
+                              </TableCell>
+
+                              <TableCell>
+                                <Chip
+                                  size="small"
+                                  variant="outlined"
+                                  color={
+                                    flow.amount >= 0
+                                      ? "success"
+                                      : "error"
+                                  }
+                                  label={externalFlowTypeLabel(
+                                    flow.transactionType,
+                                  )}
+                                />
+                              </TableCell>
+
+                              <TableCell
+                                align="right"
+                                sx={{
+                                  fontWeight: 700,
+                                  color: valueColor(
+                                    flow.amount,
+                                  ),
+                                }}
+                              >
+                                {signedEuro(
+                                  flow.amount,
+                                )}
+                              </TableCell>
+
+                              <TableCell align="right">
+                                {flow.weightPercent.toLocaleString(
+                                  "it-IT",
+                                  {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  },
+                                )}
+                                %
+                              </TableCell>
+
+                              <TableCell
+                                align="right"
+                                sx={{
+                                  fontWeight: 800,
+                                  color: valueColor(
+                                    flow.weightedAmount,
+                                  ),
+                                }}
+                              >
+                                {signedEuro(
+                                  flow.weightedAmount,
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+
+                          <TableRow>
+                            <TableCell
+                              colSpan={4}
+                              align="right"
+                              sx={{
+                                fontWeight: 800,
+                              }}
+                            >
+                              Totale ponderato
+                            </TableCell>
+
+                            <TableCell
+                              align="right"
+                              sx={{
+                                fontWeight: 800,
+                                color: valueColor(
+                                  report.performance
+                                    .weightedExternalFlows,
+                                ),
+                              }}
+                            >
+                              {signedEuro(
+                                report.performance
+                                  .weightedExternalFlows,
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  )}
+
+                  <Typography
                     variant="caption"
                     color="text.secondary"
                     sx={{
@@ -3392,7 +3581,11 @@ export default function Performance() {
                     I flussi ponderati riflettono
                     il tempo trascorso tra ciascun
                     versamento o prelievo e la
-                    fotografia finale.
+                    fotografia finale. Il totale
+                    utilizza i valori non
+                    arrotondati; la somma delle
+                    righe mostrate può differire
+                    di pochi centesimi.
                   </Typography>
                 </Paper>
               )}
