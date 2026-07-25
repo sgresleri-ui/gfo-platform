@@ -125,7 +125,34 @@ export default function ReportSnapshotsPanel() {
   }
 
   useEffect(() => {
-    void loadSnapshots();
+    let cancelled = false;
+
+    void getExecutiveReportSnapshots()
+      .then((response) => {
+        if (!cancelled) {
+          setSnapshots(
+            response.snapshots,
+          );
+        }
+      })
+      .catch((requestError) => {
+        console.error(requestError);
+
+        if (!cancelled) {
+          setError(
+            "Impossibile caricare lo storico dei report.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function saveSnapshot() {
