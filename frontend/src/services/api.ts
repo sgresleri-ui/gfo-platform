@@ -1274,6 +1274,13 @@ export type PositionAttributionItem = {
     | "CHANGED"
     | "NEW"
     | "CLOSED";
+  changeType:
+    | "LIQUIDITY_MOVEMENT"
+    | "INVESTMENT_MOVEMENT"
+    | "REAL_ESTATE_MOVEMENT"
+    | "LIABILITY_CHANGE"
+    | "OTHER_ASSET_CHANGE";
+  changeDescription: string;
   startValue: number;
   endValue: number;
   signedStartValue: number;

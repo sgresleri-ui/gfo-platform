@@ -122,6 +122,86 @@ export class PerformanceService
     );
   }
 
+  private classifyPositionChange(
+    position: {
+      name: string;
+      category: string;
+      isLiability: boolean;
+    },
+    contributionChange: number,
+  ) {
+    if (
+      position.isLiability ||
+      position.category === 'LIABILITY'
+    ) {
+      return {
+        changeType:
+          'LIABILITY_CHANGE' as const,
+        changeDescription:
+          contributionChange > 0
+            ? `Riduzione della passività ${position.name}`
+            : contributionChange < 0
+              ? `Incremento della passività ${position.name}`
+              : `Passività ${position.name} invariata`,
+      };
+    }
+
+    const direction =
+      contributionChange > 0
+        ? 'Incremento'
+        : contributionChange < 0
+          ? 'Riduzione'
+          : 'Posizione invariata';
+
+    if (
+      position.category === 'LIQUIDITY'
+    ) {
+      return {
+        changeType:
+          'LIQUIDITY_MOVEMENT' as const,
+        changeDescription:
+          contributionChange === 0
+            ? `Liquidità ${position.name} invariata`
+            : `${direction} della liquidità ${position.name}`,
+      };
+    }
+
+    if (
+      position.category === 'INVESTMENT'
+    ) {
+      return {
+        changeType:
+          'INVESTMENT_MOVEMENT' as const,
+        changeDescription:
+          contributionChange === 0
+            ? `Investimento ${position.name} invariato`
+            : `${direction} della posizione di investimento ${position.name}`,
+      };
+    }
+
+    if (
+      position.category === 'REAL_ESTATE'
+    ) {
+      return {
+        changeType:
+          'REAL_ESTATE_MOVEMENT' as const,
+        changeDescription:
+          contributionChange === 0
+            ? `Posizione immobiliare ${position.name} invariata`
+            : `${direction} della posizione immobiliare ${position.name}`,
+      };
+    }
+
+    return {
+      changeType:
+        'OTHER_ASSET_CHANGE' as const,
+      changeDescription:
+        contributionChange === 0
+          ? `Posizione ${position.name} invariata`
+          : `${direction} della posizione ${position.name}`,
+    };
+  }
+
   private parseOptionalDate(
     value: string | undefined,
     fieldName: string,
@@ -928,6 +1008,12 @@ export class PerformanceService
               'CHANGED';
           }
 
+          const classification =
+            this.classifyPositionChange(
+              entry.position,
+              contributionChange,
+            );
+
           return {
             positionId:
               entry.position.id,
@@ -960,6 +1046,12 @@ export class PerformanceService
               entry.position.status,
 
             comparisonStatus,
+
+            changeType:
+              classification.changeType,
+
+            changeDescription:
+              classification.changeDescription,
 
             startValue:
               this.roundCurrency(

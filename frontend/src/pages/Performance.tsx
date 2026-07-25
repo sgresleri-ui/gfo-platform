@@ -184,6 +184,25 @@ function categoryLabel(
   return labels[category] ?? category;
 }
 
+function changeTypeLabel(
+  changeType: string,
+): string {
+  const labels: Record<string, string> = {
+    LIQUIDITY_MOVEMENT:
+      "Movimento liquidità",
+    INVESTMENT_MOVEMENT:
+      "Movimento investimento",
+    REAL_ESTATE_MOVEMENT:
+      "Movimento immobiliare",
+    LIABILITY_CHANGE:
+      "Variazione passività",
+    OTHER_ASSET_CHANGE:
+      "Altra variazione",
+  };
+
+  return labels[changeType] ?? changeType;
+}
+
 function sourceLabel(
   source: string,
 ): string {
@@ -1976,6 +1995,7 @@ export default function Performance() {
                       <Table
                         size="small"
                         stickyHeader
+                          sx={{ minWidth: 1300 }}
                       >
                         <TableHead>
                           <TableRow>
@@ -1986,6 +2006,14 @@ export default function Performance() {
                             <TableCell>
                               Categoria
                             </TableCell>
+
+                              <TableCell>
+                                Tipo variazione
+                              </TableCell>
+
+                              <TableCell>
+                                Interpretazione
+                              </TableCell>
 
                             <TableCell align="right">
                               Valore iniziale
@@ -2034,6 +2062,30 @@ export default function Performance() {
                                     item.category,
                                   )}
                                 </TableCell>
+
+                                  <TableCell>
+                                    <Chip
+                                      size="small"
+                                      variant="outlined"
+                                      label={changeTypeLabel(
+                                        item.changeType,
+                                      )}
+                                    />
+                                  </TableCell>
+
+                                  <TableCell
+                                    sx={{
+                                      minWidth: 260,
+                                      maxWidth: 340,
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                    >
+                                      {item.changeDescription}
+                                    </Typography>
+                                  </TableCell>
 
                                 <TableCell align="right">
                                   {euro(
