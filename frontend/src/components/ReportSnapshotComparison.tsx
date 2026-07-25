@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -187,39 +186,39 @@ function calculatePercentageChange(
 export default function ReportSnapshotComparison({
   snapshots,
 }: Props) {
-  const [fromId, setFromId] =
+  const [
+    fromSelection,
+    setFromSelection,
+  ] =
     useState("");
 
-  const [toId, setToId] =
+  const [
+    toSelection,
+    setToSelection,
+  ] =
     useState("");
 
-  useEffect(() => {
-    if (snapshots.length < 2) {
-      setFromId("");
-      setToId("");
-      return;
-    }
-
-    setFromId((current) =>
-      snapshots.some(
-        (snapshot) =>
-          snapshot.id === current,
-      )
-        ? current
-        : snapshots[
+  const fromId =
+    snapshots.some(
+      (snapshot) =>
+        snapshot.id === fromSelection,
+    )
+      ? fromSelection
+      : snapshots.length >= 2
+        ? snapshots[
             snapshots.length - 1
-          ].id,
-    );
+          ].id
+        : "";
 
-    setToId((current) =>
-      snapshots.some(
-        (snapshot) =>
-          snapshot.id === current,
-      )
-        ? current
-        : snapshots[0].id,
-    );
-  }, [snapshots]);
+  const toId =
+    snapshots.some(
+      (snapshot) =>
+        snapshot.id === toSelection,
+    )
+      ? toSelection
+      : snapshots.length >= 2
+        ? snapshots[0].id
+        : "";
 
   const fromSnapshot = useMemo(
     () =>
@@ -348,7 +347,7 @@ export default function ReportSnapshotComparison({
               label="Da"
               value={fromId}
               onChange={(event) =>
-                setFromId(
+                setFromSelection(
                   event.target.value,
                 )
               }
@@ -372,7 +371,7 @@ export default function ReportSnapshotComparison({
               label="A"
               value={toId}
               onChange={(event) =>
-                setToId(
+                setToSelection(
                   event.target.value,
                 )
               }
