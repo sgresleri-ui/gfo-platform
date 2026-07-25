@@ -261,7 +261,32 @@ export default function OperationalCalendar() {
   }
 
   useEffect(() => {
-    void loadCalendar();
+    let cancelled = false;
+
+    void getOperationalCalendar()
+      .then((result) => {
+        if (!cancelled) {
+          setData(result);
+        }
+      })
+      .catch((requestError) => {
+        console.error(requestError);
+
+        if (!cancelled) {
+          setError(
+            "Impossibile caricare il Calendario Operativo.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const orderedTasks = useMemo(() => {
