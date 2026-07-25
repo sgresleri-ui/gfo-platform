@@ -648,7 +648,49 @@ export default function PlanningScenarioArchive({
   }
 
   useEffect(() => {
-    void loadScenarios();
+    let cancelled = false;
+
+    void Promise.all([
+      getStoredPlanningScenarios(
+        true,
+      ),
+      getEconomicAssumptionProfiles(
+        true,
+      ),
+    ])
+      .then(
+        ([
+          response,
+          profiles,
+        ]) => {
+          if (!cancelled) {
+            setScenarios(
+              response.scenarios,
+            );
+            setEconomicProfiles(
+              profiles,
+            );
+          }
+        },
+      )
+      .catch((requestError) => {
+        console.error(requestError);
+
+        if (!cancelled) {
+          setError(
+            "Impossibile caricare gli scenari salvati.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [economicProfilesRefreshKey]);
 
   const activeScenarios =
@@ -842,7 +884,7 @@ export default function PlanningScenarioArchive({
 
       return filtered.sort(
         (left, right) => {
-          let comparison = 0;
+          let comparison: number;
 
           switch (scenarioSort) {
             case "NAME":
