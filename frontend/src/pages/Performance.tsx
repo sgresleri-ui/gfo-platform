@@ -33,6 +33,7 @@ import {
   Cell,
   CartesianGrid,
   Legend,
+  LabelList,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -2283,6 +2284,37 @@ export default function Performance() {
                                   />
                                 ),
                               )}
+
+                              <LabelList
+                                dataKey="displayValue"
+                                position="top"
+                                formatter={(value) => {
+                                  const numericValue =
+                                    Number(value);
+
+                                  return Math.abs(
+                                    numericValue,
+                                  ) >= 1_000_000
+                                    ? `${(
+                                        numericValue /
+                                        1_000_000
+                                      ).toLocaleString(
+                                        "it-IT",
+                                        {
+                                          minimumFractionDigits: 3,
+                                          maximumFractionDigits: 3,
+                                        },
+                                      )} M€`
+                                    : signedEuro(
+                                        numericValue,
+                                      );
+                                }}
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  fill: "#334155",
+                                }}
+                              />
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>
