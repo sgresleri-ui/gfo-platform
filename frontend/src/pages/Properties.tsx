@@ -59,7 +59,32 @@ export default function Properties() {
   }
 
   useEffect(() => {
-    void loadProperties();
+    let cancelled = false;
+
+    void getPropertiesOverview()
+      .then((result) => {
+        if (!cancelled) {
+          setData(result);
+        }
+      })
+      .catch((requestError) => {
+        console.error(requestError);
+
+        if (!cancelled) {
+          setError(
+            "Impossibile caricare il patrimonio immobiliare.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const euro = (value: number) =>
