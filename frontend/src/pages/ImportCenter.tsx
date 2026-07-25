@@ -222,7 +222,50 @@ export default function ImportCenter() {
   }
 
   useEffect(() => {
-    void loadImportCenter();
+    let cancelled = false;
+
+    void Promise.allSettled([
+      getImportStatus(),
+      getImportHistory(),
+    ]).then(([
+      statusResult,
+      historyResult,
+    ]) => {
+      if (cancelled) {
+        return;
+      }
+
+      if (
+        statusResult.status ===
+        "fulfilled"
+      ) {
+        setStatus(
+          statusResult.value,
+        );
+      } else {
+        setStatus(null);
+        setError(
+          "Impossibile verificare il workbook configurato.",
+        );
+      }
+
+      if (
+        historyResult.status ===
+        "fulfilled"
+      ) {
+        setHistory(
+          historyResult.value,
+        );
+      } else {
+        setHistory(null);
+      }
+
+      setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function analyzeWorkbook() {
