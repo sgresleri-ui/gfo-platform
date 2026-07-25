@@ -764,6 +764,69 @@ export default function Performance() {
       attributionSort,
     ]);
 
+  const attributionChangeTypeSummary =
+    useMemo(() => {
+      const groups = new Map<
+        string,
+        {
+          changeType: string;
+          positions: number;
+          contributionChange: number;
+        }
+      >();
+
+      for (
+        const item of attribution?.items ?? []
+      ) {
+        if (
+          item.comparisonStatus ===
+          "UNCHANGED"
+        ) {
+          continue;
+        }
+
+        const current =
+          groups.get(item.changeType) ?? {
+            changeType: item.changeType,
+            positions: 0,
+            contributionChange: 0,
+          };
+
+        current.positions += 1;
+        current.contributionChange +=
+          item.contributionChange;
+
+        groups.set(
+          item.changeType,
+          current,
+        );
+      }
+
+      return Array.from(
+        groups.values(),
+      )
+        .map((group) => ({
+          ...group,
+          contributionChange:
+            Math.round(
+              (
+                group.contributionChange +
+                Number.EPSILON
+              ) *
+                100,
+            ) / 100,
+        }))
+        .sort(
+          (first, second) =>
+            Math.abs(
+              second.contributionChange,
+            ) -
+            Math.abs(
+              first.contributionChange,
+            ),
+        );
+    }, [attribution]);
+
   const topAttributionContributors =
     useMemo(() => {
       const changedItems =
@@ -1667,6 +1730,58 @@ export default function Performance() {
                       valueColor="error.main"
                     />
                   </Box>
+                  <Box sx={{ mt: 3 }}>
+                    <Typography variant="h6">
+                      Variazione per tipologia
+                    </Typography>
+
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 0.5, mb: 1.5 }}
+                    >
+                      Aggregazione automatica delle
+                      variazioni per natura patrimoniale.
+                    </Typography>
+
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: {
+                          xs: "1fr",
+                          sm:
+                            "repeat(2, minmax(0, 1fr))",
+                          xl:
+                            "repeat(3, minmax(0, 1fr))",
+                        },
+                        gap: 2,
+                      }}
+                    >
+                      {attributionChangeTypeSummary.map(
+                        (group) => (
+                          <KpiCard
+                            key={group.changeType}
+                            label={changeTypeLabel(
+                              group.changeType,
+                            )}
+                            value={signedEuro(
+                              group.contributionChange,
+                            )}
+                            subtitle={`${group.positions} ${
+                              group.positions === 1
+                                ? "posizione"
+                                : "posizioni"
+                            }`}
+                            valueColor={valueColor(
+                              group.contributionChange,
+                            )}
+                          />
+                        ),
+                      )}
+                    </Box>
+                  </Box>
+
+
                   <Box
                     sx={{
                       display: "grid",
