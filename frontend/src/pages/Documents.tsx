@@ -344,7 +344,32 @@ export default function Documents() {
   }
 
   useEffect(() => {
-    void loadDocuments();
+    let cancelled = false;
+
+    void getDocumentsOverview()
+      .then((result) => {
+        if (!cancelled) {
+          setData(result);
+        }
+      })
+      .catch((requestError) => {
+        console.error(requestError);
+
+        if (!cancelled) {
+          setError(
+            "Impossibile caricare il Document Center.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const filteredDocuments = useMemo(() => {
