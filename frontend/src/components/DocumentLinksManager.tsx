@@ -127,6 +127,19 @@ function formatBytes(
 
 export default function DocumentLinksManager({
   document,
+  ...props
+}: Props) {
+  return (
+    <DocumentLinksManagerContent
+      key={`${document.id}:${document.updatedAt}`}
+      document={document}
+      {...props}
+    />
+  );
+}
+
+function DocumentLinksManagerContent({
+  document,
   onChanged,
 }: Props) {
   const [
@@ -169,16 +182,9 @@ export default function DocumentLinksManager({
     useState("");
 
   useEffect(() => {
-    setCurrentDocument(document);
-  }, [document]);
-
-  useEffect(() => {
     let active = true;
 
-    setLoading(true);
-    setError("");
-
-    Promise.all([
+    void Promise.all([
       getOperationalCalendar(),
       getDecisionsOverview(),
       getPropertiesOverview(),
@@ -296,14 +302,14 @@ export default function DocumentLinksManager({
   const availableOptions =
     optionsByType[entityType];
 
-  useEffect(() => {
-    setEntityId(
-      availableOptions[0]?.id ?? "",
-    );
-  }, [
-    entityType,
-    availableOptions,
-  ]);
+  const effectiveEntityId =
+    availableOptions.some(
+      (option) =>
+        option.id === entityId,
+    )
+      ? entityId
+      : availableOptions[0]?.id ??
+        "";
 
   async function refreshDocument() {
     const overview =
@@ -323,7 +329,7 @@ export default function DocumentLinksManager({
   }
 
   async function addLink() {
-    if (!entityId) {
+    if (!effectiveEntityId) {
       setError(
         "Selezionare l’entità da collegare.",
       );
@@ -340,7 +346,8 @@ export default function DocumentLinksManager({
         currentDocument.id,
         {
           entityType,
-          entityId,
+          entityId:
+            effectiveEntityId,
           relationType,
           notes:
             notes.trim() || null,
@@ -599,7 +606,9 @@ export default function DocumentLinksManager({
               <TextField
                 select
                 label="Entità"
-                value={entityId}
+                value={
+                  effectiveEntityId
+                }
                 onChange={(event) =>
                   setEntityId(
                     event.target.value,
@@ -673,7 +682,8 @@ export default function DocumentLinksManager({
                 void addLink()
               }
               disabled={
-                saving || !entityId
+                saving ||
+                !effectiveEntityId
               }
               sx={{ mt: 2 }}
             >
