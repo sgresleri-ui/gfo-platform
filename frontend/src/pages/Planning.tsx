@@ -79,7 +79,43 @@ export default function Planning() {
   }
 
   useEffect(() => {
-    void loadPlanning();
+    let cancelled = false;
+
+    void Promise.all([
+      getBudgetOverview(),
+      getPropertiesOverview(),
+    ])
+      .then(
+        ([
+          budgetResult,
+          propertiesResult,
+        ]) => {
+          if (!cancelled) {
+            setBudget(budgetResult);
+            setProperties(
+              propertiesResult,
+            );
+          }
+        },
+      )
+      .catch((requestError) => {
+        console.error(requestError);
+
+        if (!cancelled) {
+          setError(
+            "Impossibile caricare il piano patrimoniale.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const euro = (value: number | null) => {
