@@ -283,7 +283,40 @@ export default function Reports() {
   }
 
   useEffect(() => {
-    void loadReport();
+    let cancelled = false;
+
+    void getExecutiveReport()
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+
+        setReport(result);
+
+        if (result.status === "PARTIAL") {
+          setPartialWarning(
+            `Report parziale: ${result.completeness.availableSections} sezioni disponibili su ${result.completeness.totalSections}.`,
+          );
+        }
+      })
+      .catch((requestError) => {
+        console.error(requestError);
+
+        if (!cancelled) {
+          setError(
+            "Impossibile caricare il report executive consolidato.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const euro = (value: number | null) => {
