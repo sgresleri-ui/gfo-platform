@@ -319,6 +319,18 @@ export default function Performance() {
     "IMPACT_DESC" | "IMPACT_ASC"
   >("IMPACT_DESC");
 
+  const [
+    attributionTypeFilter,
+    setAttributionTypeFilter,
+  ] = useState<
+    | "ALL"
+    | "LIQUIDITY_MOVEMENT"
+    | "INVESTMENT_MOVEMENT"
+    | "REAL_ESTATE_MOVEMENT"
+    | "LIABILITY_CHANGE"
+    | "OTHER_ASSET_CHANGE"
+  >("ALL");
+
   function exportFinancialHistoryCsv() {
     if (!financialHistory) {
       return;
@@ -733,7 +745,7 @@ export default function Performance() {
             "UNCHANGED",
         ) ?? [];
 
-      const filteredItems =
+      const signFilteredItems =
         attributionFilter === "POSITIVE"
           ? changedItems.filter(
               (item) =>
@@ -745,6 +757,15 @@ export default function Performance() {
                   item.contributionChange < 0,
               )
             : changedItems;
+
+      const filteredItems =
+        attributionTypeFilter === "ALL"
+          ? signFilteredItems
+          : signFilteredItems.filter(
+              (item) =>
+                item.changeType ===
+                attributionTypeFilter,
+            );
 
       return [...filteredItems].sort(
         (first, second) => {
@@ -762,6 +783,7 @@ export default function Performance() {
       attribution,
       attributionFilter,
       attributionSort,
+      attributionTypeFilter,
     ]);
 
   const attributionChangeTypeSummary =
@@ -2018,6 +2040,59 @@ export default function Performance() {
                           </Button>
                         ))}
                       </Box>
+
+                      <TextField
+                        select
+                        size="small"
+                        label="Tipologia"
+                        value={attributionTypeFilter}
+                        onChange={(event) =>
+                          setAttributionTypeFilter(
+                            event.target.value as
+                              | "ALL"
+                              | "LIQUIDITY_MOVEMENT"
+                              | "INVESTMENT_MOVEMENT"
+                              | "REAL_ESTATE_MOVEMENT"
+                              | "LIABILITY_CHANGE"
+                              | "OTHER_ASSET_CHANGE",
+                          )
+                        }
+                        sx={{
+                          width: {
+                            xs: "100%",
+                            sm: 250,
+                          },
+                          mb: 1.5,
+                          mr: {
+                            xs: 0,
+                            sm: 1.5,
+                          },
+                        }}
+                      >
+                        <MenuItem value="ALL">
+                          Tutte le tipologie
+                        </MenuItem>
+
+                        <MenuItem value="LIQUIDITY_MOVEMENT">
+                          Movimento liquidità
+                        </MenuItem>
+
+                        <MenuItem value="INVESTMENT_MOVEMENT">
+                          Movimento investimento
+                        </MenuItem>
+
+                        <MenuItem value="REAL_ESTATE_MOVEMENT">
+                          Movimento immobiliare
+                        </MenuItem>
+
+                        <MenuItem value="LIABILITY_CHANGE">
+                          Variazione passività
+                        </MenuItem>
+
+                        <MenuItem value="OTHER_ASSET_CHANGE">
+                          Altra variazione
+                        </MenuItem>
+                      </TextField>
 
                       <TextField
                         select
