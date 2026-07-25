@@ -243,11 +243,49 @@ export default function WealthHistory() {
   );
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    let cancelled = false;
 
-  const snapshots =
-    history?.snapshots ?? [];
+    void Promise.all([
+      getLedgerSummary(),
+      getLedgerNetWorthHistory(1000),
+    ])
+      .then(
+        ([
+          summaryResult,
+          historyResult,
+        ]) => {
+          if (!cancelled) {
+            setSummary(summaryResult);
+            setHistory(historyResult);
+          }
+        },
+      )
+      .catch((error) => {
+        console.error(error);
+
+        if (!cancelled) {
+          setNotice({
+            severity: "error",
+            text:
+              "Impossibile caricare lo storico patrimoniale.",
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const snapshots = useMemo(
+    () => history?.snapshots ?? [],
+    [history],
+  );
 
   const latest =
     snapshots.length > 0
