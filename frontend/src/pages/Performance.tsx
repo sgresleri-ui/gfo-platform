@@ -745,6 +745,18 @@ export default function Performance() {
       attributionSort,
     ]);
 
+  const filteredAttributionTotal =
+    useMemo(
+      () =>
+        filteredAttributionItems.reduce(
+          (total, item) =>
+            total +
+            item.contributionChange,
+          0,
+        ),
+      [filteredAttributionItems],
+    );
+
   const attributionChartData =
     useMemo(
       () =>
@@ -1725,6 +1737,57 @@ export default function Performance() {
                           Contributo minore
                         </MenuItem>
                       </TextField>
+
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          display: "flex",
+                          justifyContent:
+                            "space-between",
+                          alignItems: {
+                            xs: "flex-start",
+                            sm: "center",
+                          },
+                          flexDirection: {
+                            xs: "column",
+                            sm: "row",
+                          },
+                          gap: 1,
+                          p: 1.5,
+                          mb: 1.5,
+                          bgcolor:
+                            "background.default",
+                          border: "1px solid",
+                          borderColor: "divider",
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                        >
+                          Posizioni visualizzate:{" "}
+                          <strong>
+                            {
+                              filteredAttributionItems.length
+                            }
+                          </strong>
+                        </Typography>
+
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 800,
+                            color: valueColor(
+                              filteredAttributionTotal,
+                            ),
+                          }}
+                        >
+                          Contributo totale:{" "}
+                          {signedEuro(
+                            filteredAttributionTotal,
+                          )}
+                        </Typography>
+                      </Paper>
 
                       <TableContainer
                       sx={{
