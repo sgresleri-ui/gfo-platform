@@ -254,7 +254,32 @@ export default function Decisions() {
   }
 
   useEffect(() => {
-    void loadDecisions();
+    let cancelled = false;
+
+    void getDecisionsOverview()
+      .then((result) => {
+        if (!cancelled) {
+          setData(result);
+        }
+      })
+      .catch((requestError) => {
+        console.error(requestError);
+
+        if (!cancelled) {
+          setError(
+            "Impossibile caricare il registro decisioni.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function updateForm<
