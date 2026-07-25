@@ -140,7 +140,32 @@ export default function DataCatalog() {
   }
 
   useEffect(() => {
-    void loadCatalog();
+    let cancelled = false;
+
+    void getDataCatalogOverview()
+      .then((result) => {
+        if (!cancelled) {
+          setData(result);
+        }
+      })
+      .catch((requestError) => {
+        console.error(requestError);
+
+        if (!cancelled) {
+          setError(
+            "Impossibile caricare il Data Catalog.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const maximumCategoryCount =
