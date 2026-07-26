@@ -1086,6 +1086,18 @@ export default function Performance() {
       [financialHistory],
     );
 
+  const activeAttributionControlCount =
+    Number(
+      attributionFilter !== "ALL",
+    ) +
+    Number(
+      attributionTypeFilter !== "ALL",
+    ) +
+    Number(
+      attributionSort !==
+        "IMPACT_DESC",
+    );
+
   const filteredAttributionItems =
     useMemo(() => {
       const changedItems =
@@ -3310,17 +3322,18 @@ export default function Performance() {
                           );
                         }}
                         disabled={
-                          attributionFilter === "ALL" &&
-                          attributionTypeFilter === "ALL" &&
-                          attributionSort ===
-                            "IMPACT_DESC"
+                          activeAttributionControlCount ===
+                          0
                         }
                         sx={{
                           mb: 1.5,
                           alignSelf: "center",
                         }}
                       >
-                        Azzera filtri
+                        {activeAttributionControlCount >
+                        0
+                          ? `Ripristina vista (${activeAttributionControlCount})`
+                          : "Ripristina vista"}
                       </Button>
 
                       <Paper
@@ -3607,8 +3620,13 @@ export default function Performance() {
                   <MuiTooltip
                     title="Il metodo separa la performance del patrimonio dai versamenti e dai prelievi esterni, ponderandoli per il tempo trascorso nel periodo."
                     arrow
+                    describeChild
+                    enterTouchDelay={0}
+                    leaveTouchDelay={5000}
                   >
                     <Chip
+                      tabIndex={0}
+                      role="note"
                       icon={
                         <InfoOutlinedIcon />
                       }
