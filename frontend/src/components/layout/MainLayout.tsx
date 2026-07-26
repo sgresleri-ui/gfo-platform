@@ -473,8 +473,9 @@ export default function MainLayout() {
           borderColor: "divider",
         }}
       >
-        <Toolbar sx={{ minHeight: 76, gap: 2 }}>
+        <Toolbar sx={{ minHeight: 76, gap: { xs: 1, sm: 2 } }}>
           <IconButton
+            aria-label="Apri il menu di navigazione"
             onClick={() => setMobileOpen(true)}
             sx={{ display: { md: "none" } }}
           >
@@ -483,9 +484,18 @@ export default function MainLayout() {
 
           <Typography
             variant="h6"
+            noWrap
+            title={currentTitle}
             sx={{
-              minWidth: { md: 180 },
-              flexShrink: 0,
+              minWidth: { xs: 0, md: 180 },
+              maxWidth: {
+                xs: "42vw",
+                sm: 150,
+                md: 180,
+                lg: 260,
+              },
+              flexGrow: { xs: 1, sm: 0 },
+              flexShrink: 1,
             }}
           >
             {currentTitle}
@@ -496,7 +506,7 @@ export default function MainLayout() {
               position: "relative",
               display: { xs: "none", sm: "block" },
               ml: "auto",
-              width: { sm: 250, lg: 360 },
+              width: { sm: 220, lg: 360 },
             }}
           >
             <TextField
@@ -692,11 +702,31 @@ export default function MainLayout() {
           </Box>
 
           <Box
+            component={RouterLink}
+            to="/settings"
+            aria-label="Apri le Impostazioni del profilo"
+            title="Apri Impostazioni"
+            onMouseEnter={() => preloadPage(pageLoaders.settings)}
+            onFocus={() => preloadPage(pageLoaders.settings)}
             sx={{
               display: "flex",
               alignItems: "center",
               gap: 1.2,
               ml: { xs: "auto", sm: 1 },
+              p: 0.5,
+              borderRadius: 2,
+              color: "inherit",
+              textDecoration: "none",
+
+              "&:hover": {
+                bgcolor: "action.hover",
+              },
+
+              "&:focus-visible": {
+                outline: "2px solid",
+                outlineColor: "primary.main",
+                outlineOffset: 2,
+              },
             }}
           >
             <Box sx={{ display: { xs: "none", lg: "block" }, textAlign: "right" }}>
