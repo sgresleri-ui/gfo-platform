@@ -107,6 +107,13 @@ export default function Dashboard() {
       })
     : "non disponibile";
 
+  const grossAssets = data
+    ? data.liquidity +
+      data.investments +
+      data.realEstate +
+      data.otherAssets
+    : 0;
+
   if (loading && !data) {
     return (
       <Box
@@ -325,6 +332,25 @@ export default function Dashboard() {
             }}
           >
             {euro(data.netWorth)}
+          </Typography>
+
+          <Typography
+            variant="body2"
+            sx={{
+              mt: 1.2,
+              color:
+                "rgba(255,255,255,0.76)",
+            }}
+          >
+            Attività lorde{" "}
+            <strong>
+              {euro(grossAssets)}
+            </strong>
+            {" − "}
+            Passività{" "}
+            <strong>
+              {euro(data.liabilities)}
+            </strong>
           </Typography>
         </Box>
       </Paper>
