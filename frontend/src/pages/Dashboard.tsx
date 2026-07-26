@@ -39,6 +39,8 @@ export default function Dashboard() {
     );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] =
+    useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -72,10 +74,18 @@ export default function Dashboard() {
   function refreshDashboard() {
     setLoading(true);
     setError("");
+    setSuccess("");
 
     void getDashboard()
       .then((result) => {
         setData(result);
+        setSuccess(
+          `Dashboard aggiornata: ${result.positionCount} ${
+            result.positionCount === 1
+              ? "posizione attiva"
+              : "posizioni attive"
+          }.`,
+        );
       })
       .catch((requestError) => {
         console.error(requestError);
@@ -373,6 +383,18 @@ export default function Dashboard() {
           </Typography>
         </Box>
       </Paper>
+
+      {success && (
+        <Alert
+          severity="success"
+          onClose={() =>
+            setSuccess("")
+          }
+          sx={{ mb: 3 }}
+        >
+          {success}
+        </Alert>
+      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
