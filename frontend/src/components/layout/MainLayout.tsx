@@ -351,6 +351,7 @@ export default function MainLayout() {
         aria-label="Vai alla Dashboard"
         onMouseEnter={() => preloadPage(pageLoaders.dashboard)}
         onFocus={() => preloadPage(pageLoaders.dashboard)}
+        onTouchStart={() => preloadPage(pageLoaders.dashboard)}
         onClick={() => setMobileOpen(false)}
         sx={{
           display: "block",
@@ -474,6 +475,7 @@ export default function MainLayout() {
                 aria-current={selected ? "page" : undefined}
                 onMouseEnter={() => preloadPage(item.load)}
                 onFocus={() => preloadPage(item.load)}
+                onTouchStart={() => preloadPage(item.load)}
                 onClick={() => setMobileOpen(false)}
                 sx={{
                   mb: 0.45,
@@ -835,6 +837,7 @@ export default function MainLayout() {
                         preloadPage(item.load);
                       }}
                       onFocus={() => preloadPage(item.load)}
+                      onTouchStart={() => preloadPage(item.load)}
                       onClick={() => openSearchResult(item.path)}
                       sx={{
                         minHeight: 52,
@@ -902,6 +905,7 @@ export default function MainLayout() {
             title="Apri Impostazioni"
             onMouseEnter={() => preloadPage(pageLoaders.settings)}
             onFocus={() => preloadPage(pageLoaders.settings)}
+            onTouchStart={() => preloadPage(pageLoaders.settings)}
             sx={{
               display: "flex",
               alignItems: "center",
@@ -1101,6 +1105,7 @@ export default function MainLayout() {
                     preloadPage(item.load);
                   }}
                   onFocus={() => preloadPage(item.load)}
+                  onTouchStart={() => preloadPage(item.load)}
                   onClick={() => openSearchResult(item.path)}
                   sx={{
                     minHeight: 52,
