@@ -732,6 +732,17 @@ export default function MainLayout() {
                   return;
                 }
 
+                if (event.key === "Home" || event.key === "End") {
+                  event.preventDefault();
+                  setSearchOpen(true);
+                  setActiveSearchIndex(
+                    event.key === "Home"
+                      ? 0
+                      : searchResults.length - 1,
+                  );
+                  return;
+                }
+
                 if (event.key === "Enter" && searchOpen) {
                   event.preventDefault();
                   openSearchResult(
@@ -1031,6 +1042,16 @@ export default function MainLayout() {
                   (index) =>
                     (index - 1 + searchResults.length) %
                     searchResults.length,
+                );
+                return;
+              }
+
+              if (event.key === "Home" || event.key === "End") {
+                event.preventDefault();
+                setActiveSearchIndex(
+                  event.key === "Home"
+                    ? 0
+                    : searchResults.length - 1,
                 );
                 return;
               }
