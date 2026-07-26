@@ -21,26 +21,28 @@ import ExecutiveDecisionsPanel from "../components/ExecutiveDecisionsPanel";
 import ExecutiveDataImportsPanel from "../components/ExecutiveDataImportsPanel";
 import ExecutiveOperationalCalendarPanel from "../components/ExecutiveOperationalCalendarPanel";
 import ExecutiveDocumentsPanel from "../components/ExecutiveDocumentsPanel";
-import { getDashboard } from "../services/api";
+import {
+  getDashboard,
+  type DashboardSummary,
+} from "../services/api";
 
-type DashboardData = {
-  netWorth: number;
-  liquidity: number;
-  investments: number;
-  realEstate: number;
-  liabilities: number;
-};
-
-const initialData: DashboardData = {
+const initialData: DashboardSummary = {
   netWorth: 0,
   liquidity: 0,
   investments: 0,
   realEstate: 0,
+  otherAssets: 0,
   liabilities: 0,
+  currency: "EUR",
+  asOfDate: null,
+  positionCount: 0,
 };
 
 export default function Dashboard() {
-  const [data, setData] = useState<DashboardData>(initialData);
+  const [data, setData] =
+    useState<DashboardSummary>(
+      initialData,
+    );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -60,15 +62,20 @@ export default function Dashboard() {
   const euro = (value: number) =>
     value.toLocaleString("it-IT", {
       style: "currency",
-      currency: "EUR",
+      currency: data.currency,
       maximumFractionDigits: 0,
     });
 
-  const updateDate = new Date().toLocaleDateString("it-IT", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
+  const updateDate = data.asOfDate
+    ? new Date(
+        data.asOfDate,
+      ).toLocaleDateString("it-IT", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC",
+      })
+    : "non disponibile";
 
   if (loading) {
     return (
@@ -119,7 +126,12 @@ export default function Dashboard() {
         </Typography>
 
         <Typography sx={{ color: "rgba(255,255,255,0.76)" }}>
-          Situazione consolidata aggiornata al {updateDate}
+          Valorizzazione più recente: {updateDate}
+          {" · "}
+          {data.positionCount}{" "}
+          {data.positionCount === 1
+            ? "posizione attiva"
+            : "posizioni attive"}
         </Typography>
 
         <Box sx={{ mt: 3 }}>
