@@ -640,6 +640,11 @@ export default function Performance() {
         setAttribution(
           attributionResult,
         );
+        setNotice({
+          severity: "success",
+          text:
+            "Performance ricalcolata per il periodo selezionato.",
+        });
       } catch (error) {
         console.error(error);
 
@@ -682,6 +687,11 @@ export default function Performance() {
           await fetchPerformancePageData();
 
         applyPageData(data);
+        setNotice({
+          severity: "success",
+          text:
+            "Dati Performance aggiornati.",
+        });
       } catch (error) {
         console.error(error);
 
@@ -2186,12 +2196,22 @@ export default function Performance() {
 
               <Button
                 variant="contained"
-                disabled={analyzing}
+                startIcon={
+                  analyzing ? (
+                    <CircularProgress
+                      size={18}
+                      thickness={5}
+                      color="inherit"
+                      aria-hidden="true"
+                    />
+                  ) : undefined
+                }
+                disabled={loading || analyzing}
                 onClick={requestAnalysis}
                 sx={{ minHeight: 54 }}
               >
                 {analyzing
-                  ? "Calcolo..."
+                  ? "Calcolo…"
                   : "Calcola performance"}
               </Button>
             </Box>
