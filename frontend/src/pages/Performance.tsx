@@ -1136,6 +1136,35 @@ export default function Performance() {
       attributionTypeFilter,
     ]);
 
+  const attributionFilterCounts =
+    useMemo(() => {
+      const items =
+        attribution?.items.filter(
+          (item) =>
+            item.comparisonStatus !==
+              "UNCHANGED" &&
+            (attributionTypeFilter ===
+              "ALL" ||
+              item.changeType ===
+                attributionTypeFilter),
+        ) ?? [];
+
+      return {
+        all: items.length,
+        positive: items.filter(
+          (item) =>
+            item.contributionChange > 0,
+        ).length,
+        negative: items.filter(
+          (item) =>
+            item.contributionChange < 0,
+        ).length,
+      };
+    }, [
+      attribution,
+      attributionTypeFilter,
+    ]);
+
   const attributionChangeTypeSummary =
     useMemo(() => {
       const groups = new Map<
@@ -3149,15 +3178,18 @@ export default function Performance() {
                           [
                             {
                               value: "ALL",
-                              label: "Tutti",
+                              label:
+                                `Tutti (${attributionFilterCounts.all})`,
                             },
                             {
                               value: "POSITIVE",
-                              label: "Positivi",
+                              label:
+                                `Positivi (${attributionFilterCounts.positive})`,
                             },
                             {
                               value: "NEGATIVE",
-                              label: "Negativi",
+                              label:
+                                `Negativi (${attributionFilterCounts.negative})`,
                             },
                           ] as const
                         ).map((filter) => (
