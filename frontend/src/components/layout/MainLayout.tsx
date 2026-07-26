@@ -6,7 +6,9 @@ import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import {
   Suspense,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -167,10 +169,45 @@ function normalizeSearchText(value: string) {
 export default function MainLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [activeSearchIndex, setActiveSearchIndex] = useState(0);
+
+  const searchShortcutLabel = useMemo(() => {
+    return /Mac|iPhone|iPad|iPod/.test(navigator.platform)
+      ? "⌘ K"
+      : "Ctrl K";
+  }, []);
+
+  useEffect(() => {
+    const focusSearch = (event: KeyboardEvent) => {
+      if (
+        event.key.toLocaleLowerCase("it") !== "k" ||
+        (!event.metaKey && !event.ctrlKey)
+      ) {
+        return;
+      }
+
+      const searchInput = searchInputRef.current;
+
+      if (!searchInput || searchInput.getClientRects().length === 0) {
+        return;
+      }
+
+      event.preventDefault();
+      searchInput.focus();
+      setSearchOpen(true);
+      setActiveSearchIndex(0);
+    };
+
+    window.addEventListener("keydown", focusSearch);
+
+    return () => {
+      window.removeEventListener("keydown", focusSearch);
+    };
+  }, []);
 
   const currentTitle = useMemo(() => {
     return (
@@ -392,6 +429,7 @@ export default function MainLayout() {
             <TextField
               fullWidth
               size="small"
+              inputRef={searchInputRef}
               value={searchValue}
               placeholder="Vai a una sezione..."
               onFocus={() => {
@@ -457,6 +495,28 @@ export default function MainLayout() {
                         fontSize: 20,
                       }}
                     />
+                  ),
+                  endAdornment: (
+                    <Box
+                      component="span"
+                      aria-hidden
+                      title={`Scorciatoia: ${searchShortcutLabel}`}
+                      sx={{
+                        flexShrink: 0,
+                        px: 0.8,
+                        py: 0.25,
+                        border: "1px solid",
+                        borderColor: "divider",
+                        borderRadius: 1,
+                        color: "text.secondary",
+                        bgcolor: "background.paper",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {searchShortcutLabel}
+                    </Box>
                   ),
                 },
                 htmlInput: {
