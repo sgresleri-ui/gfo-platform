@@ -4,6 +4,7 @@ import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import {
   Suspense,
   useEffect,
@@ -16,6 +17,9 @@ import {
   Avatar,
   Box,
   CircularProgress,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   Divider,
   Drawer,
   IconButton,
@@ -203,6 +207,8 @@ export default function MainLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] =
+    useState(false);
   const [activeSearchIndex, setActiveSearchIndex] = useState(0);
 
   const searchShortcutLabel = useMemo(() => {
@@ -268,7 +274,10 @@ export default function MainLayout() {
   }, [searchValue]);
 
   useEffect(() => {
-    if (!searchOpen || searchResults.length === 0) {
+    if (
+      (!searchOpen && !mobileSearchOpen) ||
+      searchResults.length === 0
+    ) {
       return;
     }
 
@@ -278,14 +287,26 @@ export default function MainLayout() {
       ];
 
     preloadPage(activeResult.load);
-  }, [activeSearchIndex, searchOpen, searchResults]);
+  }, [
+    activeSearchIndex,
+    mobileSearchOpen,
+    searchOpen,
+    searchResults,
+  ]);
 
   const openSearchResult = (path: string) => {
     navigate(path);
     setSearchValue("");
     setSearchOpen(false);
+    setMobileSearchOpen(false);
     setActiveSearchIndex(0);
     setMobileOpen(false);
+  };
+
+  const closeMobileSearch = () => {
+    setMobileSearchOpen(false);
+    setSearchValue("");
+    setActiveSearchIndex(0);
   };
 
   const drawer = (
@@ -612,7 +633,10 @@ export default function MainLayout() {
                     : undefined,
                   "aria-activedescendant":
                     searchOpen && searchResults.length > 0
-                      ? `platform-search-option-${activeSearchIndex}`
+                      ? `platform-search-option-${Math.min(
+                          activeSearchIndex,
+                          searchResults.length - 1,
+                        )}`
                       : undefined,
                 },
               }}
@@ -701,6 +725,22 @@ export default function MainLayout() {
             )}
           </Box>
 
+          <IconButton
+            aria-label="Cerca una sezione"
+            title="Cerca una sezione"
+            onClick={() => {
+              setSearchValue("");
+              setActiveSearchIndex(0);
+              setMobileSearchOpen(true);
+            }}
+            sx={{
+              display: { xs: "inline-flex", sm: "none" },
+              ml: "auto",
+            }}
+          >
+            <SearchRoundedIcon />
+          </IconButton>
+
           <Box
             component={RouterLink}
             to="/settings"
@@ -712,7 +752,7 @@ export default function MainLayout() {
               display: "flex",
               alignItems: "center",
               gap: 1.2,
-              ml: { xs: "auto", sm: 1 },
+              ml: { xs: 0, sm: 1 },
               p: 0.5,
               borderRadius: 2,
               color: "inherit",
@@ -753,6 +793,195 @@ export default function MainLayout() {
           </Box>
         </Toolbar>
       </AppBar>
+
+      <Dialog
+        open={mobileSearchOpen}
+        onClose={closeMobileSearch}
+        fullWidth
+        maxWidth="xs"
+        aria-labelledby="mobile-platform-search-title"
+        slotProps={{
+          paper: {
+            sx: {
+              m: 2,
+              maxHeight: "calc(100dvh - 32px)",
+              borderRadius: 3,
+            },
+          },
+        }}
+      >
+        <DialogTitle
+          id="mobile-platform-search-title"
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 2,
+            pb: 1,
+          }}
+        >
+          Vai a una sezione
+
+          <IconButton
+            aria-label="Chiudi la ricerca"
+            onClick={closeMobileSearch}
+            edge="end"
+          >
+            <CloseRoundedIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ pt: "8px !important", pb: 2 }}>
+          <TextField
+            fullWidth
+            autoFocus
+            size="small"
+            value={searchValue}
+            placeholder="Cerca nella piattaforma..."
+            onChange={(event) => {
+              setSearchValue(event.target.value);
+              setActiveSearchIndex(0);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                closeMobileSearch();
+                return;
+              }
+
+              if (searchResults.length === 0) {
+                return;
+              }
+
+              if (event.key === "ArrowDown") {
+                event.preventDefault();
+                setActiveSearchIndex(
+                  (index) => (index + 1) % searchResults.length,
+                );
+                return;
+              }
+
+              if (event.key === "ArrowUp") {
+                event.preventDefault();
+                setActiveSearchIndex(
+                  (index) =>
+                    (index - 1 + searchResults.length) %
+                    searchResults.length,
+                );
+                return;
+              }
+
+              if (event.key === "Enter") {
+                event.preventDefault();
+                openSearchResult(
+                  searchResults[
+                    Math.min(
+                      activeSearchIndex,
+                      searchResults.length - 1,
+                    )
+                  ].path,
+                );
+              }
+            }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <SearchRoundedIcon
+                    sx={{
+                      mr: 1,
+                      color: "text.secondary",
+                      fontSize: 20,
+                    }}
+                  />
+                ),
+              },
+              htmlInput: {
+                role: "combobox",
+                "aria-label": "Cerca una sezione della piattaforma",
+                "aria-autocomplete": "list",
+                "aria-expanded": true,
+                "aria-controls": "mobile-platform-search-results",
+                "aria-activedescendant":
+                  searchResults.length > 0
+                    ? `mobile-platform-search-option-${Math.min(
+                        activeSearchIndex,
+                        searchResults.length - 1,
+                      )}`
+                    : undefined,
+              },
+            }}
+            sx={{
+              mb: 1.25,
+
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: "#F6F8FC",
+                borderRadius: 2.5,
+              },
+            }}
+          />
+
+          <Box
+            id="mobile-platform-search-results"
+            role="listbox"
+            sx={{
+              maxHeight: "min(460px, calc(100dvh - 180px))",
+              overflowY: "auto",
+            }}
+          >
+            {searchResults.length === 0 ? (
+              <Typography
+                color="text.secondary"
+                sx={{ px: 1.5, py: 2, fontSize: 14 }}
+              >
+                Nessuna sezione trovata
+              </Typography>
+            ) : (
+              searchResults.map((item, index) => (
+                <ListItemButton
+                  key={item.path}
+                  id={`mobile-platform-search-option-${index}`}
+                  role="option"
+                  aria-selected={index === activeSearchIndex}
+                  selected={index === activeSearchIndex}
+                  onMouseEnter={() => {
+                    setActiveSearchIndex(index);
+                    preloadPage(item.load);
+                  }}
+                  onFocus={() => preloadPage(item.load)}
+                  onClick={() => openSearchResult(item.path)}
+                  sx={{
+                    minHeight: 46,
+                    borderRadius: 2,
+
+                    "&.Mui-selected": {
+                      bgcolor: "action.selected",
+                    },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 38,
+                      color: "primary.main",
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={item.label}
+                    slotProps={{
+                      primary: {
+                        sx: {
+                          fontSize: 14,
+                          fontWeight: 600,
+                        },
+                      },
+                    }}
+                  />
+                </ListItemButton>
+              ))
+            )}
+          </Box>
+        </DialogContent>
+      </Dialog>
 
       <Box
         component="nav"
