@@ -1557,14 +1557,40 @@ export default function Performance() {
   if (loading && periods.length === 0) {
     return (
       <Box
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
         sx={{
           minHeight: 420,
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
+          gap: 1.5,
+          textAlign: "center",
         }}
       >
-        <CircularProgress />
+        <CircularProgress
+          size={32}
+          thickness={4}
+          aria-hidden="true"
+        />
+
+        <Box>
+          <Typography
+            variant="body1"
+            sx={{ fontWeight: 700 }}
+          >
+            Caricamento Performance
+          </Typography>
+
+          <Typography
+            variant="body2"
+            color="text.secondary"
+          >
+            Analisi dei dati patrimoniali in corso…
+          </Typography>
+        </Box>
       </Box>
     );
   }
@@ -1617,12 +1643,22 @@ export default function Performance() {
         <Button
           variant="outlined"
           startIcon={
-            <RefreshRoundedIcon />
+            loading ? (
+              <CircularProgress
+                size={18}
+                thickness={5}
+                aria-hidden="true"
+              />
+            ) : (
+              <RefreshRoundedIcon />
+            )
           }
           disabled={loading || analyzing}
           onClick={refreshPage}
         >
-          Aggiorna
+          {loading
+            ? "Aggiornamento…"
+            : "Aggiorna"}
         </Button>
       </Box>
 
