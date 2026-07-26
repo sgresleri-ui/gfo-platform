@@ -10,76 +10,29 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import RouteErrorBoundary from "./components/RouteErrorBoundary";
 import MainLayout from "./components/layout/MainLayout";
+import { pageLoaders } from "./routes/pageLoaders";
 
-const Budget = lazy(
-  () => import("./pages/Budget"),
-);
-const Dashboard = lazy(
-  () => import("./pages/Dashboard"),
-);
-const DataCatalog = lazy(
-  () => import("./pages/DataCatalog"),
-);
-const DataQuality = lazy(
-  () => import("./pages/DataQuality"),
-);
-const Decisions = lazy(
-  () => import("./pages/Decisions"),
-);
-const Documents = lazy(
-  () => import("./pages/Documents"),
-);
-const ImportCenter = lazy(
-  () => import("./pages/ImportCenter"),
-);
-const Investments = lazy(
-  () => import("./pages/Investments"),
-);
-const Ips = lazy(
-  () => import("./pages/Ips"),
-);
-const Liquidity = lazy(
-  () => import("./pages/Liquidity"),
-);
-const OperationalCalendar = lazy(
-  () =>
-    import(
-      "./pages/OperationalCalendar"
-    ),
-);
-const Performance = lazy(
-  () => import("./pages/Performance"),
-);
-const Planning = lazy(
-  () => import("./pages/Planning"),
-);
-const Properties = lazy(
-  () => import("./pages/Properties"),
-);
-const Reports = lazy(
-  () => import("./pages/Reports"),
-);
-const ReportSnapshotPrint = lazy(
-  () =>
-    import(
-      "./pages/ReportSnapshotPrint"
-    ),
-);
-const Risk = lazy(
-  () => import("./pages/Risk"),
-);
-const Settings = lazy(
-  () => import("./pages/Settings"),
-);
-const Transactions = lazy(
-  () => import("./pages/Transactions"),
-);
-const Wealth = lazy(
-  () => import("./pages/Wealth"),
-);
-const WealthHistory = lazy(
-  () => import("./pages/WealthHistory"),
-);
+const Budget = lazy(pageLoaders.budget);
+const Dashboard = lazy(pageLoaders.dashboard);
+const DataCatalog = lazy(pageLoaders.dataCatalog);
+const DataQuality = lazy(pageLoaders.dataQuality);
+const Decisions = lazy(pageLoaders.decisions);
+const Documents = lazy(pageLoaders.documents);
+const ImportCenter = lazy(pageLoaders.importCenter);
+const Investments = lazy(pageLoaders.investments);
+const Ips = lazy(pageLoaders.ips);
+const Liquidity = lazy(pageLoaders.liquidity);
+const OperationalCalendar = lazy(pageLoaders.operationalCalendar);
+const Performance = lazy(pageLoaders.performance);
+const Planning = lazy(pageLoaders.planning);
+const Properties = lazy(pageLoaders.properties);
+const Reports = lazy(pageLoaders.reports);
+const ReportSnapshotPrint = lazy(pageLoaders.reportSnapshotPrint);
+const Risk = lazy(pageLoaders.risk);
+const Settings = lazy(pageLoaders.settings);
+const Transactions = lazy(pageLoaders.transactions);
+const Wealth = lazy(pageLoaders.wealth);
+const WealthHistory = lazy(pageLoaders.wealthHistory);
 
 function FullPageLoading() {
   return (

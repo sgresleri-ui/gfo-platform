@@ -46,6 +46,7 @@ import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import RouteErrorBoundary from "../RouteErrorBoundary";
+import { pageLoaders } from "../../routes/pageLoaders";
 
 const drawerWidth = 264;
 
@@ -54,42 +55,50 @@ const navigation = [
     label: "Dashboard",
     path: "/dashboard",
     icon: <DashboardRoundedIcon />,
+    load: pageLoaders.dashboard,
   },
   {
     label: "Patrimonio",
     path: "/wealth",
     icon: <AccountBalanceWalletRoundedIcon />,
+    load: pageLoaders.wealth,
   },
   {
     label: "Storico Patrimoniale",
     path: "/wealth-history",
     icon: <TimelineRoundedIcon />,
+    load: pageLoaders.wealthHistory,
   },
   {
     label: "Registro Movimenti",
     path: "/transactions",
     icon: <ReceiptLongRoundedIcon />,
+    load: pageLoaders.transactions,
   },
   {
     label: "Performance",
     path: "/performance",
     icon: <AssessmentRoundedIcon />,
+    load: pageLoaders.performance,
   },
   {
     label: "Rischio",
     path: "/risk",
     icon: <ShieldRoundedIcon />,
+    load: pageLoaders.risk,
   },
   {
     label: "IPS e Conformità",
     path: "/ips",
     icon: <PolicyRoundedIcon />,
+    load: pageLoaders.ips,
   },
 
   {
     label: "Qualità Dati",
     path: "/data-quality",
     icon: <FactCheckRoundedIcon />,
+    load: pageLoaders.dataQuality,
   },
 
 
@@ -100,64 +109,80 @@ const navigation = [
     label: "Investimenti",
     path: "/investments",
     icon: <ShowChartRoundedIcon />,
+    load: pageLoaders.investments,
   },
   {
     label: "Liquidità",
     path: "/liquidity",
     icon: <SavingsRoundedIcon />,
+    load: pageLoaders.liquidity,
   },
   {
     label: "Immobili",
     path: "/properties",
     icon: <HomeWorkRoundedIcon />,
+    load: pageLoaders.properties,
   },
   {
     label: "Budget",
     path: "/budget",
     icon: <ReceiptLongRoundedIcon />,
+    load: pageLoaders.budget,
   },
   {
     label: "Planning",
     path: "/planning",
     icon: <TimelineRoundedIcon />,
+    load: pageLoaders.planning,
   },
   {
     label: "Calendario Operativo",
     path: "/operational-calendar",
     icon: <CalendarMonthRoundedIcon />,
+    load: pageLoaders.operationalCalendar,
   },
   {
     label: "Data Catalog",
     path: "/data-catalog",
     icon: <StorageRoundedIcon />,
+    load: pageLoaders.dataCatalog,
   },
   {
     label: "Import Center",
     path: "/imports",
     icon: <UploadFileRoundedIcon />,
+    load: pageLoaders.importCenter,
   },
 
   {
     label: "Report",
     path: "/reports",
     icon: <DescriptionRoundedIcon />,
+    load: pageLoaders.reports,
   },
   {
     label: "Document Center",
     path: "/documents",
     icon: <FolderRoundedIcon />,
+    load: pageLoaders.documents,
   },
   {
     label: "Decisioni",
     path: "/decisions",
     icon: <GavelRoundedIcon />,
+    load: pageLoaders.decisions,
   },
   {
     label: "Impostazioni",
     path: "/settings",
     icon: <SettingsRoundedIcon />,
+    load: pageLoaders.settings,
   },
 ];
+
+function preloadPage(loader: () => Promise<unknown>) {
+  void loader().catch(() => undefined);
+}
 
 function normalizeSearchText(value: string) {
   return value
@@ -236,6 +261,19 @@ export default function MainLayout() {
       normalizeSearchText(item.label).includes(query),
     );
   }, [searchValue]);
+
+  useEffect(() => {
+    if (!searchOpen || searchResults.length === 0) {
+      return;
+    }
+
+    const activeResult =
+      searchResults[
+        Math.min(activeSearchIndex, searchResults.length - 1)
+      ];
+
+    preloadPage(activeResult.load);
+  }, [activeSearchIndex, searchOpen, searchResults]);
 
   const openSearchResult = (path: string) => {
     navigate(path);
@@ -318,6 +356,8 @@ export default function MainLayout() {
             <ListItemButton
               key={item.path}
               selected={selected}
+              onMouseEnter={() => preloadPage(item.load)}
+              onFocus={() => preloadPage(item.load)}
               onClick={() => {
                 navigate(item.path);
                 setMobileOpen(false);
@@ -586,7 +626,11 @@ export default function MainLayout() {
                       role="option"
                       aria-selected={index === activeSearchIndex}
                       selected={index === activeSearchIndex}
-                      onMouseEnter={() => setActiveSearchIndex(index)}
+                      onMouseEnter={() => {
+                        setActiveSearchIndex(index);
+                        preloadPage(item.load);
+                      }}
+                      onFocus={() => preloadPage(item.load)}
                       onClick={() => openSearchResult(item.path)}
                       sx={{
                         minHeight: 42,
