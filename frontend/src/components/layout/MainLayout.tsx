@@ -43,7 +43,12 @@ import GavelRoundedIcon from "@mui/icons-material/GavelRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import {
+  Link as RouterLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
 import RouteErrorBoundary from "../RouteErrorBoundary";
 import { pageLoaders } from "../../routes/pageLoaders";
@@ -296,7 +301,26 @@ export default function MainLayout() {
           "linear-gradient(180deg, #071A36 0%, #092650 55%, #071A36 100%)",
       }}
     >
-      <Box sx={{ px: 2.5, py: 3 }}>
+      <Box
+        component={RouterLink}
+        to="/dashboard"
+        aria-label="Vai alla Dashboard"
+        onMouseEnter={() => preloadPage(pageLoaders.dashboard)}
+        onFocus={() => preloadPage(pageLoaders.dashboard)}
+        onClick={() => setMobileOpen(false)}
+        sx={{
+          display: "block",
+          px: 2.5,
+          py: 3,
+          color: "inherit",
+          textDecoration: "none",
+
+          "&:focus-visible": {
+            outline: "2px solid rgba(255,255,255,0.82)",
+            outlineOffset: -4,
+          },
+        }}
+      >
         <Typography
           variant="h5"
           sx={{
@@ -355,13 +379,13 @@ export default function MainLayout() {
           return (
             <ListItemButton
               key={item.path}
+              component={RouterLink}
+              to={item.path}
               selected={selected}
+              aria-current={selected ? "page" : undefined}
               onMouseEnter={() => preloadPage(item.load)}
               onFocus={() => preloadPage(item.load)}
-              onClick={() => {
-                navigate(item.path);
-                setMobileOpen(false);
-              }}
+              onClick={() => setMobileOpen(false)}
               sx={{
                 mb: 0.55,
                 minHeight: 46,
