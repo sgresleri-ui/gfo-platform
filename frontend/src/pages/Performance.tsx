@@ -795,6 +795,14 @@ export default function Performance() {
         toSnapshot,
     ) ?? null;
 
+  const periodSelectionError =
+    !fromSnapshot || !toSnapshot
+      ? "Selezionare entrambe le fotografie."
+      : new Date(fromSnapshot) >=
+          new Date(toSnapshot)
+        ? "La fotografia iniziale deve precedere quella finale."
+        : null;
+
   const assetClassData = useMemo(
     () =>
       report
@@ -2177,6 +2185,7 @@ export default function Performance() {
         <>
           <Paper
             elevation={0}
+            aria-busy={analyzing}
             sx={{
               p: 2.5,
               mb: 3,
@@ -2192,6 +2201,11 @@ export default function Performance() {
             </Typography>
 
             <Box
+              aria-describedby={
+                periodSelectionError
+                  ? "performance-period-error"
+                  : undefined
+              }
               sx={{
                 display: "grid",
                 gridTemplateColumns: {
@@ -2207,6 +2221,9 @@ export default function Performance() {
                 select
                 label="Fotografia iniziale"
                 value={fromSnapshot}
+                error={Boolean(
+                  periodSelectionError,
+                )}
                 onChange={(event) =>
                   setFromSnapshot(
                     event.target.value,
@@ -2237,6 +2254,9 @@ export default function Performance() {
                 select
                 label="Fotografia finale"
                 value={toSnapshot}
+                error={Boolean(
+                  periodSelectionError,
+                )}
                 onChange={(event) =>
                   setToSnapshot(
                     event.target.value,
@@ -2275,7 +2295,13 @@ export default function Performance() {
                     />
                   ) : undefined
                 }
-                disabled={loading || analyzing}
+                disabled={
+                  loading ||
+                  analyzing ||
+                  Boolean(
+                    periodSelectionError,
+                  )
+                }
                 onClick={requestAnalysis}
                 sx={{ minHeight: 54 }}
               >
@@ -2285,8 +2311,21 @@ export default function Performance() {
               </Button>
             </Box>
 
+            {periodSelectionError && (
+              <Typography
+                id="performance-period-error"
+                role="alert"
+                variant="body2"
+                color="error.main"
+                sx={{ mt: 1.5 }}
+              >
+                {periodSelectionError}
+              </Typography>
+            )}
+
             {selectedFrom &&
-              selectedTo && (
+              selectedTo &&
+              !periodSelectionError && (
                 <Typography
                   variant="body2"
                   color="text.secondary"
@@ -3359,6 +3398,25 @@ export default function Performance() {
                         </TableHead>
 
                         <TableBody>
+                          {filteredAttributionItems.length ===
+                            0 && (
+                            <TableRow>
+                              <TableCell
+                                colSpan={8}
+                                align="center"
+                                sx={{
+                                  py: 4,
+                                  color:
+                                    "text.secondary",
+                                }}
+                              >
+                                Nessuna posizione
+                                corrisponde ai filtri
+                                selezionati.
+                              </TableCell>
+                            </TableRow>
+                          )}
+
                           {filteredAttributionItems.map(
                               (item) => (
                               <TableRow
