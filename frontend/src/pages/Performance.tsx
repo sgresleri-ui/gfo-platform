@@ -516,9 +516,11 @@ export default function Performance() {
     const link =
       document.createElement("a");
 
-    link.href = url;
-    link.download =
+    const fileName =
       `patrimonio-finanziario-${financialHistory.year}.csv`;
+
+    link.href = url;
+    link.download = fileName;
 
     document.body.appendChild(link);
     link.click();
@@ -527,8 +529,7 @@ export default function Performance() {
     URL.revokeObjectURL(url);
     setNotice({
       severity: "success",
-      text:
-        "Storico finanziario esportato in CSV.",
+      text: `File ${fileName} esportato.`,
     });
   }
 
@@ -633,9 +634,11 @@ export default function Performance() {
         10,
       );
 
-    link.href = url;
-    link.download =
+    const fileName =
       `attribuzione-posizioni-${startDate}-${endDate}.csv`;
+
+    link.href = url;
+    link.download = fileName;
 
     document.body.appendChild(link);
     link.click();
@@ -644,8 +647,7 @@ export default function Performance() {
     URL.revokeObjectURL(url);
     setNotice({
       severity: "success",
-      text:
-        "Attribuzione per posizione esportata in CSV.",
+      text: `File ${fileName} esportato.`,
     });
   }
 
@@ -679,7 +681,11 @@ export default function Performance() {
         setNotice({
           severity: "success",
           text:
-            "Performance ricalcolata per il periodo selezionato.",
+            `Performance ricalcolata dal ${dateTimeLabel(
+              fromValue,
+            )} al ${dateTimeLabel(
+              toValue,
+            )}.`,
         });
       } catch (error) {
         console.error(error);
@@ -726,7 +732,7 @@ export default function Performance() {
         setNotice({
           severity: "success",
           text:
-            "Dati Performance aggiornati.",
+            `Dati Performance aggiornati: ${data.periods.length} fotografie disponibili.`,
         });
       } catch (error) {
         console.error(error);
@@ -1045,9 +1051,11 @@ export default function Performance() {
     const endDate =
       report.period.end.slice(0, 10);
 
-    link.href = url;
-    link.download =
+    const fileName =
       `modified-dietz-${startDate}-${endDate}.csv`;
+
+    link.href = url;
+    link.download = fileName;
 
     document.body.appendChild(link);
     link.click();
@@ -1056,8 +1064,7 @@ export default function Performance() {
     URL.revokeObjectURL(url);
     setNotice({
       severity: "success",
-      text:
-        "Dettaglio Modified Dietz esportato in CSV.",
+      text: `File ${fileName} esportato.`,
     });
   }
 
@@ -1467,9 +1474,11 @@ export default function Performance() {
         10,
       );
 
-    link.href = url;
-    link.download =
+    const fileName =
       `waterfall-patrimoniale-${startDate}-${endDate}.csv`;
+
+    link.href = url;
+    link.download = fileName;
 
     document.body.appendChild(link);
     link.click();
@@ -1478,8 +1487,7 @@ export default function Performance() {
     URL.revokeObjectURL(url);
     setNotice({
       severity: "success",
-      text:
-        "Waterfall patrimoniale esportato in CSV.",
+      text: `File ${fileName} esportato.`,
     });
   }
 
