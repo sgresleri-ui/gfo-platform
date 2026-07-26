@@ -143,6 +143,19 @@ export default function Dashboard() {
       data.otherAssets
     : 0;
 
+  const grossAssetShare = (
+    value: number,
+  ) =>
+    grossAssets > 0
+      ? `${(
+          (value / grossAssets) *
+          100
+        ).toLocaleString("it-IT", {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        })}% degli attivi lordi`
+      : "Incidenza non disponibile";
+
   if (loading && !data) {
     return (
       <Box
@@ -417,7 +430,9 @@ export default function Dashboard() {
         <KpiCard
           title="Liquidità"
           value={euro(data.liquidity)}
-          subtitle="Disponibilità sui conti"
+          subtitle={`Disponibilità sui conti · ${grossAssetShare(
+            data.liquidity,
+          )}`}
           icon={<AccountBalanceWalletRoundedIcon />}
           tone="success"
         />
@@ -425,7 +440,9 @@ export default function Dashboard() {
         <KpiCard
           title="Investimenti"
           value={euro(data.investments)}
-          subtitle="Valore finanziario di mercato"
+          subtitle={`Valore finanziario di mercato · ${grossAssetShare(
+            data.investments,
+          )}`}
           icon={<ShowChartRoundedIcon />}
           tone="primary"
         />
@@ -433,7 +450,9 @@ export default function Dashboard() {
         <KpiCard
           title="Immobili"
           value={euro(data.realEstate)}
-          subtitle="Valore lordo consolidato"
+          subtitle={`Valore lordo consolidato · ${grossAssetShare(
+            data.realEstate,
+          )}`}
           icon={<HomeWorkRoundedIcon />}
           tone="warning"
         />
@@ -441,7 +460,9 @@ export default function Dashboard() {
         <KpiCard
           title="Altri attivi"
           value={euro(data.otherAssets)}
-          subtitle="Attività patrimoniali residuali"
+          subtitle={`Attività patrimoniali residuali · ${grossAssetShare(
+            data.otherAssets,
+          )}`}
           icon={<CategoryRoundedIcon />}
           tone="primary"
         />
@@ -449,7 +470,9 @@ export default function Dashboard() {
         <KpiCard
           title="Passività"
           value={euro(data.liabilities)}
-          subtitle="Debiti e impegni residui"
+          subtitle={`Debiti e impegni residui · ${grossAssetShare(
+            data.liabilities,
+          )}`}
           icon={<CreditCardRoundedIcon />}
           tone="error"
         />
