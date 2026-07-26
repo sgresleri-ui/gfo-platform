@@ -1177,6 +1177,55 @@ export default function Performance() {
       attributionTypeFilter,
     ]);
 
+  const attributionTypeCounts =
+    useMemo(() => {
+      const items =
+        attribution?.items.filter(
+          (item) =>
+            item.comparisonStatus !==
+              "UNCHANGED" &&
+            (attributionFilter ===
+              "ALL" ||
+              (attributionFilter ===
+                "POSITIVE"
+                ? item.contributionChange >
+                  0
+                : item.contributionChange <
+                  0)),
+        ) ?? [];
+
+      const count = (
+        changeType: string,
+      ) =>
+        items.filter(
+          (item) =>
+            item.changeType ===
+            changeType,
+        ).length;
+
+      return {
+        all: items.length,
+        liquidity: count(
+          "LIQUIDITY_MOVEMENT",
+        ),
+        investment: count(
+          "INVESTMENT_MOVEMENT",
+        ),
+        realEstate: count(
+          "REAL_ESTATE_MOVEMENT",
+        ),
+        liability: count(
+          "LIABILITY_CHANGE",
+        ),
+        otherAsset: count(
+          "OTHER_ASSET_CHANGE",
+        ),
+      };
+    }, [
+      attribution,
+      attributionFilter,
+    ]);
+
   const attributionChangeTypeSummary =
     useMemo(() => {
       const groups = new Map<
@@ -3258,27 +3307,27 @@ export default function Performance() {
                         }}
                       >
                         <MenuItem value="ALL">
-                          Tutte le tipologie
+                          {`Tutte le tipologie (${attributionTypeCounts.all})`}
                         </MenuItem>
 
                         <MenuItem value="LIQUIDITY_MOVEMENT">
-                          Movimento liquidità
+                          {`Movimento liquidità (${attributionTypeCounts.liquidity})`}
                         </MenuItem>
 
                         <MenuItem value="INVESTMENT_MOVEMENT">
-                          Movimento investimento
+                          {`Movimento investimento (${attributionTypeCounts.investment})`}
                         </MenuItem>
 
                         <MenuItem value="REAL_ESTATE_MOVEMENT">
-                          Movimento immobiliare
+                          {`Movimento immobiliare (${attributionTypeCounts.realEstate})`}
                         </MenuItem>
 
                         <MenuItem value="LIABILITY_CHANGE">
-                          Variazione passività
+                          {`Variazione passività (${attributionTypeCounts.liability})`}
                         </MenuItem>
 
                         <MenuItem value="OTHER_ASSET_CHANGE">
-                          Altra variazione
+                          {`Altra variazione (${attributionTypeCounts.otherAsset})`}
                         </MenuItem>
                       </TextField>
 
