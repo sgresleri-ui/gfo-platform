@@ -211,6 +211,14 @@ function flowDateLabel(
   );
 }
 
+function csvCell(value: string): string {
+  if (!/[;"\r\n]/.test(value)) {
+    return value;
+  }
+
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
 function monthYearLabel(
   value: string,
 ): string {
@@ -471,7 +479,7 @@ export default function Performance() {
         "Investimenti",
         "Liquidità",
         "Variazione mensile",
-      ].join(";"),
+      ].map(csvCell).join(";"),
       ...financialHistory.points.map(
         (point, index, points) => {
           const monthlyChange =
@@ -489,7 +497,7 @@ export default function Performance() {
             decimal(point.investments),
             decimal(point.liquidity),
             monthlyChange,
-          ].join(";");
+          ].map(csvCell).join(";");
         },
       ),
     ];
@@ -572,7 +580,7 @@ export default function Performance() {
         "Contributo patrimoniale",
         "Variazione percentuale",
         "Valuta base",
-      ].join(";"),
+      ].map(csvCell).join(";"),
 
       ...attribution.items.map(
         (item) =>
@@ -595,7 +603,7 @@ export default function Performance() {
               item.percentageChange,
             ),
             item.baseCurrency,
-          ].join(";"),
+          ].map(csvCell).join(";"),
       ),
     ];
 
@@ -890,13 +898,13 @@ export default function Performance() {
         "",
         "",
         "",
-      ].join(";"),
+      ].map(csvCell).join(";"),
       [
         "Componente",
         "Valore",
         "Unità",
         "Descrizione",
-      ].join(";"),
+      ].map(csvCell).join(";"),
       [
         "Patrimonio iniziale",
         decimal(
@@ -905,7 +913,7 @@ export default function Performance() {
         ),
         currency,
         report.period.start,
-      ].join(";"),
+      ].map(csvCell).join(";"),
       [
         "Patrimonio finale",
         decimal(
@@ -914,7 +922,7 @@ export default function Performance() {
         ),
         currency,
         report.period.end,
-      ].join(";"),
+      ].map(csvCell).join(";"),
       [
         "Variazione patrimonio",
         decimal(
@@ -923,7 +931,7 @@ export default function Performance() {
         ),
         currency,
         "Valore finale meno valore iniziale",
-      ].join(";"),
+      ].map(csvCell).join(";"),
       [
         "Flussi esterni netti",
         decimal(
@@ -932,7 +940,7 @@ export default function Performance() {
         ),
         currency,
         "Entrate meno uscite esterne",
-      ].join(";"),
+      ].map(csvCell).join(";"),
       [
         "Flussi esterni ponderati",
         decimal(
@@ -941,7 +949,7 @@ export default function Performance() {
         ),
         currency,
         "Ponderati per il tempo residuo nel periodo",
-      ].join(";"),
+      ].map(csvCell).join(";"),
       [
         "Risultato depurato",
         decimal(
@@ -950,7 +958,7 @@ export default function Performance() {
         ),
         currency,
         "Numeratore Modified Dietz",
-      ].join(";"),
+      ].map(csvCell).join(";"),
       [
         "Capitale ponderato",
         decimal(
@@ -958,7 +966,7 @@ export default function Performance() {
         ),
         currency,
         "Denominatore Modified Dietz",
-      ].join(";"),
+      ].map(csvCell).join(";"),
       [
         "Rendimento Modified Dietz",
         decimal(
@@ -968,7 +976,7 @@ export default function Performance() {
         ),
         "%",
         "Numeratore diviso denominatore",
-      ].join(";"),
+      ].map(csvCell).join(";"),
       "",
       [
         "Dettaglio flussi esterni",
@@ -977,7 +985,7 @@ export default function Performance() {
         "",
         "",
         "",
-      ].join(";"),
+      ].map(csvCell).join(";"),
       [
         "Data",
         "Tipo",
@@ -985,7 +993,7 @@ export default function Performance() {
         "Peso temporale",
         "Importo ponderato",
         "Valuta",
-      ].join(";"),
+      ].map(csvCell).join(";"),
       ...(
         report.externalFlows ?? []
       ).map((flow) =>
@@ -1005,7 +1013,7 @@ export default function Performance() {
             flow.weightedAmount,
           ),
           flow.baseCurrency,
-        ].join(";"),
+        ].map(csvCell).join(";"),
       ),
     ];
 
@@ -1406,7 +1414,7 @@ export default function Performance() {
         "Variazione",
         "Saldo dopo",
         "Valuta",
-      ].join(";"),
+      ].map(csvCell).join(";"),
 
       ...attributionWaterfallData.points.map(
         (point) =>
@@ -1421,7 +1429,7 @@ export default function Performance() {
                 ),
             decimal(point.end),
             baseCurrency,
-          ].join(";"),
+          ].map(csvCell).join(";"),
       ),
     ];
 
