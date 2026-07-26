@@ -136,6 +136,23 @@ export default function Dashboard() {
         ? dateLabel(data.asOfDate)
         : "non disponibile";
 
+  const valuationSpanDays =
+    data?.oldestValuationDate &&
+    data.asOfDate
+      ? Math.max(
+          0,
+          Math.round(
+            (new Date(
+              data.asOfDate,
+            ).getTime() -
+              new Date(
+                data.oldestValuationDate,
+              ).getTime()) /
+              86_400_000,
+          ),
+        )
+      : null;
+
   const grossAssets = data
     ? data.liquidity +
       data.investments +
@@ -306,6 +323,14 @@ export default function Dashboard() {
             >
               Valorizzazioni:{" "}
               {valuationDateLabel}
+              {valuationSpanDays !== null &&
+                valuationSpanDays > 0 && (
+                  <>
+                    {" · "}
+                    intervallo di{" "}
+                    {valuationSpanDays} giorni
+                  </>
+                )}
               {" · "}
               {data.positionCount}{" "}
               {data.positionCount === 1
