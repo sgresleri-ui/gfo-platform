@@ -124,6 +124,20 @@ function ReportSnapshotPrintContent({
     useState("");
 
   useEffect(() => {
+    document.title = snapshot
+      ? `Report archiviato ${snapshot.version} | GFO Platform`
+      : "Report archiviato | GFO Platform";
+  }, [snapshot]);
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
+  }, []);
+
+  useEffect(() => {
     if (!id) {
       return;
     }
