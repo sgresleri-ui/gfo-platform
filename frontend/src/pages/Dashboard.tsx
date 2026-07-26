@@ -68,7 +68,7 @@ export default function Dashboard() {
     };
   }, []);
 
-  function retryDashboard() {
+  function refreshDashboard() {
     setLoading(true);
     setError("");
 
@@ -166,7 +166,9 @@ export default function Dashboard() {
               startIcon={
                 <RefreshRoundedIcon />
               }
-              onClick={retryDashboard}
+              onClick={
+                refreshDashboard
+              }
             >
               Riprova
             </Button>
@@ -184,7 +186,7 @@ export default function Dashboard() {
   }
 
   return (
-    <Box>
+    <Box aria-busy={loading}>
       <Paper
         elevation={0}
         sx={{
@@ -209,30 +211,103 @@ export default function Dashboard() {
           },
         }}
       >
-        <Typography
-          variant="overline"
+        <Box
           sx={{
-            color: "rgba(255,255,255,0.72)",
-            letterSpacing: "0.15em",
+            position: "relative",
+            zIndex: 1,
+            display: "flex",
+            justifyContent:
+              "space-between",
+            alignItems: {
+              xs: "stretch",
+              sm: "flex-start",
+            },
+            flexDirection: {
+              xs: "column",
+              sm: "row",
+            },
+            gap: 2,
           }}
         >
-          Family Wealth Control Room
-        </Typography>
+          <Box>
+            <Typography
+              variant="overline"
+              sx={{
+                color:
+                  "rgba(255,255,255,0.72)",
+                letterSpacing: "0.15em",
+              }}
+            >
+              Family Wealth Control Room
+            </Typography>
 
-        <Typography variant="h4" sx={{ mt: 0.5, mb: 1 }}>
-          Patrimonio familiare
-        </Typography>
+            <Typography
+              variant="h4"
+              sx={{ mt: 0.5, mb: 1 }}
+            >
+              Patrimonio familiare
+            </Typography>
 
-        <Typography sx={{ color: "rgba(255,255,255,0.76)" }}>
-          Valorizzazione più recente: {updateDate}
-          {" · "}
-          {data.positionCount}{" "}
-          {data.positionCount === 1
-            ? "posizione attiva"
-            : "posizioni attive"}
-        </Typography>
+            <Typography
+              sx={{
+                color:
+                  "rgba(255,255,255,0.76)",
+              }}
+            >
+              Valorizzazione più recente:{" "}
+              {updateDate}
+              {" · "}
+              {data.positionCount}{" "}
+              {data.positionCount === 1
+                ? "posizione attiva"
+                : "posizioni attive"}
+            </Typography>
+          </Box>
 
-        <Box sx={{ mt: 3 }}>
+          <Button
+            size="small"
+            variant="outlined"
+            color="inherit"
+            disabled={loading}
+            startIcon={
+              loading ? (
+                <CircularProgress
+                  size={16}
+                  thickness={5}
+                  color="inherit"
+                  aria-hidden="true"
+                />
+              ) : (
+                <RefreshRoundedIcon />
+              )
+            }
+            onClick={
+              refreshDashboard
+            }
+            sx={{
+              flexShrink: 0,
+              borderColor:
+                "rgba(255,255,255,0.5)",
+              "&:hover": {
+                borderColor: "white",
+                bgcolor:
+                  "rgba(255,255,255,0.08)",
+              },
+            }}
+          >
+            {loading
+              ? "Aggiornamento…"
+              : "Aggiorna"}
+          </Button>
+        </Box>
+
+        <Box
+          sx={{
+            position: "relative",
+            zIndex: 1,
+            mt: 3,
+          }}
+        >
           <Typography
             variant="body2"
             sx={{ color: "rgba(255,255,255,0.72)" }}
