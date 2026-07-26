@@ -939,6 +939,11 @@ export default function MainLayout() {
                       id={`platform-search-option-${index}`}
                       role="option"
                       aria-selected={index === activeSearchIndex}
+                      aria-current={
+                        location.pathname === item.path
+                          ? "page"
+                          : undefined
+                      }
                       selected={index === activeSearchIndex}
                       onMouseEnter={() => {
                         setActiveSearchIndex(index);
@@ -966,7 +971,11 @@ export default function MainLayout() {
                       </ListItemIcon>
                       <ListItemText
                         primary={item.label}
-                        secondary={item.section}
+                        secondary={
+                          location.pathname === item.path
+                            ? `${item.section} · Pagina corrente`
+                            : item.section
+                        }
                         slotProps={{
                           primary: {
                             sx: {
@@ -1232,6 +1241,11 @@ export default function MainLayout() {
                   id={`mobile-platform-search-option-${index}`}
                   role="option"
                   aria-selected={index === activeSearchIndex}
+                  aria-current={
+                    location.pathname === item.path
+                      ? "page"
+                      : undefined
+                  }
                   selected={index === activeSearchIndex}
                   onMouseEnter={() => {
                     setActiveSearchIndex(index);
@@ -1259,7 +1273,11 @@ export default function MainLayout() {
                   </ListItemIcon>
                   <ListItemText
                     primary={item.label}
-                    secondary={item.section}
+                    secondary={
+                      location.pathname === item.path
+                        ? `${item.section} · Pagina corrente`
+                        : item.section
+                    }
                     slotProps={{
                       primary: {
                         sx: {
