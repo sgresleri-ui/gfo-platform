@@ -303,12 +303,19 @@ export default function MainLayout() {
       return;
     }
 
-    const activeResult =
-      searchResults[
-        Math.min(activeSearchIndex, searchResults.length - 1)
-      ];
+    const activeResultIndex = Math.min(
+      activeSearchIndex,
+      searchResults.length - 1,
+    );
+    const activeResult = searchResults[activeResultIndex];
+    const activeOptionId = `${
+      mobileSearchOpen ? "mobile-" : ""
+    }platform-search-option-${activeResultIndex}`;
 
     preloadPage(activeResult.load);
+    document.getElementById(activeOptionId)?.scrollIntoView({
+      block: "nearest",
+    });
   }, [
     activeSearchIndex,
     mobileSearchOpen,
