@@ -75,6 +75,15 @@ function categoryChipColor(category: string) {
   }
 }
 
+function isLiabilityPosition(
+  position: WealthPosition,
+): boolean {
+  return (
+    position.isLiability ||
+    position.category === "LIABILITY"
+  );
+}
+
 export default function Wealth() {
   const [registry, setRegistry] =
     useState<WealthRegistryResponse | null>(null);
@@ -158,13 +167,10 @@ export default function Wealth() {
     let liabilities = 0;
 
     for (const position of activePositions) {
-      const value = Math.abs(position.valueBase);
+      const value = position.valueBase;
 
-      if (
-        position.isLiability ||
-        position.category === "LIABILITY"
-      ) {
-        liabilities += value;
+      if (isLiabilityPosition(position)) {
+        liabilities += Math.abs(value);
         continue;
       }
 
@@ -681,18 +687,22 @@ export default function Wealth() {
                           variant="body2"
                           sx={{
                             fontWeight: 750,
-                            color: position.isLiability
-                              ? "error.main"
-                              : "text.primary",
+                            color:
+                              isLiabilityPosition(
+                                position,
+                              )
+                                ? "error.main"
+                                : "text.primary",
                           }}
                         >
-                          {position.isLiability
-                            ? "− "
-                            : ""}
                           {euroPrecise(
-                            Math.abs(
-                              position.valueBase,
-                            ),
+                            isLiabilityPosition(
+                              position,
+                            )
+                              ? -Math.abs(
+                                  position.valueBase,
+                                )
+                              : position.valueBase,
                           )}
                         </Typography>
                       </TableCell>
