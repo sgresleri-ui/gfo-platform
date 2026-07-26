@@ -554,6 +554,27 @@ export default function MainLayout() {
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
       <Box
+        component="span"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        sx={{
+          position: "absolute",
+          width: 1,
+          height: 1,
+          p: 0,
+          m: -1,
+          overflow: "hidden",
+          clip: "rect(0 0 0 0)",
+          clipPath: "inset(50%)",
+          whiteSpace: "nowrap",
+          border: 0,
+        }}
+      >
+        Pagina aperta: {currentSection}, {currentTitle}
+      </Box>
+
+      <Box
         component="a"
         href="#main-content"
         sx={{
