@@ -793,6 +793,12 @@ export default function Performance() {
         ? "La fotografia iniziale deve precedere quella finale."
         : null;
 
+  const selectedNetWorthChange =
+    selectedFrom && selectedTo
+      ? selectedTo.netWorth -
+        selectedFrom.netWorth
+      : null;
+
   const assetClassData = useMemo(
     () =>
       report
@@ -2279,16 +2285,39 @@ export default function Performance() {
                 <Typography
                   variant="body2"
                   color="text.secondary"
+                  aria-live="polite"
+                  aria-atomic="true"
                   sx={{ mt: 2 }}
                 >
                   Da{" "}
-                  {euro(
-                    selectedFrom.netWorth,
-                  )}{" "}
+                  <strong>
+                    {euro(
+                      selectedFrom.netWorth,
+                    )}
+                  </strong>{" "}
                   a{" "}
-                  {euro(
-                    selectedTo.netWorth,
-                  )}
+                  <strong>
+                    {euro(
+                      selectedTo.netWorth,
+                    )}
+                  </strong>
+                  {" · "}
+                  Variazione{" "}
+                  <Box
+                    component="span"
+                    sx={{
+                      fontWeight: 800,
+                      color: valueColor(
+                        selectedNetWorthChange ??
+                          0,
+                      ),
+                    }}
+                  >
+                    {signedEuro(
+                      selectedNetWorthChange ??
+                        0,
+                    )}
+                  </Box>
                 </Typography>
               )}
           </Paper>
