@@ -220,6 +220,8 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
+  const desktopSelectedNavigationRef =
+    useRef<HTMLAnchorElement>(null);
   const mobileSelectedNavigationRef =
     useRef<HTMLAnchorElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -283,6 +285,18 @@ export default function MainLayout() {
       behavior: "auto",
     });
   }, [currentTitle, location.pathname]);
+
+  useEffect(() => {
+    const animationFrame = window.requestAnimationFrame(() => {
+      desktopSelectedNavigationRef.current?.scrollIntoView({
+        block: "nearest",
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!mobileOpen) {
@@ -503,8 +517,10 @@ export default function MainLayout() {
 
               <ListItemButton
                 ref={
-                  mobile && selected
-                    ? mobileSelectedNavigationRef
+                  selected
+                    ? mobile
+                      ? mobileSelectedNavigationRef
+                      : desktopSelectedNavigationRef
                     : undefined
                 }
                 component={RouterLink}
