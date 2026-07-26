@@ -1135,13 +1135,40 @@ export default function MainLayout() {
             <Suspense
               fallback={
                 <Box
+                  role="status"
+                  aria-live="polite"
+                  aria-busy="true"
                   sx={{
-                    minHeight: 420,
-                    display: "grid",
-                    placeItems: "center",
+                    minHeight: { xs: 320, sm: 420 },
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 1.5,
+                    textAlign: "center",
                   }}
                 >
-                  <CircularProgress />
+                  <CircularProgress
+                    size={32}
+                    thickness={4}
+                    aria-hidden="true"
+                  />
+
+                  <Box>
+                    <Typography
+                      variant="body1"
+                      sx={{ fontWeight: 700 }}
+                    >
+                      Caricamento {currentTitle}
+                    </Typography>
+
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                    >
+                      Preparazione dei dati in corso…
+                    </Typography>
+                  </Box>
                 </Box>
               }
             >
