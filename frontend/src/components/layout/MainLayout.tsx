@@ -6,6 +6,7 @@ import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import {
+  Fragment,
   Suspense,
   useEffect,
   useMemo,
@@ -27,6 +28,7 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  ListSubheader,
   TextField,
   Toolbar,
   Typography,
@@ -61,127 +63,140 @@ const drawerWidth = 264;
 
 const navigation = [
   {
+    section: "Monitoraggio",
     label: "Dashboard",
     path: "/dashboard",
     icon: <DashboardRoundedIcon />,
     load: pageLoaders.dashboard,
   },
   {
+    section: "Monitoraggio",
     label: "Patrimonio",
     path: "/wealth",
     icon: <AccountBalanceWalletRoundedIcon />,
     load: pageLoaders.wealth,
   },
   {
+    section: "Monitoraggio",
     label: "Storico Patrimoniale",
     path: "/wealth-history",
     icon: <TimelineRoundedIcon />,
     load: pageLoaders.wealthHistory,
   },
   {
+    section: "Monitoraggio",
     label: "Registro Movimenti",
     path: "/transactions",
     icon: <ReceiptLongRoundedIcon />,
     load: pageLoaders.transactions,
   },
   {
+    section: "Monitoraggio",
     label: "Performance",
     path: "/performance",
     icon: <AssessmentRoundedIcon />,
     load: pageLoaders.performance,
   },
   {
+    section: "Monitoraggio",
     label: "Rischio",
     path: "/risk",
     icon: <ShieldRoundedIcon />,
     load: pageLoaders.risk,
   },
   {
+    section: "Monitoraggio",
     label: "IPS e Conformità",
     path: "/ips",
     icon: <PolicyRoundedIcon />,
     load: pageLoaders.ips,
   },
-
   {
+    section: "Monitoraggio",
     label: "Qualità Dati",
     path: "/data-quality",
     icon: <FactCheckRoundedIcon />,
     load: pageLoaders.dataQuality,
   },
-
-
-
-
-
   {
+    section: "Gestione patrimoniale",
     label: "Investimenti",
     path: "/investments",
     icon: <ShowChartRoundedIcon />,
     load: pageLoaders.investments,
   },
   {
+    section: "Gestione patrimoniale",
     label: "Liquidità",
     path: "/liquidity",
     icon: <SavingsRoundedIcon />,
     load: pageLoaders.liquidity,
   },
   {
+    section: "Gestione patrimoniale",
     label: "Immobili",
     path: "/properties",
     icon: <HomeWorkRoundedIcon />,
     load: pageLoaders.properties,
   },
   {
+    section: "Gestione patrimoniale",
     label: "Budget",
     path: "/budget",
     icon: <ReceiptLongRoundedIcon />,
     load: pageLoaders.budget,
   },
   {
+    section: "Gestione patrimoniale",
     label: "Planning",
     path: "/planning",
     icon: <TimelineRoundedIcon />,
     load: pageLoaders.planning,
   },
   {
+    section: "Operatività",
     label: "Calendario Operativo",
     path: "/operational-calendar",
     icon: <CalendarMonthRoundedIcon />,
     load: pageLoaders.operationalCalendar,
   },
   {
+    section: "Operatività",
     label: "Data Catalog",
     path: "/data-catalog",
     icon: <StorageRoundedIcon />,
     load: pageLoaders.dataCatalog,
   },
   {
+    section: "Operatività",
     label: "Import Center",
     path: "/imports",
     icon: <UploadFileRoundedIcon />,
     load: pageLoaders.importCenter,
   },
-
   {
+    section: "Operatività",
     label: "Report",
     path: "/reports",
     icon: <DescriptionRoundedIcon />,
     load: pageLoaders.reports,
   },
   {
+    section: "Operatività",
     label: "Document Center",
     path: "/documents",
     icon: <FolderRoundedIcon />,
     load: pageLoaders.documents,
   },
   {
+    section: "Operatività",
     label: "Decisioni",
     path: "/decisions",
     icon: <GavelRoundedIcon />,
     load: pageLoaders.decisions,
   },
   {
+    section: "Operatività",
     label: "Impostazioni",
     path: "/settings",
     icon: <SettingsRoundedIcon />,
@@ -368,9 +383,10 @@ export default function MainLayout() {
       <Divider sx={{ borderColor: "rgba(255,255,255,0.09)" }} />
 
       <List
+        aria-label="Navigazione principale"
         sx={{
           px: 1.5,
-          py: 2,
+          py: 1.5,
           flexGrow: 1,
           minHeight: 0,
           overflowY: "auto",
@@ -394,62 +410,90 @@ export default function MainLayout() {
           },
         }}
       >
-        {navigation.map((item) => {
+        {navigation.map((item, index) => {
           const selected = location.pathname === item.path;
+          const beginsSection =
+            index === 0 ||
+            navigation[index - 1].section !== item.section;
 
           return (
-            <ListItemButton
-              key={item.path}
-              component={RouterLink}
-              to={item.path}
-              selected={selected}
-              aria-current={selected ? "page" : undefined}
-              onMouseEnter={() => preloadPage(item.load)}
-              onFocus={() => preloadPage(item.load)}
-              onClick={() => setMobileOpen(false)}
-              sx={{
-                mb: 0.55,
-                minHeight: 46,
-                borderRadius: 2.5,
-                color: selected ? "white" : "rgba(255,255,255,0.74)",
+            <Fragment key={item.path}>
+              {beginsSection && (
+                <ListSubheader
+                  disableSticky
+                  sx={{
+                    px: 1.25,
+                    pt: index === 0 ? 0 : 1.35,
+                    pb: 0.7,
+                    color: "rgba(255,255,255,0.43)",
+                    bgcolor: "transparent",
+                    fontSize: 10,
+                    fontWeight: 800,
+                    letterSpacing: "0.13em",
+                    lineHeight: 1.5,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {item.section}
+                </ListSubheader>
+              )}
 
-                "& .MuiListItemIcon-root": {
-                  minWidth: 40,
-                  color: selected ? "white" : "rgba(255,255,255,0.62)",
-                },
+              <ListItemButton
+                component={RouterLink}
+                to={item.path}
+                selected={selected}
+                aria-current={selected ? "page" : undefined}
+                onMouseEnter={() => preloadPage(item.load)}
+                onFocus={() => preloadPage(item.load)}
+                onClick={() => setMobileOpen(false)}
+                sx={{
+                  mb: 0.45,
+                  minHeight: 44,
+                  borderRadius: 2.5,
+                  color: selected
+                    ? "white"
+                    : "rgba(255,255,255,0.74)",
 
-                "&.Mui-selected": {
-                  background:
-                    "linear-gradient(90deg, #174A9C 0%, #215AB5 100%)",
-                  boxShadow: "0 8px 18px rgba(0,0,0,0.22)",
-                },
+                  "& .MuiListItemIcon-root": {
+                    minWidth: 40,
+                    color: selected
+                      ? "white"
+                      : "rgba(255,255,255,0.62)",
+                  },
 
-                "&.Mui-selected:hover": {
-                  background:
-                    "linear-gradient(90deg, #174A9C 0%, #215AB5 100%)",
-                },
+                  "&.Mui-selected": {
+                    background:
+                      "linear-gradient(90deg, #174A9C 0%, #215AB5 100%)",
+                    boxShadow: "0 8px 18px rgba(0,0,0,0.22)",
+                  },
 
-                "&:hover": {
-                  backgroundColor: "rgba(255,255,255,0.07)",
-                },
-              }}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
+                  "&.Mui-selected:hover": {
+                    background:
+                      "linear-gradient(90deg, #174A9C 0%, #215AB5 100%)",
+                  },
 
-              <ListItemText
-                primary={
-                  <Typography
-                    component="span"
-                    sx={{
-                      fontSize: 14,
-                      fontWeight: selected ? 700 : 500,
-                    }}
-                  >
-                    {item.label}
-                  </Typography>
-                }
-              />
-            </ListItemButton>
+                  "&:hover": {
+                    backgroundColor: "rgba(255,255,255,0.07)",
+                  },
+                }}
+              >
+                <ListItemIcon>{item.icon}</ListItemIcon>
+
+                <ListItemText
+                  primary={
+                    <Typography
+                      component="span"
+                      sx={{
+                        fontSize: 14,
+                        fontWeight: selected ? 700 : 500,
+                      }}
+                    >
+                      {item.label}
+                    </Typography>
+                  }
+                />
+              </ListItemButton>
+            </Fragment>
           );
         })}
       </List>
