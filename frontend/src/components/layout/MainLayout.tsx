@@ -61,6 +61,19 @@ import { pageLoaders } from "../../routes/pageLoaders";
 
 const drawerWidth = 264;
 
+const visuallyHiddenStyles = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  p: 0,
+  m: -1,
+  overflow: "hidden",
+  clip: "rect(0 0 0 0)",
+  clipPath: "inset(50%)",
+  whiteSpace: "nowrap",
+  border: 0,
+} as const;
+
 const navigation = [
   {
     section: "Monitoraggio",
@@ -614,20 +627,25 @@ export default function MainLayout() {
         role="status"
         aria-live="polite"
         aria-atomic="true"
-        sx={{
-          position: "absolute",
-          width: 1,
-          height: 1,
-          p: 0,
-          m: -1,
-          overflow: "hidden",
-          clip: "rect(0 0 0 0)",
-          clipPath: "inset(50%)",
-          whiteSpace: "nowrap",
-          border: 0,
-        }}
+        sx={visuallyHiddenStyles}
       >
         Pagina aperta: {currentSection}, {currentTitle}
+      </Box>
+
+      <Box
+        component="span"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        sx={visuallyHiddenStyles}
+      >
+        {searchOpen || mobileSearchOpen
+          ? searchResults.length === 0
+            ? "Nessuna sezione trovata"
+            : searchResults.length === 1
+              ? "1 sezione trovata"
+              : `${searchResults.length} sezioni trovate`
+          : ""}
       </Box>
 
       <Box
