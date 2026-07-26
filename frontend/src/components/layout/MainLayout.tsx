@@ -220,6 +220,8 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
+  const mobileSelectedNavigationRef =
+    useRef<HTMLAnchorElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -281,6 +283,22 @@ export default function MainLayout() {
       behavior: "auto",
     });
   }, [currentTitle, location.pathname]);
+
+  useEffect(() => {
+    if (!mobileOpen) {
+      return;
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      mobileSelectedNavigationRef.current?.scrollIntoView({
+        block: "nearest",
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, [location.pathname, mobileOpen]);
 
   const searchResults = useMemo(() => {
     const query = normalizeSearchText(searchValue.trim());
@@ -345,7 +363,7 @@ export default function MainLayout() {
     input?.focus();
   };
 
-  const drawer = (
+  const renderDrawer = (mobile: boolean) => (
     <Box
       sx={{
         position: "relative",
@@ -403,26 +421,27 @@ export default function MainLayout() {
         </Typography>
       </Box>
 
-      <IconButton
-        aria-label="Chiudi il menu di navigazione"
-        title="Chiudi menu"
-        onClick={() => setMobileOpen(false)}
-        sx={{
-          position: "absolute",
-          zIndex: 1,
-          top: 18,
-          right: 12,
-          display: { md: "none" },
-          color: "rgba(255,255,255,0.82)",
-          bgcolor: "rgba(255,255,255,0.07)",
+      {mobile && (
+        <IconButton
+          aria-label="Chiudi il menu di navigazione"
+          title="Chiudi menu"
+          onClick={() => setMobileOpen(false)}
+          sx={{
+            position: "absolute",
+            zIndex: 1,
+            top: 18,
+            right: 12,
+            color: "rgba(255,255,255,0.82)",
+            bgcolor: "rgba(255,255,255,0.07)",
 
-          "&:hover": {
-            bgcolor: "rgba(255,255,255,0.13)",
-          },
-        }}
-      >
-        <CloseRoundedIcon />
-      </IconButton>
+            "&:hover": {
+              bgcolor: "rgba(255,255,255,0.13)",
+            },
+          }}
+        >
+          <CloseRoundedIcon />
+        </IconButton>
+      )}
 
       <Divider sx={{ borderColor: "rgba(255,255,255,0.09)" }} />
 
@@ -483,6 +502,11 @@ export default function MainLayout() {
               )}
 
               <ListItemButton
+                ref={
+                  mobile && selected
+                    ? mobileSelectedNavigationRef
+                    : undefined
+                }
                 component={RouterLink}
                 to={item.path}
                 selected={selected}
@@ -1249,7 +1273,7 @@ export default function MainLayout() {
             },
           }}
         >
-          {drawer}
+          {renderDrawer(true)}
         </Drawer>
 
         <Drawer
@@ -1267,7 +1291,7 @@ export default function MainLayout() {
             },
           }}
         >
-          {drawer}
+          {renderDrawer(false)}
         </Drawer>
       </Box>
 
