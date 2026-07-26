@@ -1875,7 +1875,11 @@ export default function Performance() {
               </Box>
             )}
 
-            <Box sx={{ height: 360 }}>
+            <Box
+              role="img"
+              aria-label={`Andamento mensile del patrimonio finanziario, degli investimenti e della liquidità nel ${financialHistory.year}.`}
+              sx={{ height: 360 }}
+            >
               <ResponsiveContainer
                 width="100%"
                 height="100%"
@@ -1975,7 +1979,11 @@ export default function Performance() {
                   polizza assicurativa.
                 </Typography>
 
-                <Box sx={{ height: 340 }}>
+                <Box
+                  role="img"
+                  aria-label="Composizione mensile degli investimenti tra Advice, Advice Plus, Aviva e polizza assicurativa."
+                  sx={{ height: 340 }}
+                >
                   <ResponsiveContainer
                     width="100%"
                     height="100%"
@@ -2656,6 +2664,8 @@ export default function Performance() {
                     </Typography>
 
                     <Box
+                      role="img"
+                      aria-label="Contributi positivi e negativi alla variazione patrimoniale per posizione."
                       sx={{
                         height: Math.max(
                           280,
@@ -2783,6 +2793,8 @@ export default function Performance() {
                       </Box>
 
                       <Box
+                        role="img"
+                        aria-label="Raccordo tra patrimonio iniziale, variazioni per tipologia e patrimonio finale."
                         sx={{
                           height: 380,
                           mt: 2,
@@ -4079,7 +4091,17 @@ export default function Performance() {
                     patrimoniali selezionati.
                   </Typography>
 
-                  <Box sx={{ height: 320 }}>
+                  <Box
+                    role="img"
+                    aria-label={`Confronto tra patrimonio iniziale ${euro(
+                      report.performance
+                        .startingNetWorth,
+                    )} e patrimonio finale ${euro(
+                      report.performance
+                        .endingNetWorth,
+                    )}.`}
+                    sx={{ height: 320 }}
+                  >
                     <ResponsiveContainer
                       width="100%"
                       height="100%"
@@ -4160,7 +4182,11 @@ export default function Performance() {
                     iniziale e finale.
                   </Typography>
 
-                  <Box sx={{ height: 320 }}>
+                  <Box
+                    role="img"
+                    aria-label="Variazione patrimoniale per asset class tra fotografia iniziale e finale."
+                    sx={{ height: 320 }}
+                  >
                     <ResponsiveContainer
                       width="100%"
                       height="100%"
