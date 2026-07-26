@@ -334,6 +334,7 @@ export default function MainLayout() {
   const drawer = (
     <Box
       sx={{
+        position: "relative",
         height: "100dvh",
         minHeight: 0,
         display: "flex",
@@ -386,6 +387,27 @@ export default function MainLayout() {
           Family Office
         </Typography>
       </Box>
+
+      <IconButton
+        aria-label="Chiudi il menu di navigazione"
+        title="Chiudi menu"
+        onClick={() => setMobileOpen(false)}
+        sx={{
+          position: "absolute",
+          zIndex: 1,
+          top: 18,
+          right: 12,
+          display: { md: "none" },
+          color: "rgba(255,255,255,0.82)",
+          bgcolor: "rgba(255,255,255,0.07)",
+
+          "&:hover": {
+            bgcolor: "rgba(255,255,255,0.13)",
+          },
+        }}
+      >
+        <CloseRoundedIcon />
+      </IconButton>
 
       <Divider sx={{ borderColor: "rgba(255,255,255,0.09)" }} />
 
