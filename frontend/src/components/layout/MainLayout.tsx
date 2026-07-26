@@ -260,12 +260,14 @@ export default function MainLayout() {
     };
   }, []);
 
-  const currentTitle = useMemo(() => {
-    return (
-      navigation.find((item) => item.path === location.pathname)?.label ??
-      "GFO Platform"
-    );
+  const currentNavigationItem = useMemo(() => {
+    return navigation.find((item) => item.path === location.pathname);
   }, [location.pathname]);
+
+  const currentTitle =
+    currentNavigationItem?.label ?? "GFO Platform";
+  const currentSection =
+    currentNavigationItem?.section ?? "Family Office";
 
   useEffect(() => {
     document.title = `${currentTitle} | GFO Platform`;
@@ -549,10 +551,7 @@ export default function MainLayout() {
             <MenuRoundedIcon />
           </IconButton>
 
-          <Typography
-            variant="h6"
-            noWrap
-            title={currentTitle}
+          <Box
             sx={{
               minWidth: { xs: 0, md: 180 },
               maxWidth: {
@@ -565,8 +564,32 @@ export default function MainLayout() {
               flexShrink: 1,
             }}
           >
-            {currentTitle}
-          </Typography>
+            <Typography
+              variant="caption"
+              noWrap
+              sx={{
+                display: { xs: "none", sm: "block" },
+                mb: 0.15,
+                color: "text.secondary",
+                fontSize: 10,
+                fontWeight: 800,
+                letterSpacing: "0.1em",
+                lineHeight: 1.2,
+                textTransform: "uppercase",
+              }}
+            >
+              {currentSection}
+            </Typography>
+
+            <Typography
+              variant="h6"
+              noWrap
+              title={currentTitle}
+              sx={{ lineHeight: 1.2 }}
+            >
+              {currentTitle}
+            </Typography>
+          </Box>
 
           <Box
             sx={{
