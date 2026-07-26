@@ -1,7 +1,11 @@
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 import {
   Alert,
   Box,
+  Button,
   CircularProgress,
   Paper,
   Typography,
@@ -11,6 +15,7 @@ import AccountBalanceWalletRoundedIcon from "@mui/icons-material/AccountBalanceW
 import ShowChartRoundedIcon from "@mui/icons-material/ShowChartRounded";
 import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded";
 import CreditCardRoundedIcon from "@mui/icons-material/CreditCardRounded";
+import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 
 import KpiCard from "../components/KpiCard";
 import ExecutiveIpsPanel from "../components/ExecutiveIpsPanel";
@@ -26,47 +31,71 @@ import {
   type DashboardSummary,
 } from "../services/api";
 
-const initialData: DashboardSummary = {
-  netWorth: 0,
-  liquidity: 0,
-  investments: 0,
-  realEstate: 0,
-  otherAssets: 0,
-  liabilities: 0,
-  currency: "EUR",
-  asOfDate: null,
-  positionCount: 0,
-};
-
 export default function Dashboard() {
   const [data, setData] =
-    useState<DashboardSummary>(
-      initialData,
+    useState<DashboardSummary | null>(
+      null,
     );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getDashboard()
+    let cancelled = false;
+
+    void getDashboard()
       .then((result) => {
-        setData(result);
-        setError("");
+        if (!cancelled) {
+          setData(result);
+        }
       })
       .catch((requestError) => {
         console.error(requestError);
-        setError("Impossibile caricare i dati della dashboard.");
+
+        if (!cancelled) {
+          setError(
+            "Impossibile caricare i dati della dashboard.",
+          );
+        }
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  function retryDashboard() {
+    setLoading(true);
+    setError("");
+
+    void getDashboard()
+      .then((result) => {
+        setData(result);
+      })
+      .catch((requestError) => {
+        console.error(requestError);
+        setError(
+          "Impossibile caricare i dati della dashboard.",
+        );
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }
 
   const euro = (value: number) =>
     value.toLocaleString("it-IT", {
       style: "currency",
-      currency: data.currency,
+      currency:
+        data?.currency ?? "EUR",
       maximumFractionDigits: 0,
     });
 
-  const updateDate = data.asOfDate
+  const updateDate = data?.asOfDate
     ? new Date(
         data.asOfDate,
       ).toLocaleDateString("it-IT", {
@@ -77,10 +106,79 @@ export default function Dashboard() {
       })
     : "non disponibile";
 
-  if (loading) {
+  if (loading && !data) {
     return (
-      <Box sx={{ minHeight: 420, display: "grid", placeItems: "center" }}>
-        <CircularProgress />
+      <Box
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+        sx={{
+          minHeight: 420,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 1.5,
+          textAlign: "center",
+        }}
+      >
+        <CircularProgress
+          size={32}
+          thickness={4}
+          aria-hidden="true"
+        />
+
+        <Box>
+          <Typography
+            variant="body1"
+            sx={{ fontWeight: 700 }}
+          >
+            Caricamento Dashboard
+          </Typography>
+
+          <Typography
+            variant="body2"
+            color="text.secondary"
+          >
+            Consolidamento dei dati
+            patrimoniali in corso…
+          </Typography>
+        </Box>
+      </Box>
+    );
+  }
+
+  if (!data) {
+    return (
+      <Box
+        sx={{
+          minHeight: 420,
+          display: "grid",
+          placeItems: "center",
+        }}
+      >
+        <Alert
+          severity="error"
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              startIcon={
+                <RefreshRoundedIcon />
+              }
+              onClick={retryDashboard}
+            >
+              Riprova
+            </Button>
+          }
+          sx={{
+            width:
+              "min(560px, calc(100vw - 32px))",
+          }}
+        >
+          {error ||
+            "Dati della dashboard non disponibili."}
+        </Alert>
       </Box>
     );
   }
