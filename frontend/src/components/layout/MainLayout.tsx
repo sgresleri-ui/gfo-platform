@@ -283,8 +283,10 @@ export default function MainLayout() {
       return navigation;
     }
 
-    return navigation.filter((item) =>
-      normalizeSearchText(item.label).includes(query),
+    return navigation.filter(
+      (item) =>
+        normalizeSearchText(item.label).includes(query) ||
+        normalizeSearchText(item.section).includes(query),
     );
   }, [searchValue]);
 
@@ -735,7 +737,7 @@ export default function MainLayout() {
                       onFocus={() => preloadPage(item.load)}
                       onClick={() => openSearchResult(item.path)}
                       sx={{
-                        minHeight: 42,
+                        minHeight: 52,
                         borderRadius: 2,
 
                         "&.Mui-selected": {
@@ -753,11 +755,19 @@ export default function MainLayout() {
                       </ListItemIcon>
                       <ListItemText
                         primary={item.label}
+                        secondary={item.section}
                         slotProps={{
                           primary: {
                             sx: {
                               fontSize: 14,
                               fontWeight: 600,
+                            },
+                          },
+                          secondary: {
+                            sx: {
+                              mt: 0.15,
+                              fontSize: 11,
+                              lineHeight: 1.2,
                             },
                           },
                         }}
@@ -993,7 +1003,7 @@ export default function MainLayout() {
                   onFocus={() => preloadPage(item.load)}
                   onClick={() => openSearchResult(item.path)}
                   sx={{
-                    minHeight: 46,
+                    minHeight: 52,
                     borderRadius: 2,
 
                     "&.Mui-selected": {
@@ -1011,11 +1021,19 @@ export default function MainLayout() {
                   </ListItemIcon>
                   <ListItemText
                     primary={item.label}
+                    secondary={item.section}
                     slotProps={{
                       primary: {
                         sx: {
                           fontSize: 14,
                           fontWeight: 600,
+                        },
+                      },
+                      secondary: {
+                        sx: {
+                          mt: 0.15,
+                          fontSize: 11,
+                          lineHeight: 1.2,
                         },
                       },
                     }}
