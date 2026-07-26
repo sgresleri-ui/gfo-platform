@@ -40,9 +40,15 @@ export default function KpiCard({
         boxShadow: "0 12px 32px rgba(26, 45, 75, 0.07)",
         transition: "transform 180ms ease, box-shadow 180ms ease",
 
-        "&:hover": {
-          transform: "translateY(-2px)",
-          boxShadow: "0 16px 38px rgba(26, 45, 75, 0.11)",
+        "@media (hover: hover)": {
+          "&:hover": {
+            transform: "translateY(-2px)",
+            boxShadow: "0 16px 38px rgba(26, 45, 75, 0.11)",
+          },
+        },
+
+        "@media (prefers-reduced-motion: reduce)": {
+          transition: "none",
         },
 
         "&::before": {
@@ -102,6 +108,7 @@ export default function KpiCard({
 
         {icon && (
           <Box
+            aria-hidden="true"
             sx={{
               width: 44,
               height: 44,
