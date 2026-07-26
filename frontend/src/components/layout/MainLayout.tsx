@@ -244,6 +244,9 @@ export default function MainLayout() {
       const searchInput = searchInputRef.current;
 
       if (!searchInput || searchInput.getClientRects().length === 0) {
+        event.preventDefault();
+        setActiveSearchIndex(0);
+        setMobileSearchOpen(true);
         return;
       }
 
