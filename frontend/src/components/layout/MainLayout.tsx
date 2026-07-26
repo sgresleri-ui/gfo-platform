@@ -334,11 +334,34 @@ export default function MainLayout() {
       return navigation;
     }
 
-    return navigation.filter(
-      (item) =>
-        normalizeSearchText(item.label).includes(query) ||
-        normalizeSearchText(item.section).includes(query),
-    );
+    return navigation
+      .map((item, index) => {
+        const label = normalizeSearchText(item.label);
+        const section = normalizeSearchText(item.section);
+        let relevance: number | null = null;
+
+        if (label === query) {
+          relevance = 0;
+        } else if (label.startsWith(query)) {
+          relevance = 1;
+        } else if (label.includes(query)) {
+          relevance = 2;
+        } else if (section.startsWith(query)) {
+          relevance = 3;
+        } else if (section.includes(query)) {
+          relevance = 4;
+        }
+
+        return { item, index, relevance };
+      })
+      .filter(({ relevance }) => relevance !== null)
+      .sort(
+        (left, right) =>
+          (left.relevance ?? Number.MAX_SAFE_INTEGER) -
+            (right.relevance ?? Number.MAX_SAFE_INTEGER) ||
+          left.index - right.index,
+      )
+      .map(({ item }) => item);
   }, [searchValue]);
 
   useEffect(() => {
