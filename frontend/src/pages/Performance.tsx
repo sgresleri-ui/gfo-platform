@@ -219,6 +219,32 @@ function csvCell(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
+function downloadCsv(
+  rows: string[],
+  fileName: string,
+): void {
+  const blob = new Blob(
+    ["\uFEFF" + rows.join("\r\n")],
+    {
+      type: "text/csv;charset=utf-8;",
+    },
+  );
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = fileName;
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  window.setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 0);
+}
+
 function monthYearLabel(
   value: string,
 ): string {
@@ -502,31 +528,10 @@ export default function Performance() {
       ),
     ];
 
-    const blob = new Blob(
-      ["\uFEFF" + rows.join("\n")],
-      {
-        type:
-          "text/csv;charset=utf-8;",
-      },
-    );
-
-    const url =
-      URL.createObjectURL(blob);
-
-    const link =
-      document.createElement("a");
-
     const fileName =
       `patrimonio-finanziario-${financialHistory.year}.csv`;
 
-    link.href = url;
-    link.download = fileName;
-
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    URL.revokeObjectURL(url);
+    downloadCsv(rows, fileName);
     setNotice({
       severity: "success",
       text: `File ${fileName} esportato.`,
@@ -608,20 +613,6 @@ export default function Performance() {
       ),
     ];
 
-    const blob = new Blob(
-      ["\uFEFF" + rows.join("\n")],
-      {
-        type:
-          "text/csv;charset=utf-8;",
-      },
-    );
-
-    const url =
-      URL.createObjectURL(blob);
-
-    const link =
-      document.createElement("a");
-
     const startDate =
       attribution.period.start.slice(
         0,
@@ -637,14 +628,7 @@ export default function Performance() {
     const fileName =
       `attribuzione-posizioni-${startDate}-${endDate}.csv`;
 
-    link.href = url;
-    link.download = fileName;
-
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    URL.revokeObjectURL(url);
+    downloadCsv(rows, fileName);
     setNotice({
       severity: "success",
       text: `File ${fileName} esportato.`,
@@ -1031,20 +1015,6 @@ export default function Performance() {
       ),
     ];
 
-    const blob = new Blob(
-      ["\uFEFF" + rows.join("\n")],
-      {
-        type:
-          "text/csv;charset=utf-8;",
-      },
-    );
-
-    const url =
-      URL.createObjectURL(blob);
-
-    const link =
-      document.createElement("a");
-
     const startDate =
       report.period.start.slice(0, 10);
 
@@ -1054,14 +1024,7 @@ export default function Performance() {
     const fileName =
       `modified-dietz-${startDate}-${endDate}.csv`;
 
-    link.href = url;
-    link.download = fileName;
-
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    URL.revokeObjectURL(url);
+    downloadCsv(rows, fileName);
     setNotice({
       severity: "success",
       text: `File ${fileName} esportato.`,
@@ -1448,20 +1411,6 @@ export default function Performance() {
       ),
     ];
 
-    const blob = new Blob(
-      ["\uFEFF" + rows.join("\n")],
-      {
-        type:
-          "text/csv;charset=utf-8;",
-      },
-    );
-
-    const url =
-      URL.createObjectURL(blob);
-
-    const link =
-      document.createElement("a");
-
     const startDate =
       attribution.period.start.slice(
         0,
@@ -1477,14 +1426,7 @@ export default function Performance() {
     const fileName =
       `waterfall-patrimoniale-${startDate}-${endDate}.csv`;
 
-    link.href = url;
-    link.download = fileName;
-
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    URL.revokeObjectURL(url);
+    downloadCsv(rows, fileName);
     setNotice({
       severity: "success",
       text: `File ${fileName} esportato.`,
