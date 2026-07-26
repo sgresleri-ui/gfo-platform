@@ -219,6 +219,7 @@ export default function MainLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -336,6 +337,12 @@ export default function MainLayout() {
     setMobileSearchOpen(false);
     setSearchValue("");
     setActiveSearchIndex(0);
+  };
+
+  const clearSearch = (input: HTMLInputElement | null) => {
+    setSearchValue("");
+    setActiveSearchIndex(0);
+    input?.focus();
   };
 
   const drawer = (
@@ -768,24 +775,49 @@ export default function MainLayout() {
                   ),
                   endAdornment: (
                     <Box
-                      component="span"
-                      aria-hidden
-                      title={`Scorciatoia: ${searchShortcutLabel}`}
                       sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.5,
                         flexShrink: 0,
-                        px: 0.8,
-                        py: 0.25,
-                        border: "1px solid",
-                        borderColor: "divider",
-                        borderRadius: 1,
-                        color: "text.secondary",
-                        bgcolor: "background.paper",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        lineHeight: 1.4,
                       }}
                     >
-                      {searchShortcutLabel}
+                      {searchValue && (
+                        <IconButton
+                          size="small"
+                          aria-label="Azzera ricerca"
+                          title="Azzera ricerca"
+                          onMouseDown={(event) =>
+                            event.preventDefault()
+                          }
+                          onClick={() =>
+                            clearSearch(searchInputRef.current)
+                          }
+                          sx={{ p: 0.5 }}
+                        >
+                          <CloseRoundedIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      )}
+
+                      <Box
+                        component="span"
+                        aria-hidden
+                        title={`Scorciatoia: ${searchShortcutLabel}`}
+                        sx={{
+                          px: 0.8,
+                          py: 0.25,
+                          border: "1px solid",
+                          borderColor: "divider",
+                          borderRadius: 1,
+                          color: "text.secondary",
+                          bgcolor: "background.paper",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {searchShortcutLabel}
+                      </Box>
                     </Box>
                   ),
                 },
@@ -1012,6 +1044,7 @@ export default function MainLayout() {
             fullWidth
             autoFocus
             size="small"
+            inputRef={mobileSearchInputRef}
             value={searchValue}
             placeholder="Cerca nella piattaforma..."
             onChange={(event) => {
@@ -1079,6 +1112,20 @@ export default function MainLayout() {
                     }}
                   />
                 ),
+                endAdornment: searchValue ? (
+                  <IconButton
+                    size="small"
+                    aria-label="Azzera ricerca"
+                    title="Azzera ricerca"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() =>
+                      clearSearch(mobileSearchInputRef.current)
+                    }
+                    sx={{ p: 0.5 }}
+                  >
+                    <CloseRoundedIcon sx={{ fontSize: 18 }} />
+                  </IconButton>
+                ) : undefined,
               },
               htmlInput: {
                 role: "combobox",
