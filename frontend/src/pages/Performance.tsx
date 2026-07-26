@@ -412,6 +412,24 @@ export default function Performance() {
   const [notice, setNotice] =
     useState<Notice | null>(null);
 
+  useEffect(() => {
+    if (notice?.severity !== "success") {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setNotice((currentNotice) =>
+        currentNotice?.severity === "success"
+          ? null
+          : currentNotice,
+      );
+    }, 4000);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [notice]);
+
   const [
     attributionFilter,
     setAttributionFilter,
@@ -499,6 +517,11 @@ export default function Performance() {
     link.remove();
 
     URL.revokeObjectURL(url);
+    setNotice({
+      severity: "success",
+      text:
+        "Storico finanziario esportato in CSV.",
+    });
   }
 
   function exportPositionAttributionCsv() {
@@ -611,6 +634,11 @@ export default function Performance() {
     link.remove();
 
     URL.revokeObjectURL(url);
+    setNotice({
+      severity: "success",
+      text:
+        "Attribuzione per posizione esportata in CSV.",
+    });
   }
 
   const analyzePeriod = useCallback(
@@ -1010,6 +1038,11 @@ export default function Performance() {
     link.remove();
 
     URL.revokeObjectURL(url);
+    setNotice({
+      severity: "success",
+      text:
+        "Dettaglio Modified Dietz esportato in CSV.",
+    });
   }
 
   const financialHistorySummary =
@@ -1427,6 +1460,11 @@ export default function Performance() {
     link.remove();
 
     URL.revokeObjectURL(url);
+    setNotice({
+      severity: "success",
+      text:
+        "Waterfall patrimoniale esportato in CSV.",
+    });
   }
 
   const topAttributionContributors =
@@ -1672,16 +1710,38 @@ export default function Performance() {
         </Button>
       </Box>
 
-      {notice && (
+      {notice && notice.severity !== "success" && (
         <Alert
           severity={notice.severity}
           sx={{ mb: 3 }}
-          onClose={() =>
-            setNotice(null)
-          }
+          onClose={() => setNotice(null)}
         >
           {notice.text}
         </Alert>
+      )}
+
+      {notice?.severity === "success" && (
+        <Box
+          sx={{
+            position: "fixed",
+            zIndex: (theme) =>
+              theme.zIndex.snackbar,
+            bottom: { xs: 16, sm: 24 },
+            left: "50%",
+            width:
+              "min(520px, calc(100vw - 32px))",
+            transform: "translateX(-50%)",
+          }}
+        >
+          <Alert
+            severity="success"
+            variant="filled"
+            onClose={() => setNotice(null)}
+            sx={{ width: "100%" }}
+          >
+            {notice.text}
+          </Alert>
+        </Box>
       )}
 
       {financialHistory &&
