@@ -43,6 +43,8 @@ import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
+import RouteErrorBoundary from "../RouteErrorBoundary";
+
 const drawerWidth = 264;
 
 const navigation = [
@@ -648,21 +650,23 @@ export default function MainLayout() {
             p: { xs: 2, sm: 3, lg: 4 },
           }}
         >
-          <Suspense
-            fallback={
-              <Box
-                sx={{
-                  minHeight: 420,
-                  display: "grid",
-                  placeItems: "center",
-                }}
-              >
-                <CircularProgress />
-              </Box>
-            }
-          >
-            <Outlet />
-          </Suspense>
+          <RouteErrorBoundary key={location.pathname}>
+            <Suspense
+              fallback={
+                <Box
+                  sx={{
+                    minHeight: 420,
+                    display: "grid",
+                    placeItems: "center",
+                  }}
+                >
+                  <CircularProgress />
+                </Box>
+              }
+            >
+              <Outlet />
+            </Suspense>
+          </RouteErrorBoundary>
         </Box>
       </Box>
     </Box>

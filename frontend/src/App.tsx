@@ -8,6 +8,7 @@ import {
 } from "@mui/material";
 import { Navigate, Route, Routes } from "react-router-dom";
 
+import RouteErrorBoundary from "./components/RouteErrorBoundary";
 import MainLayout from "./components/layout/MainLayout";
 
 const Budget = lazy(
@@ -198,13 +199,15 @@ function App() {
       <Route
         path="/reports/snapshots/:id/print"
         element={
-          <Suspense
-            fallback={
-              <FullPageLoading />
-            }
-          >
-            <ReportSnapshotPrint />
-          </Suspense>
+          <RouteErrorBoundary fullPage>
+            <Suspense
+              fallback={
+                <FullPageLoading />
+              }
+            >
+              <ReportSnapshotPrint />
+            </Suspense>
+          </RouteErrorBoundary>
         }
       />
 
