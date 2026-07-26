@@ -1829,6 +1829,7 @@ export default function Performance() {
                 <Button
                   size="small"
                   variant="outlined"
+                  aria-label="Esporta lo storico finanziario in CSV"
                   startIcon={
                     <DownloadRoundedIcon />
                   }
@@ -2386,6 +2387,7 @@ export default function Performance() {
                       <Button
                         size="small"
                         variant="outlined"
+                        aria-label="Esporta l’attribuzione per posizione in CSV"
                         startIcon={
                           <DownloadRoundedIcon />
                         }
@@ -2750,6 +2752,7 @@ export default function Performance() {
                         <Button
                           size="small"
                           variant="outlined"
+                          aria-label="Esporta il waterfall patrimoniale in CSV"
                           startIcon={
                             <DownloadRoundedIcon />
                           }
@@ -3097,13 +3100,15 @@ export default function Performance() {
                     </Typography>
 
                     <Box
-                        sx={{
-                          display: "flex",
-                          gap: 1,
-                          flexWrap: "wrap",
-                          mb: 1.5,
-                        }}
-                      >
+                      role="group"
+                      aria-label="Filtra le posizioni per contributo"
+                      sx={{
+                        display: "flex",
+                        gap: 1,
+                        flexWrap: "wrap",
+                        mb: 1.5,
+                      }}
+                    >
                         {(
                           [
                             {
@@ -3123,6 +3128,10 @@ export default function Performance() {
                           <Button
                             key={filter.value}
                             size="small"
+                            aria-pressed={
+                              attributionFilter ===
+                              filter.value
+                            }
                             variant={
                               attributionFilter ===
                               filter.value
@@ -3247,6 +3256,9 @@ export default function Performance() {
                       </Button>
 
                       <Paper
+                        role="status"
+                        aria-live="polite"
+                        aria-atomic="true"
                         elevation={0}
                         sx={{
                           display: "flex",
@@ -3668,6 +3680,7 @@ export default function Performance() {
                       <Button
                         size="small"
                         variant="outlined"
+                        aria-label="Esporta il dettaglio Modified Dietz in CSV"
                         startIcon={
                           <DownloadRoundedIcon />
                         }
