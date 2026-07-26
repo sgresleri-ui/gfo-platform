@@ -91,6 +91,8 @@ export default function Wealth() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] =
+    useState("");
   const [search, setSearch] = useState("");
   const [category, setCategory] =
     useState<CategoryFilter>("ALL");
@@ -101,10 +103,25 @@ export default function Wealth() {
   async function loadRegistry() {
     setLoading(true);
     setError("");
+    setSuccess("");
 
     try {
       const result = await getWealthRegistry();
+      const activeCount =
+        result.positions.filter(
+          (position) =>
+            position.status === "ACTIVE",
+        ).length;
+
       setRegistry(result);
+      setPage(0);
+      setSuccess(
+        `Registro aggiornato: ${activeCount} ${
+          activeCount === 1
+            ? "posizione attiva"
+            : "posizioni attive"
+        }.`,
+      );
     } catch (requestError) {
       console.error(requestError);
       setError(
@@ -287,13 +304,41 @@ export default function Wealth() {
   if (loading && !registry) {
     return (
       <Box
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
         sx={{
           minHeight: 420,
-          display: "grid",
-          placeItems: "center",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 1.5,
+          textAlign: "center",
         }}
       >
-        <CircularProgress />
+        <CircularProgress
+          size={32}
+          thickness={4}
+          aria-hidden="true"
+        />
+
+        <Box>
+          <Typography
+            variant="body1"
+            sx={{ fontWeight: 700 }}
+          >
+            Caricamento Patrimonio
+          </Typography>
+
+          <Typography
+            variant="body2"
+            color="text.secondary"
+          >
+            Preparazione del registro
+            patrimoniale in corso…
+          </Typography>
+        </Box>
       </Box>
     );
   }
@@ -332,13 +377,36 @@ export default function Wealth() {
 
         <Button
           variant="contained"
-          startIcon={<RefreshRoundedIcon />}
+          startIcon={
+            loading ? (
+              <CircularProgress
+                size={18}
+                thickness={5}
+                color="inherit"
+                aria-hidden="true"
+              />
+            ) : (
+              <RefreshRoundedIcon />
+            )
+          }
           onClick={() => void loadRegistry()}
           disabled={loading}
         >
-          {loading ? "Aggiornamento..." : "Aggiorna"}
+          {loading ? "Aggiornamento…" : "Aggiorna"}
         </Button>
       </Box>
+
+      {success && (
+        <Alert
+          severity="success"
+          onClose={() =>
+            setSuccess("")
+          }
+          sx={{ mb: 3 }}
+        >
+          {success}
+        </Alert>
+      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -544,7 +612,7 @@ export default function Wealth() {
               <TextField
                 size="small"
                 label="Cerca posizione"
-                placeholder="Nome, ISIN, paese, portafoglio..."
+                placeholder="Nome, codice, paese, valuta…"
                 value={search}
                 onChange={(event) => {
                   setSearch(
@@ -598,6 +666,9 @@ export default function Wealth() {
               </FormControl>
 
               <Typography
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
                 variant="body2"
                 color="text.secondary"
                 sx={{
@@ -622,7 +693,7 @@ export default function Wealth() {
                 "0 12px 32px rgba(26, 45, 75, 0.06)",
             }}
           >
-            <Table>
+            <Table aria-label="Registro delle posizioni patrimoniali attive">
               <TableHead>
                 <TableRow>
                   <TableCell>Posizione</TableCell>
