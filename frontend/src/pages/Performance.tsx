@@ -2064,7 +2064,10 @@ export default function Performance() {
                   borderRadius: 1,
                 }}
               >
-                <Table size="small">
+                <Table
+                  size="small"
+                  aria-label="Dettaglio mensile del patrimonio finanziario"
+                >
                   <TableHead>
                     <TableRow>
                       <TableCell>Mese</TableCell>
@@ -3010,7 +3013,10 @@ export default function Performance() {
                           borderRadius: 1,
                         }}
                       >
-                        <Table size="small">
+                        <Table
+                          size="small"
+                          aria-label="Riconciliazione analitica della variazione patrimoniale"
+                        >
                           <TableHead>
                             <TableRow>
                               <TableCell>
@@ -3350,7 +3356,8 @@ export default function Performance() {
                       <Table
                         size="small"
                         stickyHeader
-                          sx={{ minWidth: 1300 }}
+                        aria-label="Posizioni variate nel periodo"
+                        sx={{ minWidth: 1300 }}
                       >
                         <TableHead>
                           <TableRow>
@@ -3749,7 +3756,10 @@ export default function Performance() {
                       borderRadius: 1,
                     }}
                   >
-                    <Table size="small">
+                    <Table
+                      size="small"
+                      aria-label="Calcolo del rendimento Modified Dietz"
+                    >
                       <TableHead>
                         <TableRow>
                           <TableCell>
@@ -3905,6 +3915,7 @@ export default function Performance() {
                       <Table
                         size="small"
                         stickyHeader
+                        aria-label="Flussi esterni ponderati nel calcolo Modified Dietz"
                         sx={{ minWidth: 760 }}
                       >
                         <TableHead>
