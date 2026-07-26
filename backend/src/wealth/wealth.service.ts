@@ -9,6 +9,7 @@ type WealthSummary = {
   otherAssets: number;
   liabilities: number;
   currency: string;
+  oldestValuationDate: string | null;
   asOfDate: string | null;
   positionCount: number;
 };
@@ -56,6 +57,7 @@ export class WealthService {
     let realEstate = 0;
     let otherAssets = 0;
     let liabilities = 0;
+    let earliestValuationDate: Date | null = null;
     let latestValuationDate: Date | null = null;
 
     for (const position of positions) {
@@ -66,6 +68,13 @@ export class WealthService {
         position.valuationDate > latestValuationDate
       ) {
         latestValuationDate = position.valuationDate;
+      }
+
+      if (
+        !earliestValuationDate ||
+        position.valuationDate < earliestValuationDate
+      ) {
+        earliestValuationDate = position.valuationDate;
       }
 
       if (position.isLiability || position.category === 'LIABILITY') {
@@ -93,11 +102,7 @@ export class WealthService {
     }
 
     const netWorth =
-      liquidity +
-      investments +
-      realEstate +
-      otherAssets -
-      liabilities;
+      liquidity + investments + realEstate + otherAssets - liabilities;
 
     return {
       netWorth,
@@ -107,9 +112,10 @@ export class WealthService {
       otherAssets,
       liabilities,
       currency: household.currency,
-      asOfDate: latestValuationDate
-        ? latestValuationDate.toISOString()
+      oldestValuationDate: earliestValuationDate
+        ? earliestValuationDate.toISOString()
         : null,
+      asOfDate: latestValuationDate ? latestValuationDate.toISOString() : null,
       positionCount: positions.length,
     };
   }

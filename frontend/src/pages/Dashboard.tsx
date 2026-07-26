@@ -96,16 +96,35 @@ export default function Dashboard() {
       maximumFractionDigits: 0,
     });
 
-  const updateDate = data?.asOfDate
-    ? new Date(
-        data.asOfDate,
-      ).toLocaleDateString("it-IT", {
+  const dateLabel = (
+    value: string,
+  ) =>
+    new Date(
+      value,
+    ).toLocaleDateString("it-IT", {
         day: "2-digit",
         month: "long",
         year: "numeric",
         timeZone: "UTC",
-      })
-    : "non disponibile";
+      });
+
+  const valuationDateLabel =
+    data?.oldestValuationDate &&
+    data.asOfDate
+      ? data.oldestValuationDate.slice(
+          0,
+          10,
+        ) ===
+        data.asOfDate.slice(0, 10)
+        ? dateLabel(data.asOfDate)
+        : `${dateLabel(
+            data.oldestValuationDate,
+          )} – ${dateLabel(
+            data.asOfDate,
+          )}`
+      : data?.asOfDate
+        ? dateLabel(data.asOfDate)
+        : "non disponibile";
 
   const grossAssets = data
     ? data.liquidity +
@@ -262,8 +281,8 @@ export default function Dashboard() {
                   "rgba(255,255,255,0.76)",
               }}
             >
-              Valorizzazione più recente:{" "}
-              {updateDate}
+              Valorizzazioni:{" "}
+              {valuationDateLabel}
               {" · "}
               {data.positionCount}{" "}
               {data.positionCount === 1

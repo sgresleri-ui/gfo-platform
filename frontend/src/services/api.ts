@@ -8,6 +8,7 @@ export type DashboardSummary = {
   otherAssets: number;
   liabilities: number;
   currency: string;
+  oldestValuationDate: string | null;
   asOfDate: string | null;
   positionCount: number;
 };
