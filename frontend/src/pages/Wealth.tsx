@@ -26,6 +26,7 @@ import AccountBalanceWalletRoundedIcon from "@mui/icons-material/AccountBalanceW
 import ShowChartRoundedIcon from "@mui/icons-material/ShowChartRounded";
 import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded";
 import CreditCardRoundedIcon from "@mui/icons-material/CreditCardRounded";
+import CategoryRoundedIcon from "@mui/icons-material/CategoryRounded";
 
 import KpiCard from "../components/KpiCard";
 import {
@@ -252,14 +253,18 @@ export default function Wealth() {
   const euro = (value: number) =>
     value.toLocaleString("it-IT", {
       style: "currency",
-      currency: "EUR",
+      currency:
+        registry?.household.currency ??
+        "EUR",
       maximumFractionDigits: 0,
     });
 
   const euroPrecise = (value: number) =>
     value.toLocaleString("it-IT", {
       style: "currency",
-      currency: "EUR",
+      currency:
+        registry?.household.currency ??
+        "EUR",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
@@ -455,7 +460,7 @@ export default function Wealth() {
               gridTemplateColumns: {
                 xs: "1fr",
                 sm: "repeat(2, minmax(0, 1fr))",
-                xl: "repeat(4, minmax(0, 1fr))",
+                xl: "repeat(5, minmax(0, 1fr))",
               },
               gap: 2.2,
               mb: 3,
@@ -485,6 +490,16 @@ export default function Wealth() {
               subtitle="Valore immobiliare lordo"
               icon={<HomeWorkRoundedIcon />}
               tone="warning"
+            />
+
+            <KpiCard
+              title="Altri attivi"
+              value={euro(
+                summary.otherAssets,
+              )}
+              subtitle="Attività patrimoniali residuali"
+              icon={<CategoryRoundedIcon />}
+              tone="primary"
             />
 
             <KpiCard
