@@ -528,6 +528,37 @@ export default function MainLayout() {
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
+      <Box
+        component="a"
+        href="#main-content"
+        sx={{
+          position: "fixed",
+          zIndex: (theme) => theme.zIndex.tooltip + 1,
+          top: 12,
+          left: 12,
+          px: 2,
+          py: 1.25,
+          borderRadius: 2,
+          bgcolor: "primary.main",
+          color: "primary.contrastText",
+          boxShadow: 4,
+          fontSize: 14,
+          fontWeight: 700,
+          textDecoration: "none",
+          transform: "translateY(calc(-100% - 24px))",
+          transition: "transform 160ms ease",
+
+          "&:focus-visible": {
+            outline: "3px solid",
+            outlineColor: "primary.contrastText",
+            outlineOffset: 2,
+            transform: "translateY(0)",
+          },
+        }}
+      >
+        Vai al contenuto principale
+      </Box>
+
       <AppBar
         position="fixed"
         elevation={0}
@@ -1116,6 +1147,8 @@ export default function MainLayout() {
 
       <Box
         component="main"
+        id="main-content"
+        tabIndex={-1}
         sx={{
           flexGrow: 1,
           width: { md: `calc(100% - ${drawerWidth}px)` },
