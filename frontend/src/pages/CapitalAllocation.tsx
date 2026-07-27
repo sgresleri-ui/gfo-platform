@@ -205,13 +205,24 @@ export default function CapitalAllocation() {
         netEquity:
           summary.netEquity +
           property.netEquity,
+        historicalCost:
+          summary.historicalCost +
+          (property.historicalCost ?? 0),
       }),
       {
         grossValue: 0,
         debt: 0,
         netEquity: 0,
+        historicalCost: 0,
       },
     );
+
+    const historicalCostComplete =
+      heldForSale.length > 0 &&
+      heldForSale.every(
+        (property) =>
+          property.historicalCost !== null,
+      );
 
     const closingDates = heldForSale
       .map(
@@ -228,6 +239,15 @@ export default function CapitalAllocation() {
 
     return {
       ...totals,
+      historicalCost:
+        historicalCostComplete
+          ? totals.historicalCost
+          : null,
+      grossDifference:
+        historicalCostComplete
+          ? totals.grossValue -
+            totals.historicalCost
+          : null,
       earliestClosingDate:
         closingDates[0] ?? null,
     };
@@ -591,9 +611,9 @@ export default function CapitalAllocation() {
                       xs:
                         "repeat(2, minmax(0, 1fr))",
                       md:
-                        "repeat(3, minmax(0, 1fr))",
+                        "repeat(4, minmax(0, 1fr))",
                       xl:
-                        "repeat(6, minmax(0, 1fr))",
+                        "repeat(8, minmax(0, 1fr))",
                     },
                     gap: 1.5,
                     mt: 2,
@@ -620,6 +640,28 @@ export default function CapitalAllocation() {
                       value: euro(
                         saleSummary.netEquity,
                       ),
+                    },
+                    {
+                      label:
+                        "Costo storico",
+                      value:
+                        saleSummary.historicalCost ===
+                        null
+                          ? "Non disponibile"
+                          : euro(
+                              saleSummary.historicalCost,
+                            ),
+                    },
+                    {
+                      label:
+                        "Differenza lorda",
+                      value:
+                        saleSummary.grossDifference ===
+                        null
+                          ? "Non disponibile"
+                          : euro(
+                              saleSummary.grossDifference,
+                            ),
                     },
                     {
                       label:
@@ -672,6 +714,26 @@ export default function CapitalAllocation() {
                     </Box>
                   ))}
                 </Box>
+
+                {saleSummary.grossDifference !==
+                  null && (
+                  <Alert
+                    severity="info"
+                    sx={{ mb: 2 }}
+                  >
+                    La differenza lorda di{" "}
+                    <strong>
+                      {euro(
+                        saleSummary.grossDifference,
+                      )}
+                    </strong>{" "}
+                    rispetto al costo storico è
+                    un dato patrimoniale. Non
+                    rappresenta ancora la
+                    plusvalenza imponibile né
+                    l’imposta dovuta.
+                  </Alert>
+                )}
 
                 <Alert
                   severity={
