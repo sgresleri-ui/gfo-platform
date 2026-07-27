@@ -59,15 +59,6 @@ function dateLabel(
   ).format(new Date(value));
 }
 
-const capitalBlocks = [
-  {
-    label: "Capitale investibile",
-    description:
-      "Quota realmente disponibile per investimenti finanziari di lungo termine.",
-    source: "Motore di allocazione",
-  },
-];
-
 const decisionSteps = [
   "Calcolare il ricavo netto derivante dalla vendita.",
   "Sottrarre riserva fiscale, fondo di emergenza e impegni immobiliari.",
@@ -395,6 +386,55 @@ export default function CapitalAllocation() {
   const residualCapitalError =
     saleDataError ??
     planningError;
+
+  const liquidityIpsLimit =
+    planningAssessment?.allocation
+      .ipsProjection.limits.find(
+        (limit) =>
+          limit.code ===
+          "LIQUIDITY_GROSS_ASSETS",
+      ) ?? null;
+
+  const liquidityMinimumPct =
+    liquidityIpsLimit?.minimum ?? 0;
+
+  const liquidityTargetPct =
+    liquidityIpsLimit?.target ??
+    liquidityMinimumPct;
+
+  const projectedYearEndAssets =
+    firstPlanningYear?.endTotal ?? 0;
+
+  const minimumLiquidityReserve =
+    projectedYearEndAssets *
+    liquidityMinimumPct /
+    100;
+
+  const targetLiquidityReserve =
+    projectedYearEndAssets *
+    liquidityTargetPct /
+    100;
+
+  const capitalAfterMinimumReserve =
+    Math.max(
+      0,
+      residualAfterCommitments -
+        minimumLiquidityReserve,
+    );
+
+  const capitalAfterTargetReserve =
+    Math.max(
+      0,
+      residualAfterCommitments -
+        targetLiquidityReserve,
+    );
+
+  const ipsLiquidityConfigured =
+    Boolean(
+      firstPlanningYear &&
+      liquidityIpsLimit?.supported &&
+      liquidityMinimumPct > 0,
+    );
 
   const refreshSaleData = () => {
     void loadProperties();
@@ -857,52 +897,166 @@ export default function CapitalAllocation() {
           )}
         </Paper>
 
-        {capitalBlocks.map(
-          (block) => (
-            <Paper
-              key={block.label}
-              elevation={0}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2.25,
+            border: "1px solid",
+            borderColor:
+              residualCapitalError
+                ? "error.main"
+                : ipsLiquidityConfigured
+                  ? "primary.main"
+                  : "warning.main",
+            minHeight: 190,
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent:
+                "space-between",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
+            <Typography
+              variant="overline"
+              color={
+                residualCapitalError
+                  ? "error.main"
+                  : ipsLiquidityConfigured
+                    ? "primary.main"
+                    : "warning.main"
+              }
+            >
+              IPS collegato
+            </Typography>
+
+            <Chip
+              size="small"
+              color={
+                residualCapitalError
+                  ? "error"
+                  : ipsLiquidityConfigured
+                    ? "success"
+                    : "warning"
+              }
+              label={
+                residualCapitalError
+                  ? "Errore"
+                  : ipsLiquidityConfigured
+                    ? "Target disponibile"
+                    : "IPS non configurato"
+              }
+            />
+          </Box>
+
+          <Typography
+            variant="h6"
+            sx={{
+              mt: 0.5,
+              fontWeight: 750,
+            }}
+          >
+            Disponibile dopo riserva IPS
+          </Typography>
+
+          {loadingResidualCapital ? (
+            <Box
               sx={{
-                p: 2.25,
-                border: "1px solid",
-                borderColor: "divider",
-                minHeight: 190,
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mt: 2,
               }}
             >
-              <Typography
-                variant="overline"
-                color="text.secondary"
-              >
-                Da collegare
-              </Typography>
+              <CircularProgress size={20} />
 
               <Typography
-                variant="h6"
+                variant="body2"
+                color="text.secondary"
+              >
+                Calcolo…
+              </Typography>
+            </Box>
+          ) : residualCapitalError ? (
+            <Typography
+              variant="body2"
+              color="error.main"
+              sx={{ mt: 1.5 }}
+            >
+              Calcolo non disponibile.
+            </Typography>
+          ) : !ipsLiquidityConfigured ? (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 1.5 }}
+            >
+              Configurare minimo e target di
+              liquidità nell’IPS.
+            </Typography>
+          ) : (
+            <>
+              <Typography
+                variant="h5"
                 sx={{
-                  mt: 0.5,
-                  fontWeight: 750,
+                  mt: 1.5,
+                  fontWeight: 800,
                 }}
               >
-                {block.label}
+                {euro(
+                  capitalAfterTargetReserve,
+                )}
               </Typography>
 
               <Typography
                 variant="body2"
                 color="text.secondary"
-                sx={{ mt: 1 }}
+                sx={{ mt: 0.75 }}
               >
-                {block.description}
+                Residuo dopo la riserva
+                obiettivo IPS del{" "}
+                {liquidityTargetPct.toLocaleString(
+                  "it-IT",
+                )}
+                %.
               </Typography>
 
-              <Chip
-                size="small"
-                variant="outlined"
-                label={block.source}
-                sx={{ mt: 2 }}
-              />
-            </Paper>
-          ),
-        )}
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{
+                  display: "block",
+                  mt: 1,
+                }}
+              >
+                Riserva target{" "}
+                {euro(
+                  targetLiquidityReserve,
+                )}{" "}
+                · scenario minimo{" "}
+                {euro(
+                  capitalAfterMinimumReserve,
+                )}
+              </Typography>
+
+              <Typography
+                variant="caption"
+                color="warning.main"
+                sx={{
+                  display: "block",
+                  mt: 0.5,
+                }}
+              >
+                Non definitivo: fiscalità e
+                ulteriori fabbisogni di breve
+                periodo non sono ancora inclusi.
+              </Typography>
+            </>
+          )}
+        </Paper>
       </Box>
 
       {!loadingSaleData &&
@@ -1359,6 +1513,7 @@ export default function CapitalAllocation() {
                       "Ledger",
                       "Budget",
                       "Planning",
+                      "IPS",
                     ].includes(source)
                       ? "success"
                       : "default"
