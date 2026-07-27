@@ -847,6 +847,73 @@ export default function Performance() {
         )
       : null;
 
+  const quickPeriodAccuracy =
+    useMemo(() => {
+      if (
+        !quickPeriod ||
+        selectedPeriodDays === null ||
+        !selectedFrom ||
+        !selectedTo
+      ) {
+        return null;
+      }
+
+      const startDate = new Date(
+        selectedFrom.snapshotDate,
+      );
+
+      const endDate = new Date(
+        selectedTo.snapshotDate,
+      );
+
+      if (quickPeriod === "LAST_DAY") {
+        return {
+          exact: selectedPeriodDays === 1,
+          description: "1 giorno",
+        };
+      }
+
+      if (quickPeriod === "SEVEN_DAYS") {
+        return {
+          exact: selectedPeriodDays === 7,
+          description: "7 giorni",
+        };
+      }
+
+      if (quickPeriod === "MTD") {
+        return {
+          exact:
+            startDate.getUTCFullYear() ===
+              endDate.getUTCFullYear() &&
+            startDate.getUTCMonth() ===
+              endDate.getUTCMonth() &&
+            startDate.getUTCDate() === 1,
+          description: "inizio mese",
+        };
+      }
+
+      if (quickPeriod === "YTD") {
+        return {
+          exact:
+            startDate.getUTCFullYear() ===
+              endDate.getUTCFullYear() &&
+            startDate.getUTCMonth() === 0 &&
+            startDate.getUTCDate() === 1,
+          description: "inizio anno",
+        };
+      }
+
+      return {
+        exact: true,
+        description: "intero storico",
+      };
+    }, [
+      quickPeriod,
+      selectedFrom,
+      selectedPeriodDays,
+      selectedTo,
+    ]);
+
   const selectedNetWorthChange =
     selectedFrom && selectedTo
       ? selectedTo.netWorth -
@@ -2475,20 +2542,33 @@ export default function Performance() {
                   <Chip
                     size="small"
                     variant="outlined"
-                    label={`Periodo effettivo: ${selectedPeriodDays} ${
+                    color={
+                      quickPeriodAccuracy
+                        ? quickPeriodAccuracy.exact
+                          ? "success"
+                          : "warning"
+                        : "default"
+                    }
+                    label={`${
+                      quickPeriodAccuracy &&
+                      !quickPeriodAccuracy.exact
+                        ? "Periodo approssimato"
+                        : "Periodo effettivo"
+                    }: ${selectedPeriodDays} ${
                       selectedPeriodDays === 1
                         ? "giorno"
                         : "giorni"
                     }`}
                   />
 
-                  {quickPeriod && (
+                  {quickPeriodAccuracy && (
                     <Typography
                       variant="caption"
                       color="text.secondary"
                     >
-                      Il preset utilizza le fotografie
-                      patrimoniali disponibili più vicine.
+                      {quickPeriodAccuracy.exact
+                        ? `Il preset è coperto esattamente (${quickPeriodAccuracy.description}).`
+                        : `Fotografia iniziale più vicina disponibile; obiettivo: ${quickPeriodAccuracy.description}.`}
                     </Typography>
                   )}
                 </Box>
