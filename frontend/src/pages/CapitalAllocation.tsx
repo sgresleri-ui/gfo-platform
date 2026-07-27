@@ -1429,6 +1429,81 @@ export default function CapitalAllocation() {
           />
         </Box>
 
+        {taxAnalysis &&
+        taxAnalysis.evidence
+          .recordedSellingCostTransactionCount >
+          0 ? (
+          <Alert
+            severity="info"
+            sx={{ mt: 2 }}
+          >
+            <Typography
+              variant="subtitle2"
+              sx={{ fontWeight: 800 }}
+            >
+              Prova contabile dal ledger
+            </Typography>
+
+            <Typography
+              variant="body2"
+              sx={{ mt: 0.5 }}
+            >
+              Operazioni registrate:{" "}
+              {
+                taxAnalysis.evidence
+                  .recordedSellingCostTransactionCount
+              }
+              {" · Totale: "}
+              {euro(
+                taxAnalysis.sale
+                  .recordedSellingCosts,
+              )}
+            </Typography>
+
+            {taxAnalysis.evidence
+              .recordedSellingCostTransactions
+              .map((transaction) => (
+                <Box
+                  key={transaction.id}
+                  sx={{
+                    mt: 1,
+                    p: 1.25,
+                    borderRadius: 1.5,
+                    bgcolor: "action.hover",
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{ fontWeight: 750 }}
+                  >
+                    {dateLabel(
+                      transaction.date,
+                    )}
+                    {" · "}
+                    {euro(
+                      transaction.amount,
+                    )}
+                  </Typography>
+
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{
+                      display: "block",
+                      mt: 0.5,
+                      overflowWrap:
+                        "anywhere",
+                    }}
+                  >
+                    {transaction.notes ||
+                      "Descrizione non disponibile"}
+                  </Typography>
+                </Box>
+              ))}
+          </Alert>
+        ) : null}
+
+
         <Box
           sx={{
             display: "grid",
@@ -1933,79 +2008,6 @@ export default function CapitalAllocation() {
             )}
           </Box>
 
-          {taxAnalysis &&
-          taxAnalysis.evidence
-            .recordedSellingCostTransactionCount >
-            0 ? (
-            <Alert
-              severity="info"
-              sx={{ mt: 2 }}
-            >
-              <Typography
-                variant="subtitle2"
-                sx={{ fontWeight: 800 }}
-              >
-                Prova contabile dal ledger
-              </Typography>
-
-              <Typography
-                variant="body2"
-                sx={{ mt: 0.5 }}
-              >
-                Operazioni registrate:{" "}
-                {
-                  taxAnalysis.evidence
-                    .recordedSellingCostTransactionCount
-                }
-                {" · Totale: "}
-                {euro(
-                  taxAnalysis.sale
-                    .recordedSellingCosts,
-                )}
-              </Typography>
-
-              {taxAnalysis.evidence
-                .recordedSellingCostTransactions
-                .map((transaction) => (
-                  <Box
-                    key={transaction.id}
-                    sx={{
-                      mt: 1,
-                      p: 1.25,
-                      borderRadius: 1.5,
-                      bgcolor: "action.hover",
-                    }}
-                  >
-                    <Typography
-                      variant="body2"
-                      sx={{ fontWeight: 750 }}
-                    >
-                      {dateLabel(
-                        transaction.date,
-                      )}
-                      {" · "}
-                      {euro(
-                        transaction.amount,
-                      )}
-                    </Typography>
-
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{
-                        display: "block",
-                        mt: 0.5,
-                        overflowWrap:
-                          "anywhere",
-                      }}
-                    >
-                      {transaction.notes ||
-                        "Descrizione non disponibile"}
-                    </Typography>
-                  </Box>
-                ))}
-            </Alert>
-          ) : null}
         </Paper>
 
         <Paper
