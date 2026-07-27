@@ -641,6 +641,18 @@ export default function CapitalAllocation() {
   const fiscalEstimateComplete =
     effectiveEstimatedTaxReserve > 0;
 
+  const planningEstimateSaved =
+    !estimatesChanged &&
+    taxAnalysis?.planningEstimates.status ===
+      "USER_ESTIMATE";
+
+  const planningEstimateStatusLabel =
+    estimatesChanged
+      ? "Modifiche non salvate"
+      : planningEstimateSaved
+        ? "Stima manuale salvata"
+        : "Stima non impostata";
+
   const refreshSaleData = () => {
     void loadProperties();
     void loadSaleExpenses();
@@ -1307,14 +1319,12 @@ export default function CapitalAllocation() {
           <Chip
             size="small"
             color={
-              fiscalEstimateComplete
+              planningEstimateSaved
                 ? "success"
                 : "warning"
             }
             label={
-              fiscalEstimateComplete
-                ? "Stima inserita"
-                : "Stima incompleta"
+              planningEstimateStatusLabel
             }
           />
         </Box>
