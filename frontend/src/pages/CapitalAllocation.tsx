@@ -12,6 +12,7 @@ import {
   Chip,
   CircularProgress,
   Paper,
+  TextField,
   Typography,
 } from "@mui/material";
 
@@ -27,9 +28,11 @@ import {
 import {
   assessPlanningAllocationScenario,
   getLedgerTransactions,
+  getPlatformSettings,
   getPropertiesOverview,
   type LedgerTransaction,
   type PlanningIntegratedScenarioAssessmentResponse,
+  type PlatformSettingsResponse,
   type PropertiesOverviewResponse,
 } from "../services/api";
 
@@ -57,6 +60,41 @@ function dateLabel(
       year: "numeric",
     },
   ).format(new Date(value));
+}
+
+function parseEstimatedAmount(
+  value: string,
+): number {
+  const normalized = value
+    .trim()
+    .replace(/\s/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+
+  const amount = Number(normalized);
+
+  return Number.isFinite(amount) &&
+    amount > 0
+    ? amount
+    : 0;
+}
+
+function residenceLabel(
+  value: string | null | undefined,
+): string {
+  if (value === "Spain") {
+    return "Spagna";
+  }
+
+  if (
+    value ===
+    "United Arab Emirates"
+  ) {
+    return "Emirati Arabi Uniti";
+  }
+
+  return value?.trim() ||
+    "Non configurata";
 }
 
 const decisionSteps = [
@@ -130,6 +168,34 @@ export default function CapitalAllocation() {
     planningError,
     setPlanningError,
   ] = useState<string | null>(null);
+
+  const [
+    platformSettings,
+    setPlatformSettings,
+  ] =
+    useState<PlatformSettingsResponse | null>(
+      null,
+    );
+
+  const [
+    loadingSettings,
+    setLoadingSettings,
+  ] = useState(true);
+
+  const [
+    settingsError,
+    setSettingsError,
+  ] = useState<string | null>(null);
+
+  const [
+    estimatedTaxReserveInput,
+    setEstimatedTaxReserveInput,
+  ] = useState("0");
+
+  const [
+    futureSaleCostsInput,
+    setFutureSaleCostsInput,
+  ] = useState("0");
 
   const loadProperties =
     useCallback(async () => {
@@ -226,14 +292,37 @@ export default function CapitalAllocation() {
       }
     }, []);
 
+  const loadSettings =
+    useCallback(async () => {
+      setLoadingSettings(true);
+      setSettingsError(null);
+
+      try {
+        const result =
+          await getPlatformSettings();
+
+        setPlatformSettings(result);
+      } catch (error) {
+        console.error(error);
+
+        setSettingsError(
+          "Impossibile caricare la residenza fiscale configurata.",
+        );
+      } finally {
+        setLoadingSettings(false);
+      }
+    }, []);
+
   useEffect(() => {
     void loadProperties();
     void loadSaleExpenses();
     void loadPlanning();
+    void loadSettings();
   }, [
     loadProperties,
     loadSaleExpenses,
     loadPlanning,
+    loadSettings,
   ]);
 
   const heldForSale = useMemo(
@@ -435,6 +524,27 @@ export default function CapitalAllocation() {
       liquidityIpsLimit?.supported &&
       liquidityMinimumPct > 0,
     );
+
+  const estimatedTaxReserve =
+    parseEstimatedAmount(
+      estimatedTaxReserveInput,
+    );
+
+  const futureSaleCosts =
+    parseEstimatedAmount(
+      futureSaleCostsInput,
+    );
+
+  const capitalAfterTaxAndCosts =
+    Math.max(
+      0,
+      capitalAfterTargetReserve -
+        estimatedTaxReserve -
+        futureSaleCosts,
+    );
+
+  const fiscalEstimateComplete =
+    estimatedTaxReserve > 0;
 
   const refreshSaleData = () => {
     void loadProperties();
@@ -1058,6 +1168,252 @@ export default function CapitalAllocation() {
           )}
         </Paper>
       </Box>
+
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2.5,
+          mb: 3,
+          border: "1px solid",
+          borderColor: fiscalEstimateComplete
+            ? "success.main"
+            : "warning.main",
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent:
+              "space-between",
+            alignItems: "flex-start",
+            gap: 2,
+            flexWrap: "wrap",
+          }}
+        >
+          <Box>
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 750 }}
+            >
+              Fiscalità e costi futuri
+            </Typography>
+
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 0.5 }}
+            >
+              Inserisci esclusivamente le
+              stime non ancora registrate nel
+              ledger.
+            </Typography>
+          </Box>
+
+          <Chip
+            size="small"
+            color={
+              fiscalEstimateComplete
+                ? "success"
+                : "warning"
+            }
+            label={
+              fiscalEstimateComplete
+                ? "Stima inserita"
+                : "Stima incompleta"
+            }
+          />
+        </Box>
+
+        {settingsError ? (
+          <Alert
+            severity="warning"
+            action={
+              <Button
+                size="small"
+                onClick={() =>
+                  void loadSettings()
+                }
+              >
+                Riprova
+              </Button>
+            }
+            sx={{ mt: 2 }}
+          >
+            {settingsError}
+          </Alert>
+        ) : (
+          <Alert
+            severity="info"
+            sx={{ mt: 2 }}
+          >
+            Residenza fiscale attualmente
+            configurata:{" "}
+            <strong>
+              {loadingSettings
+                ? "caricamento…"
+                : residenceLabel(
+                    platformSettings
+                      ?.fiscalResidence,
+                  )}
+            </strong>
+            . La posizione fiscale effettiva
+            deve essere verificata alla data
+            del rogito{" "}
+            {dateLabel(
+              saleSummary
+                .earliestClosingDate,
+            )}
+            .
+          </Alert>
+        )}
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              md:
+                "repeat(2, minmax(0, 1fr))",
+            },
+            gap: 2,
+            mt: 2,
+          }}
+        >
+          <TextField
+            size="small"
+            label="Riserva fiscale stimata (€)"
+            value={
+              estimatedTaxReserveInput
+            }
+            onChange={(event) =>
+              setEstimatedTaxReserveInput(
+                event.target.value,
+              )
+            }
+            slotProps={{
+              htmlInput: {
+                inputMode: "decimal",
+              },
+            }}
+            helperText="Stima prudenziale da validare con il consulente fiscale."
+          />
+
+          <TextField
+            size="small"
+            label="Costi futuri di vendita (€)"
+            value={futureSaleCostsInput}
+            onChange={(event) =>
+              setFutureSaleCostsInput(
+                event.target.value,
+              )
+            }
+            slotProps={{
+              htmlInput: {
+                inputMode: "decimal",
+              },
+            }}
+            helperText="Solo costi non già compresi nei 19.857,15 € registrati."
+          />
+        </Box>
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm:
+                "repeat(2, minmax(0, 1fr))",
+              lg:
+                "repeat(4, minmax(0, 1fr))",
+            },
+            gap: 1.5,
+            mt: 2,
+          }}
+        >
+          {[
+            {
+              label:
+                "Disponibile dopo riserva IPS",
+              value: euro(
+                capitalAfterTargetReserve,
+              ),
+            },
+            {
+              label:
+                "Riserva fiscale stimata",
+              value: euro(
+                estimatedTaxReserve,
+              ),
+            },
+            {
+              label:
+                "Costi futuri stimati",
+              value: euro(
+                futureSaleCosts,
+              ),
+            },
+            {
+              label:
+                "Disponibile dopo le stime",
+              value: euro(
+                capitalAfterTaxAndCosts,
+              ),
+            },
+          ].map((item) => (
+            <Box
+              key={item.label}
+              sx={{
+                p: 1.5,
+                borderRadius: 2,
+                bgcolor: "action.hover",
+              }}
+            >
+              <Typography
+                variant="caption"
+                color="text.secondary"
+              >
+                {item.label}
+              </Typography>
+
+              <Typography
+                variant="body1"
+                sx={{
+                  mt: 0.25,
+                  fontWeight: 800,
+                }}
+              >
+                {item.value}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+
+        <Alert
+          severity={
+            fiscalEstimateComplete
+              ? "warning"
+              : "error"
+          }
+          sx={{ mt: 2 }}
+        >
+          {fiscalEstimateComplete
+            ? "Il risultato è una stima di pianificazione e richiede validazione fiscale professionale prima di qualsiasi investimento."
+            : "La riserva fiscale è ancora pari a zero. Il capitale mostrato non deve essere considerato definitivamente investibile."}
+        </Alert>
+
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{
+            display: "block",
+            mt: 1.25,
+          }}
+        >
+          Le stime inserite in questa prima
+          versione non sono ancora salvate nel
+          database.
+        </Typography>
+      </Paper>
 
       {!loadingSaleData &&
         !saleDataError && (
