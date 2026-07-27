@@ -1,8 +1,16 @@
 import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
   Alert,
   Box,
   Button,
   Chip,
+  CircularProgress,
   Paper,
   Typography,
 } from "@mui/material";
@@ -10,31 +18,61 @@ import {
 import AccountBalanceRoundedIcon from "@mui/icons-material/AccountBalanceRounded";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import CheckCircleOutlineRoundedIcon from "@mui/icons-material/CheckCircleOutlineRounded";
+import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 
 import {
   Link as RouterLink,
 } from "react-router-dom";
 
+import {
+  getPropertiesOverview,
+  type PropertiesOverviewResponse,
+} from "../services/api";
+
+function euro(value: number): string {
+  return value.toLocaleString("it-IT", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function dateLabel(
+  value: string | null,
+): string {
+  if (!value) {
+    return "Non definita";
+  }
+
+  return new Intl.DateTimeFormat(
+    "it-IT",
+    {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    },
+  ).format(new Date(value));
+}
+
 const capitalBlocks = [
-  {
-    label: "Capitale netto da realizzo",
-    description:
-      "Ricavo della vendita al netto di imposte, commissioni e costi.",
-  },
   {
     label: "Riserve e impegni futuri",
     description:
       "Liquidità di sicurezza, rate immobiliari e spese previste dal Budget.",
+    source: "Budget e Liquidità",
   },
   {
     label: "Capitale di breve periodo",
     description:
       "Somme necessarie per obiettivi e acquisti previsti nei prossimi anni.",
+    source: "Budget e Planning",
   },
   {
     label: "Capitale investibile",
     description:
       "Quota realmente disponibile per investimenti finanziari di lungo termine.",
+    source: "Motore di allocazione",
   },
 ];
 
@@ -58,6 +96,99 @@ const dataSources = [
 ];
 
 export default function CapitalAllocation() {
+  const [
+    propertiesData,
+    setPropertiesData,
+  ] =
+    useState<PropertiesOverviewResponse | null>(
+      null,
+    );
+
+  const [
+    loadingProperties,
+    setLoadingProperties,
+  ] = useState(true);
+
+  const [
+    propertiesError,
+    setPropertiesError,
+  ] = useState<string | null>(null);
+
+  const loadProperties =
+    useCallback(async () => {
+      setLoadingProperties(true);
+      setPropertiesError(null);
+
+      try {
+        const result =
+          await getPropertiesOverview();
+
+        setPropertiesData(result);
+      } catch (error) {
+        console.error(error);
+
+        setPropertiesError(
+          "Impossibile caricare i dati immobiliari.",
+        );
+      } finally {
+        setLoadingProperties(false);
+      }
+    }, []);
+
+  useEffect(() => {
+    void loadProperties();
+  }, [loadProperties]);
+
+  const heldForSale = useMemo(
+    () =>
+      propertiesData?.properties.filter(
+        (property) =>
+          property.status ===
+          "HELD_FOR_SALE",
+      ) ?? [],
+    [propertiesData],
+  );
+
+  const saleSummary = useMemo(() => {
+    const totals = heldForSale.reduce(
+      (summary, property) => ({
+        grossValue:
+          summary.grossValue +
+          property.grossValue,
+        debt:
+          summary.debt +
+          property.debt,
+        netEquity:
+          summary.netEquity +
+          property.netEquity,
+      }),
+      {
+        grossValue: 0,
+        debt: 0,
+        netEquity: 0,
+      },
+    );
+
+    const closingDates = heldForSale
+      .map(
+        (property) =>
+          property.expectedClosingDate,
+      )
+      .filter(
+        (
+          value,
+        ): value is string =>
+          value !== null,
+      )
+      .sort();
+
+    return {
+      ...totals,
+      earliestClosingDate:
+        closingDates[0] ?? null,
+    };
+  }, [heldForSale]);
+
   return (
     <Box>
       <Box
@@ -70,7 +201,10 @@ export default function CapitalAllocation() {
       >
         <AccountBalanceRoundedIcon
           color="primary"
-          sx={{ fontSize: 34, mt: 0.25 }}
+          sx={{
+            fontSize: 34,
+            mt: 0.25,
+          }}
         />
 
         <Box>
@@ -85,9 +219,11 @@ export default function CapitalAllocation() {
             color="text.secondary"
             sx={{ mt: 0.5 }}
           >
-            Trasforma il capitale liberato da una vendita
-            immobiliare in un piano finanziario coerente con
-            Budget, patrimonio, IPS e obiettivi familiari.
+            Trasforma il capitale liberato da
+            una vendita immobiliare in un
+            piano finanziario coerente con
+            Budget, patrimonio, IPS e
+            obiettivi familiari.
           </Typography>
         </Box>
       </Box>
@@ -96,10 +232,10 @@ export default function CapitalAllocation() {
         severity="info"
         sx={{ mb: 3 }}
       >
-        Questa prima versione definisce la struttura del
-        processo decisionale. Le raccomandazioni automatiche
-        saranno attivate solo dopo il collegamento verificato
-        delle fonti patrimoniali, fiscali e di mercato.
+        Prima fonte collegata: patrimonio
+        immobiliare. Imposte, costi di vendita,
+        Budget, IPS e dati di mercato saranno
+        integrati nelle fasi successive.
       </Alert>
 
       <Box
@@ -107,48 +243,446 @@ export default function CapitalAllocation() {
           display: "grid",
           gridTemplateColumns: {
             xs: "1fr",
-            md: "repeat(2, minmax(0, 1fr))",
-            xl: "repeat(4, minmax(0, 1fr))",
+            md:
+              "repeat(2, minmax(0, 1fr))",
+            xl:
+              "repeat(4, minmax(0, 1fr))",
           },
           gap: 2,
           mb: 3,
         }}
       >
-        {capitalBlocks.map((block) => (
-          <Paper
-            key={block.label}
-            elevation={0}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2.25,
+            border: "1px solid",
+            borderColor: "primary.main",
+            minHeight: 190,
+          }}
+        >
+          <Box
             sx={{
-              p: 2.25,
-              border: "1px solid",
-              borderColor: "divider",
-              minHeight: 170,
+              display: "flex",
+              justifyContent:
+                "space-between",
+              alignItems: "center",
+              gap: 1,
             }}
           >
             <Typography
               variant="overline"
-              color="text.secondary"
+              color="primary.main"
             >
-              Da collegare
+              Fonte collegata
             </Typography>
 
-            <Typography
-              variant="h6"
-              sx={{ mt: 0.5, fontWeight: 750 }}
-            >
-              {block.label}
-            </Typography>
+            <Chip
+              size="small"
+              color={
+                propertiesError
+                  ? "error"
+                  : heldForSale.length > 0
+                    ? "success"
+                    : "default"
+              }
+              label={
+                propertiesError
+                  ? "Errore"
+                  : heldForSale.length > 0
+                    ? "Dati disponibili"
+                    : "Nessun immobile"
+              }
+            />
+          </Box>
 
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ mt: 1 }}
+          <Typography
+            variant="h6"
+            sx={{
+              mt: 0.5,
+              fontWeight: 750,
+            }}
+          >
+            Capitale immobiliare
+            potenzialmente liberato
+          </Typography>
+
+          {loadingProperties ? (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mt: 2,
+              }}
             >
-              {block.description}
-            </Typography>
-          </Paper>
-        ))}
+              <CircularProgress
+                size={20}
+              />
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
+                Caricamento…
+              </Typography>
+            </Box>
+          ) : propertiesError ? (
+            <Button
+              size="small"
+              startIcon={
+                <RefreshRoundedIcon />
+              }
+              onClick={() =>
+                void loadProperties()
+              }
+              sx={{ mt: 1.5 }}
+            >
+              Riprova
+            </Button>
+          ) : (
+            <>
+              <Typography
+                variant="h5"
+                sx={{
+                  mt: 1.5,
+                  fontWeight: 800,
+                }}
+              >
+                {euro(
+                  saleSummary.netEquity,
+                )}
+              </Typography>
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 0.75 }}
+              >
+                Patrimonio netto immobiliare
+                prima di imposte, commissioni
+                e costi di chiusura.
+              </Typography>
+
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{
+                  display: "block",
+                  mt: 1,
+                }}
+              >
+                {heldForSale.length}{" "}
+                {heldForSale.length === 1
+                  ? "immobile"
+                  : "immobili"}{" "}
+                destinati alla vendita
+              </Typography>
+            </>
+          )}
+        </Paper>
+
+        {capitalBlocks.map(
+          (block) => (
+            <Paper
+              key={block.label}
+              elevation={0}
+              sx={{
+                p: 2.25,
+                border: "1px solid",
+                borderColor: "divider",
+                minHeight: 190,
+              }}
+            >
+              <Typography
+                variant="overline"
+                color="text.secondary"
+              >
+                Da collegare
+              </Typography>
+
+              <Typography
+                variant="h6"
+                sx={{
+                  mt: 0.5,
+                  fontWeight: 750,
+                }}
+              >
+                {block.label}
+              </Typography>
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 1 }}
+              >
+                {block.description}
+              </Typography>
+
+              <Chip
+                size="small"
+                variant="outlined"
+                label={block.source}
+                sx={{ mt: 2 }}
+              />
+            </Paper>
+          ),
+        )}
       </Box>
+
+      {!loadingProperties &&
+        !propertiesError && (
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2.5,
+              mb: 3,
+              border: "1px solid",
+              borderColor: "divider",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent:
+                  "space-between",
+                alignItems: "center",
+                gap: 2,
+                flexWrap: "wrap",
+              }}
+            >
+              <Box>
+                <Typography
+                  variant="h6"
+                  sx={{ fontWeight: 750 }}
+                >
+                  Immobili destinati alla
+                  vendita
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 0.5 }}
+                >
+                  Prima riconciliazione del
+                  capitale potenzialmente
+                  disponibile.
+                </Typography>
+              </Box>
+
+              <Button
+                size="small"
+                startIcon={
+                  <RefreshRoundedIcon />
+                }
+                onClick={() =>
+                  void loadProperties()
+                }
+              >
+                Aggiorna
+              </Button>
+            </Box>
+
+            {heldForSale.length === 0 ? (
+              <Alert
+                severity="warning"
+                sx={{ mt: 2 }}
+              >
+                Nessun immobile è attualmente
+                classificato come destinato
+                alla vendita.
+              </Alert>
+            ) : (
+              <>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: {
+                      xs:
+                        "repeat(2, minmax(0, 1fr))",
+                      md:
+                        "repeat(4, minmax(0, 1fr))",
+                    },
+                    gap: 1.5,
+                    mt: 2,
+                    mb: 2,
+                  }}
+                >
+                  {[
+                    {
+                      label: "Valore lordo",
+                      value: euro(
+                        saleSummary.grossValue,
+                      ),
+                    },
+                    {
+                      label:
+                        "Debito collegato",
+                      value: euro(
+                        saleSummary.debt,
+                      ),
+                    },
+                    {
+                      label:
+                        "Patrimonio netto",
+                      value: euro(
+                        saleSummary.netEquity,
+                      ),
+                    },
+                    {
+                      label:
+                        "Prima chiusura prevista",
+                      value: dateLabel(
+                        saleSummary
+                          .earliestClosingDate,
+                      ),
+                    },
+                  ].map((item) => (
+                    <Box
+                      key={item.label}
+                      sx={{
+                        p: 1.5,
+                        borderRadius: 2,
+                        bgcolor:
+                          "action.hover",
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                      >
+                        {item.label}
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          mt: 0.25,
+                          fontWeight: 750,
+                        }}
+                      >
+                        {item.value}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+
+                <Box
+                  sx={{
+                    display: "grid",
+                    gap: 1.25,
+                  }}
+                >
+                  {heldForSale.map(
+                    (property) => (
+                      <Box
+                        key={property.id}
+                        sx={{
+                          display: "grid",
+                          gridTemplateColumns: {
+                            xs: "1fr",
+                            md:
+                              "1.4fr repeat(3, minmax(0, 1fr))",
+                          },
+                          gap: 1.5,
+                          p: 1.5,
+                          border: "1px solid",
+                          borderColor:
+                            "divider",
+                          borderRadius: 2,
+                        }}
+                      >
+                        <Box>
+                          <Typography
+                            sx={{
+                              fontWeight: 750,
+                            }}
+                          >
+                            {property.name}
+                          </Typography>
+
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                          >
+                            {property.country ??
+                              "Paese non definito"}{" "}
+                            · chiusura{" "}
+                            {dateLabel(
+                              property
+                                .expectedClosingDate,
+                            )}
+                          </Typography>
+                        </Box>
+
+                        <Box>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                          >
+                            Valore lordo
+                          </Typography>
+
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: 700,
+                            }}
+                          >
+                            {euro(
+                              property.grossValue,
+                            )}
+                          </Typography>
+                        </Box>
+
+                        <Box>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                          >
+                            Debito
+                          </Typography>
+
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: 700,
+                            }}
+                          >
+                            {euro(
+                              property.debt,
+                            )}
+                          </Typography>
+                        </Box>
+
+                        <Box>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                          >
+                            Patrimonio netto
+                          </Typography>
+
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: 700,
+                            }}
+                          >
+                            {euro(
+                              property.netEquity,
+                            )}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    ),
+                  )}
+                </Box>
+              </>
+            )}
+          </Paper>
+        )}
 
       <Box
         sx={{
@@ -183,37 +717,43 @@ export default function CapitalAllocation() {
               mt: 2,
             }}
           >
-            {decisionSteps.map((step, index) => (
-              <Box
-                key={step}
-                sx={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 1.25,
-                  p: 1.25,
-                  borderRadius: 2,
-                  bgcolor: "action.hover",
-                }}
-              >
-                <CheckCircleOutlineRoundedIcon
-                  color="primary"
-                  sx={{ mt: 0.1 }}
-                />
+            {decisionSteps.map(
+              (step, index) => (
+                <Box
+                  key={step}
+                  sx={{
+                    display: "flex",
+                    alignItems:
+                      "flex-start",
+                    gap: 1.25,
+                    p: 1.25,
+                    borderRadius: 2,
+                    bgcolor:
+                      "action.hover",
+                  }}
+                >
+                  <CheckCircleOutlineRoundedIcon
+                    color="primary"
+                    sx={{ mt: 0.1 }}
+                  />
 
-                <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
-                    Fase {index + 1}
-                  </Typography>
+                  <Box>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                    >
+                      Fase {index + 1}
+                    </Typography>
 
-                  <Typography variant="body2">
-                    {step}
-                  </Typography>
+                    <Typography
+                      variant="body2"
+                    >
+                      {step}
+                    </Typography>
+                  </Box>
                 </Box>
-              </Box>
-            ))}
+              ),
+            )}
           </Box>
         </Paper>
 
@@ -235,11 +775,15 @@ export default function CapitalAllocation() {
           <Typography
             variant="body2"
             color="text.secondary"
-            sx={{ mt: 1, mb: 2 }}
+            sx={{
+              mt: 1,
+              mb: 2,
+            }}
           >
-            Il motore utilizzerà solo dati verificati e
-            aggiornati, distinguendo informazioni interne e
-            dati pubblici di mercato.
+            Il motore utilizzerà solo dati
+            verificati e aggiornati,
+            distinguendo informazioni interne
+            e dati pubblici di mercato.
           </Typography>
 
           <Box
@@ -249,13 +793,21 @@ export default function CapitalAllocation() {
               gap: 1,
             }}
           >
-            {dataSources.map((source) => (
-              <Chip
-                key={source}
-                label={source}
-                variant="outlined"
-              />
-            ))}
+            {dataSources.map(
+              (source) => (
+                <Chip
+                  key={source}
+                  label={source}
+                  variant="outlined"
+                  color={
+                    source ===
+                    "Patrimonio"
+                      ? "success"
+                      : "default"
+                  }
+                />
+              ),
+            )}
           </Box>
         </Paper>
       </Box>
@@ -278,10 +830,13 @@ export default function CapitalAllocation() {
         <Typography
           variant="body2"
           color="text.secondary"
-          sx={{ mt: 0.75, mb: 2 }}
+          sx={{
+            mt: 0.75,
+            mb: 2,
+          }}
         >
-          Consulta i dati che alimenteranno il futuro motore
-          di allocazione.
+          Consulta i dati che alimenteranno il
+          futuro motore di allocazione.
         </Typography>
 
         <Box
@@ -295,14 +850,19 @@ export default function CapitalAllocation() {
             ["Planning", "/planning"],
             ["Budget", "/budget"],
             ["IPS", "/ips"],
-            ["Investimenti", "/investments"],
+            [
+              "Investimenti",
+              "/investments",
+            ],
           ].map(([label, path]) => (
             <Button
               key={path}
               component={RouterLink}
               to={path}
               variant="outlined"
-              endIcon={<ArrowForwardRoundedIcon />}
+              endIcon={
+                <ArrowForwardRoundedIcon />
+              }
             >
               {label}
             </Button>
