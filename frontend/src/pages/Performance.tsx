@@ -831,6 +831,22 @@ export default function Performance() {
         ? "La fotografia iniziale deve precedere quella finale."
         : null;
 
+
+  const selectedPeriodDays =
+    selectedFrom && selectedTo
+      ? Math.round(
+          (
+            new Date(
+              selectedTo.snapshotDate,
+            ).getTime() -
+            new Date(
+              selectedFrom.snapshotDate,
+            ).getTime()
+          ) /
+            (24 * 60 * 60 * 1000),
+        )
+      : null;
+
   const selectedNetWorthChange =
     selectedFrom && selectedTo
       ? selectedTo.netWorth -
@@ -2445,6 +2461,38 @@ export default function Performance() {
                   ),
                 )}
               </Box>
+
+              {selectedPeriodDays !== null && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 1,
+                    mb: 2,
+                  }}
+                >
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    label={`Periodo effettivo: ${selectedPeriodDays} ${
+                      selectedPeriodDays === 1
+                        ? "giorno"
+                        : "giorni"
+                    }`}
+                  />
+
+                  {quickPeriod && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                    >
+                      Il preset utilizza le fotografie
+                      patrimoniali disponibili più vicine.
+                    </Typography>
+                  )}
+                </Box>
+              )}
 
             <Box
               aria-describedby={
