@@ -25,7 +25,9 @@ import {
 } from "react-router-dom";
 
 import {
+  getLedgerTransactions,
   getPropertiesOverview,
+  type LedgerTransaction,
   type PropertiesOverviewResponse,
 } from "../services/api";
 
@@ -114,6 +116,21 @@ export default function CapitalAllocation() {
     setPropertiesError,
   ] = useState<string | null>(null);
 
+  const [
+    ledgerTransactions,
+    setLedgerTransactions,
+  ] = useState<LedgerTransaction[]>([]);
+
+  const [
+    loadingSaleExpenses,
+    setLoadingSaleExpenses,
+  ] = useState(true);
+
+  const [
+    saleExpensesError,
+    setSaleExpensesError,
+  ] = useState<string | null>(null);
+
   const loadProperties =
     useCallback(async () => {
       setLoadingProperties(true);
@@ -135,9 +152,36 @@ export default function CapitalAllocation() {
       }
     }, []);
 
+  const loadSaleExpenses =
+    useCallback(async () => {
+      setLoadingSaleExpenses(true);
+      setSaleExpensesError(null);
+
+      try {
+        const result =
+          await getLedgerTransactions(1000);
+
+        setLedgerTransactions(
+          result.transactions,
+        );
+      } catch (error) {
+        console.error(error);
+
+        setSaleExpensesError(
+          "Impossibile caricare le spese di vendita dal ledger.",
+        );
+      } finally {
+        setLoadingSaleExpenses(false);
+      }
+    }, []);
+
   useEffect(() => {
     void loadProperties();
-  }, [loadProperties]);
+    void loadSaleExpenses();
+  }, [
+    loadProperties,
+    loadSaleExpenses,
+  ]);
 
   const heldForSale = useMemo(
     () =>
@@ -189,6 +233,54 @@ export default function CapitalAllocation() {
     };
   }, [heldForSale]);
 
+  const saleExpenseTransactions =
+    useMemo(
+      () =>
+        ledgerTransactions.filter(
+          (transaction) =>
+            transaction.transactionType ===
+              "PROPERTY_EXPENSE" &&
+            transaction.position?.code ===
+              "PROPERTY_EL_TORO" &&
+            transaction.voidedAt === null,
+        ),
+      [ledgerTransactions],
+    );
+
+  const registeredSaleExpenses =
+    useMemo(
+      () =>
+        saleExpenseTransactions.reduce(
+          (total, transaction) =>
+            total +
+            Math.abs(
+              transaction.baseAmount,
+            ),
+          0,
+        ),
+      [saleExpenseTransactions],
+    );
+
+  const preliminaryNetProceeds =
+    Math.max(
+      0,
+      saleSummary.netEquity -
+        registeredSaleExpenses,
+    );
+
+  const loadingSaleData =
+    loadingProperties ||
+    loadingSaleExpenses;
+
+  const saleDataError =
+    propertiesError ??
+    saleExpensesError;
+
+  const refreshSaleData = () => {
+    void loadProperties();
+    void loadSaleExpenses();
+  };
+
   return (
     <Box>
       <Box
@@ -232,10 +324,11 @@ export default function CapitalAllocation() {
         severity="info"
         sx={{ mb: 3 }}
       >
-        Prima fonte collegata: patrimonio
-        immobiliare. Imposte, costi di vendita,
-        Budget, IPS e dati di mercato saranno
-        integrati nelle fasi successive.
+        Fonti collegate: patrimonio immobiliare
+        e ledger delle transazioni. Il realizzo
+        netto preliminare considera le spese di
+        vendita già registrate, ma non ancora le
+        imposte stimate e gli impegni futuri.
       </Alert>
 
       <Box
@@ -280,14 +373,14 @@ export default function CapitalAllocation() {
             <Chip
               size="small"
               color={
-                propertiesError
+                saleDataError
                   ? "error"
                   : heldForSale.length > 0
                     ? "success"
                     : "default"
               }
               label={
-                propertiesError
+                saleDataError
                   ? "Errore"
                   : heldForSale.length > 0
                     ? "Dati disponibili"
@@ -303,11 +396,10 @@ export default function CapitalAllocation() {
               fontWeight: 750,
             }}
           >
-            Capitale immobiliare
-            potenzialmente liberato
+            Realizzo netto preliminare
           </Typography>
 
-          {loadingProperties ? (
+          {loadingSaleData ? (
             <Box
               sx={{
                 display: "flex",
@@ -327,15 +419,13 @@ export default function CapitalAllocation() {
                 Caricamento…
               </Typography>
             </Box>
-          ) : propertiesError ? (
+          ) : saleDataError ? (
             <Button
               size="small"
               startIcon={
                 <RefreshRoundedIcon />
               }
-              onClick={() =>
-                void loadProperties()
-              }
+              onClick={refreshSaleData}
               sx={{ mt: 1.5 }}
             >
               Riprova
@@ -350,7 +440,7 @@ export default function CapitalAllocation() {
                 }}
               >
                 {euro(
-                  saleSummary.netEquity,
+                  preliminaryNetProceeds,
                 )}
               </Typography>
 
@@ -360,8 +450,9 @@ export default function CapitalAllocation() {
                 sx={{ mt: 0.75 }}
               >
                 Patrimonio netto immobiliare
-                prima di imposte, commissioni
-                e costi di chiusura.
+                meno le spese di vendita già
+                registrate. Imposte stimate e
+                costi futuri non sono inclusi.
               </Typography>
 
               <Typography
@@ -430,8 +521,8 @@ export default function CapitalAllocation() {
         )}
       </Box>
 
-      {!loadingProperties &&
-        !propertiesError && (
+      {!loadingSaleData &&
+        !saleDataError && (
           <Paper
             elevation={0}
             sx={{
@@ -476,9 +567,7 @@ export default function CapitalAllocation() {
                 startIcon={
                   <RefreshRoundedIcon />
                 }
-                onClick={() =>
-                  void loadProperties()
-                }
+                onClick={refreshSaleData}
               >
                 Aggiorna
               </Button>
@@ -502,7 +591,9 @@ export default function CapitalAllocation() {
                       xs:
                         "repeat(2, minmax(0, 1fr))",
                       md:
-                        "repeat(4, minmax(0, 1fr))",
+                        "repeat(3, minmax(0, 1fr))",
+                      xl:
+                        "repeat(6, minmax(0, 1fr))",
                     },
                     gap: 1.5,
                     mt: 2,
@@ -528,6 +619,20 @@ export default function CapitalAllocation() {
                         "Patrimonio netto",
                       value: euro(
                         saleSummary.netEquity,
+                      ),
+                    },
+                    {
+                      label:
+                        "Spese registrate",
+                      value: euro(
+                        registeredSaleExpenses,
+                      ),
+                    },
+                    {
+                      label:
+                        "Netto preliminare",
+                      value: euro(
+                        preliminaryNetProceeds,
                       ),
                     },
                     {
@@ -567,6 +672,29 @@ export default function CapitalAllocation() {
                     </Box>
                   ))}
                 </Box>
+
+                <Alert
+                  severity={
+                    saleExpenseTransactions.length > 0
+                      ? "success"
+                      : "warning"
+                  }
+                  sx={{ mb: 2 }}
+                >
+                  Ledger collegato:{" "}
+                  {saleExpenseTransactions.length}{" "}
+                  {saleExpenseTransactions.length === 1
+                    ? "movimento"
+                    : "movimenti"}{" "}
+                  relativi alla vendita El Toro,
+                  per complessivi{" "}
+                  <strong>
+                    {euro(
+                      registeredSaleExpenses,
+                    )}
+                  </strong>
+                  .
+                </Alert>
 
                 <Box
                   sx={{
