@@ -27,9 +27,11 @@ import {
 
 import {
   assessPlanningAllocationScenario,
+  getElToroTaxAnalysis,
   getLedgerTransactions,
   getPlatformSettings,
   getPropertiesOverview,
+  type ElToroTaxAnalysisResponse,
   type LedgerTransaction,
   type PlanningIntegratedScenarioAssessmentResponse,
   type PlatformSettingsResponse,
@@ -188,6 +190,14 @@ export default function CapitalAllocation() {
   ] = useState<string | null>(null);
 
   const [
+    taxAnalysis,
+    setTaxAnalysis,
+  ] =
+    useState<ElToroTaxAnalysisResponse | null>(
+      null,
+    );
+
+  const [
     estimatedTaxReserveInput,
     setEstimatedTaxReserveInput,
   ] = useState("0");
@@ -313,16 +323,30 @@ export default function CapitalAllocation() {
       }
     }, []);
 
+  const loadTaxAnalysis =
+    useCallback(async () => {
+      try {
+        const result =
+          await getElToroTaxAnalysis();
+
+        setTaxAnalysis(result);
+      } catch (error) {
+        console.error(error);
+      }
+    }, []);
+
   useEffect(() => {
     void loadProperties();
     void loadSaleExpenses();
     void loadPlanning();
     void loadSettings();
+    void loadTaxAnalysis();
   }, [
     loadProperties,
     loadSaleExpenses,
     loadPlanning,
     loadSettings,
+    loadTaxAnalysis,
   ]);
 
   const heldForSale = useMemo(
@@ -423,11 +447,16 @@ export default function CapitalAllocation() {
       [saleExpenseTransactions],
     );
 
+  const effectiveRecordedSaleExpenses =
+    taxAnalysis?.sale.recordedSellingCosts ??
+    registeredSaleExpenses;
+
   const preliminaryNetProceeds =
+    taxAnalysis?.sale.netProceedsBeforeTax ??
     Math.max(
       0,
       saleSummary.netEquity -
-        registeredSaleExpenses,
+        effectiveRecordedSaleExpenses,
     );
 
   const firstPlanningYear =
@@ -1249,19 +1278,24 @@ export default function CapitalAllocation() {
             Residenza fiscale attualmente
             configurata:{" "}
             <strong>
-              {loadingSettings
+              {loadingSettings &&
+              !taxAnalysis
                 ? "caricamento…"
                 : residenceLabel(
-                    platformSettings
-                      ?.fiscalResidence,
+                    taxAnalysis
+                      ?.fiscalResidence.current ??
+                      platformSettings
+                        ?.fiscalResidence,
                   )}
             </strong>
             . La posizione fiscale effettiva
             deve essere verificata alla data
             del rogito{" "}
             {dateLabel(
-              saleSummary
-                .earliestClosingDate,
+              taxAnalysis?.property
+                .expectedClosingDate ??
+                saleSummary
+                  .earliestClosingDate,
             )}
             .
           </Alert>
@@ -1312,7 +1346,9 @@ export default function CapitalAllocation() {
                 inputMode: "decimal",
               },
             }}
-            helperText="Solo costi non già compresi nei 19.857,15 € registrati."
+            helperText={`Solo costi non già compresi nei ${euro(
+              effectiveRecordedSaleExpenses,
+            )} registrati.`}
           />
         </Box>
 

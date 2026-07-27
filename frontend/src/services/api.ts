@@ -3978,3 +3978,62 @@ export async function archiveEconomicAssumptionProfile(
     "Unable to archive economic assumption profile",
   );
 }
+
+export type ElToroTaxAnalysisResponse = {
+  property: {
+    id: number;
+    code: string;
+    name: string;
+    country: string | null;
+    status: string;
+    expectedClosingDate: string | null;
+  };
+
+  sale: {
+    grossSalePrice: number;
+    debtToRepay: number;
+    historicalCost: number | null;
+    grossDifferenceFromHistoricalCost:
+      number | null;
+    recordedSellingCosts: number;
+    economicGainAfterRecordedCosts:
+      number | null;
+    netProceedsBeforeTax: number;
+  };
+
+  fiscalResidence: {
+    current: string;
+    planned: string;
+  };
+
+  tax: {
+    estimatedTax: number | null;
+    taxableGain: number | null;
+    netProceedsAfterTax: number | null;
+    status: "NEEDS_VALIDATION";
+  };
+
+  evidence: {
+    recordedSellingCostTransactionCount:
+      number;
+    recordedSellingCostTransactions: Array<{
+      id: string;
+      date: string;
+      amount: number;
+      notes: string | null;
+    }>;
+  };
+
+  warnings: string[];
+};
+
+export async function getElToroTaxAnalysis(): Promise<ElToroTaxAnalysisResponse> {
+  const response = await fetch(
+    `${API_URL}/tax-analysis/el-toro`,
+  );
+
+  return readJson<ElToroTaxAnalysisResponse>(
+    response,
+    "Unable to load El Toro tax analysis",
+  );
+}
