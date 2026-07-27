@@ -914,6 +914,15 @@ export default function Performance() {
       selectedTo,
     ]);
 
+
+  const selectedQuickPeriodLabel =
+    quickPeriod
+      ? quickPeriodOptions.find(
+          (option) =>
+            option.value === quickPeriod,
+        )?.label ?? quickPeriod
+      : "Selezione manuale";
+
   const selectedNetWorthChange =
     selectedFrom && selectedTo
       ? selectedTo.netWorth -
@@ -2573,6 +2582,103 @@ export default function Performance() {
                   )}
                 </Box>
               )}
+
+
+              {selectedFrom &&
+                selectedTo &&
+                selectedPeriodDays !== null && (
+                  <Box
+                    aria-label="Riepilogo del periodo"
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "repeat(2, minmax(0, 1fr))",
+                        md: "repeat(4, minmax(0, 1fr))",
+                      },
+                      gap: 1.5,
+                      p: 1.5,
+                      mb: 2,
+                      borderRadius: 2,
+                      bgcolor: "action.hover",
+                    }}
+                  >
+                    <Box>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                      >
+                        Preset
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 700 }}
+                      >
+                        {selectedQuickPeriodLabel}
+                        {quickPeriodAccuracy
+                          ? quickPeriodAccuracy.exact
+                            ? " · esatto"
+                            : " · approssimato"
+                          : ""}
+                      </Typography>
+                    </Box>
+
+                    <Box>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                      >
+                        Data iniziale
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 700 }}
+                      >
+                        {dateTimeLabel(
+                          selectedFrom.snapshotDate,
+                        )}
+                      </Typography>
+                    </Box>
+
+                    <Box>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                      >
+                        Data finale
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 700 }}
+                      >
+                        {dateTimeLabel(
+                          selectedTo.snapshotDate,
+                        )}
+                      </Typography>
+                    </Box>
+
+                    <Box>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                      >
+                        Durata effettiva
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 700 }}
+                      >
+                        {selectedPeriodDays}{" "}
+                        {selectedPeriodDays === 1
+                          ? "giorno"
+                          : "giorni"}
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
 
             <Box
               aria-describedby={
