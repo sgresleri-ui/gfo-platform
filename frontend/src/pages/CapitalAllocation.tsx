@@ -1348,6 +1348,36 @@ export default function CapitalAllocation() {
           </Alert>
         )}
 
+        {taxAnalysis ? (
+          <Alert
+            severity="warning"
+            sx={{ mt: 2 }}
+          >
+            <Typography
+              variant="subtitle2"
+              sx={{ fontWeight: 800 }}
+            >
+              Stato fiscale:{" "}
+              {taxAnalysis.tax.status ===
+              "NEEDS_VALIDATION"
+                ? "da validare"
+                : taxAnalysis.tax.status}
+            </Typography>
+
+            {taxAnalysis.warnings.map(
+              (warning) => (
+                <Typography
+                  key={warning}
+                  variant="body2"
+                  sx={{ mt: 0.5 }}
+                >
+                  • {warning}
+                </Typography>
+              ),
+            )}
+          </Alert>
+        ) : null}
+
         <Box
           sx={{
             display: "grid",
