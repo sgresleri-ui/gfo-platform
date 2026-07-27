@@ -218,6 +218,21 @@ export default function CapitalAllocation() {
     setFutureSaleCostsInput,
   ] = useState("0");
 
+  const [
+    savingEstimates,
+    setSavingEstimates,
+  ] = useState(false);
+
+  const [
+    estimateSaveError,
+    setEstimateSaveError,
+  ] = useState<string | null>(null);
+
+  const [
+    estimateSaveSuccess,
+    setEstimateSaveSuccess,
+  ] = useState(false);
+
   const loadProperties =
     useCallback(async () => {
       setLoadingProperties(true);
@@ -1438,11 +1453,27 @@ export default function CapitalAllocation() {
           />
         </Box>
 
-        <Box sx={{ mt: 2 }}>
+
+        <Box
+          sx={{
+            mt: 2,
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+            flexWrap: "wrap",
+          }}
+        >
           <Button
             variant="contained"
-            disabled={loadingSettings}
+            disabled={
+              loadingSettings ||
+              savingEstimates
+            }
             onClick={async () => {
+              setSavingEstimates(true);
+              setEstimateSaveError(null);
+              setEstimateSaveSuccess(false);
+
               try {
                 const result =
                   await updatePlatformSettings({
@@ -1463,14 +1494,41 @@ export default function CapitalAllocation() {
                     result.futureSaleCosts,
                   ),
                 );
+
+                setEstimateSaveSuccess(true);
               } catch (error) {
                 console.error(error);
+
+                setEstimateSaveError(
+                  "Impossibile salvare le stime.",
+                );
+              } finally {
+                setSavingEstimates(false);
               }
             }}
           >
-            Salva stime
+            {savingEstimates
+              ? "Salvataggio…"
+              : "Salva stime"}
           </Button>
+
+          {estimateSaveSuccess ? (
+            <Chip
+              size="small"
+              color="success"
+              label="Stime salvate"
+            />
+          ) : null}
         </Box>
+
+        {estimateSaveError ? (
+          <Alert
+            severity="error"
+            sx={{ mt: 2 }}
+          >
+            {estimateSaveError}
+          </Alert>
+        ) : null}
 
 
         {taxAnalysis &&
@@ -1641,9 +1699,9 @@ export default function CapitalAllocation() {
             mt: 1.25,
           }}
         >
-          Le stime inserite in questa prima
-          versione non sono ancora salvate nel
-          database.
+          Le stime inserite vengono salvate nel
+          database tramite il pulsante Salva
+          stime.
         </Typography>
       </Paper>
 
