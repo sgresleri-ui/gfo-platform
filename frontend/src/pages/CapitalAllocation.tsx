@@ -31,6 +31,7 @@ import {
   getLedgerTransactions,
   getPlatformSettings,
   getPropertiesOverview,
+  updatePlatformSettings,
   type ElToroTaxAnalysisResponse,
   type LedgerTransaction,
   type PlanningIntegratedScenarioAssessmentResponse,
@@ -1437,6 +1438,41 @@ export default function CapitalAllocation() {
           />
         </Box>
 
+        <Box sx={{ mt: 2 }}>
+          <Button
+            variant="contained"
+            disabled={loadingSettings}
+            onClick={async () => {
+              try {
+                const result =
+                  await updatePlatformSettings({
+                    estimatedTaxReserve,
+                    futureSaleCosts,
+                  });
+
+                setPlatformSettings(result);
+
+                setEstimatedTaxReserveInput(
+                  String(
+                    result.estimatedTaxReserve,
+                  ),
+                );
+
+                setFutureSaleCostsInput(
+                  String(
+                    result.futureSaleCosts,
+                  ),
+                );
+              } catch (error) {
+                console.error(error);
+              }
+            }}
+          >
+            Salva stime
+          </Button>
+        </Box>
+
+
         {taxAnalysis &&
         taxAnalysis.evidence
           .recordedSellingCostTransactionCount >
@@ -2015,6 +2051,7 @@ export default function CapitalAllocation() {
               ),
             )}
           </Box>
+
 
         </Paper>
 
