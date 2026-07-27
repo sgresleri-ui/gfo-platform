@@ -607,17 +607,6 @@ export default function CapitalAllocation() {
       futureSaleCostsInput,
     );
 
-  const capitalAfterTaxAndCosts =
-    Math.max(
-      0,
-      capitalAfterTargetReserve -
-        estimatedTaxReserve -
-        futureSaleCosts,
-    );
-
-  const fiscalEstimateComplete =
-    estimatedTaxReserve > 0;
-
   const estimatesChanged =
     platformSettings !== null &&
     (
@@ -626,6 +615,31 @@ export default function CapitalAllocation() {
       futureSaleCosts !==
         platformSettings.futureSaleCosts
     );
+
+  const effectiveEstimatedTaxReserve =
+    estimatesChanged
+      ? estimatedTaxReserve
+      : taxAnalysis?.planningEstimates
+          .estimatedTaxReserve ??
+        estimatedTaxReserve;
+
+  const effectiveFutureSaleCosts =
+    estimatesChanged
+      ? futureSaleCosts
+      : taxAnalysis?.planningEstimates
+          .futureSaleCosts ??
+        futureSaleCosts;
+
+  const capitalAfterTaxAndCosts =
+    Math.max(
+      0,
+      capitalAfterTargetReserve -
+        effectiveEstimatedTaxReserve -
+        effectiveFutureSaleCosts,
+    );
+
+  const fiscalEstimateComplete =
+    effectiveEstimatedTaxReserve > 0;
 
   const refreshSaleData = () => {
     void loadProperties();
@@ -1509,6 +1523,8 @@ export default function CapitalAllocation() {
                   ),
                 );
 
+                  await loadTaxAnalysis();
+
                 setEstimateSaveSuccess(true);
               } catch (error) {
                 console.error(error);
@@ -1646,14 +1662,14 @@ export default function CapitalAllocation() {
               label:
                 "Riserva fiscale stimata",
               value: euro(
-                estimatedTaxReserve,
+                effectiveEstimatedTaxReserve,
               ),
             },
             {
               label:
                 "Costi futuri stimati",
               value: euro(
-                futureSaleCosts,
+                effectiveFutureSaleCosts,
               ),
             },
             {
