@@ -136,6 +136,40 @@ async function fetchPerformancePageData(): Promise<PerformancePageData> {
   };
 }
 
+
+type QuickPeriod =
+  | "LAST_DAY"
+  | "SEVEN_DAYS"
+  | "MTD"
+  | "YTD"
+  | "ALL";
+
+const quickPeriodOptions: Array<{
+  value: QuickPeriod;
+  label: string;
+}> = [
+  {
+    value: "LAST_DAY",
+    label: "Ultimo giorno",
+  },
+  {
+    value: "SEVEN_DAYS",
+    label: "7 giorni",
+  },
+  {
+    value: "MTD",
+    label: "MTD",
+  },
+  {
+    value: "YTD",
+    label: "YTD",
+  },
+  {
+    value: "ALL",
+    label: "Tutto",
+  },
+];
+
 function euro(value: number): string {
   return value.toLocaleString("it-IT", {
     style: "currency",
@@ -430,6 +464,10 @@ export default function Performance() {
     useState<PositionAttributionResponse | null>(
       null,
     );
+
+
+  const [quickPeriod, setQuickPeriod] =
+    useState<QuickPeriod | null>(null);
 
   const [fromSnapshot, setFromSnapshot] =
     useState("");
@@ -1631,6 +1669,121 @@ export default function Performance() {
       [filteredAttributionItems],
     );
 
+
+  function applyQuickPeriod(
+    period: QuickPeriod,
+  ) {
+    if (periods.length < 2) {
+      return;
+    }
+
+    const ordered = [...periods].sort(
+      (first, second) =>
+        new Date(
+          first.snapshotDate,
+        ).getTime() -
+        new Date(
+          second.snapshotDate,
+        ).getTime(),
+    );
+
+    const end = ordered[
+      ordered.length - 1
+    ];
+
+    const endDate = new Date(
+      end.snapshotDate,
+    );
+
+    let start:
+      | PerformancePeriodSnapshot
+      | undefined;
+
+    if (period === "LAST_DAY") {
+      start = ordered[
+        ordered.length - 2
+      ];
+    }
+
+    if (period === "SEVEN_DAYS") {
+      const target =
+        endDate.getTime() -
+        7 * 24 * 60 * 60 * 1000;
+
+      start = [...ordered]
+        .reverse()
+        .find(
+          (snapshot) =>
+            new Date(
+              snapshot.snapshotDate,
+            ).getTime() <= target,
+        ) ?? ordered[0];
+    }
+
+    if (period === "MTD") {
+      const boundary = Date.UTC(
+        endDate.getUTCFullYear(),
+        endDate.getUTCMonth(),
+        1,
+      );
+
+      start =
+        ordered.find(
+          (snapshot) =>
+            new Date(
+              snapshot.snapshotDate,
+            ).getTime() >= boundary,
+        ) ?? ordered[0];
+    }
+
+    if (period === "YTD") {
+      const boundary = Date.UTC(
+        endDate.getUTCFullYear(),
+        0,
+        1,
+      );
+
+      start =
+        ordered.find(
+          (snapshot) =>
+            new Date(
+              snapshot.snapshotDate,
+            ).getTime() >= boundary,
+        ) ?? ordered[0];
+    }
+
+    if (period === "ALL") {
+      start = ordered[0];
+    }
+
+    if (
+      !start ||
+      start.snapshotDate ===
+        end.snapshotDate
+    ) {
+      setNotice({
+        severity: "warning",
+        text:
+          "Non sono disponibili fotografie sufficienti per questo periodo.",
+      });
+
+      return;
+    }
+
+    setQuickPeriod(period);
+    setFromSnapshot(
+      start.snapshotDate,
+    );
+    setToSnapshot(
+      end.snapshotDate,
+    );
+
+    void analyzePeriod(
+      start.snapshotDate,
+      end.snapshotDate,
+    );
+  }
+
   function requestAnalysis() {
     if (
       !fromSnapshot ||
@@ -2257,6 +2410,42 @@ export default function Performance() {
               Periodo di analisi
             </Typography>
 
+
+              <Box
+                sx={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 1,
+                  mb: 2,
+                }}
+              >
+                {quickPeriodOptions.map(
+                  (option) => (
+                    <Button
+                      key={option.value}
+                      size="small"
+                      variant={
+                        quickPeriod ===
+                        option.value
+                          ? "contained"
+                          : "outlined"
+                      }
+                      disabled={
+                        loading ||
+                        analyzing
+                      }
+                      onClick={() =>
+                        applyQuickPeriod(
+                          option.value,
+                        )
+                      }
+                    >
+                      {option.label}
+                    </Button>
+                  ),
+                )}
+              </Box>
+
             <Box
               aria-describedby={
                 periodSelectionError
@@ -2281,11 +2470,12 @@ export default function Performance() {
                 error={Boolean(
                   periodSelectionError,
                 )}
-                onChange={(event) =>
+                onChange={(event) => {
+                  setQuickPeriod(null);
                   setFromSnapshot(
                     event.target.value,
-                  )
-                }
+                  );
+                }}
               >
                 {periods.map(
                   (snapshot) => (
@@ -2314,11 +2504,12 @@ export default function Performance() {
                 error={Boolean(
                   periodSelectionError,
                 )}
-                onChange={(event) =>
+                onChange={(event) => {
+                  setQuickPeriod(null);
                   setToSnapshot(
                     event.target.value,
-                  )
-                }
+                  );
+                }}
               >
                 {periods.map(
                   (snapshot) => (
