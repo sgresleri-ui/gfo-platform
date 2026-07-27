@@ -198,6 +198,16 @@ export default function CapitalAllocation() {
     );
 
   const [
+    loadingTaxAnalysis,
+    setLoadingTaxAnalysis,
+  ] = useState(true);
+
+  const [
+    taxAnalysisError,
+    setTaxAnalysisError,
+  ] = useState<string | null>(null);
+
+  const [
     estimatedTaxReserveInput,
     setEstimatedTaxReserveInput,
   ] = useState("0");
@@ -325,6 +335,9 @@ export default function CapitalAllocation() {
 
   const loadTaxAnalysis =
     useCallback(async () => {
+      setLoadingTaxAnalysis(true);
+      setTaxAnalysisError(null);
+
       try {
         const result =
           await getElToroTaxAnalysis();
@@ -332,6 +345,12 @@ export default function CapitalAllocation() {
         setTaxAnalysis(result);
       } catch (error) {
         console.error(error);
+
+        setTaxAnalysisError(
+          "Impossibile caricare l’analisi fiscale di El Toro.",
+        );
+      } finally {
+        setLoadingTaxAnalysis(false);
       }
     }, []);
 
@@ -1252,6 +1271,34 @@ export default function CapitalAllocation() {
             }
           />
         </Box>
+
+          {loadingTaxAnalysis &&
+          !taxAnalysis ? (
+            <Alert
+              severity="info"
+              sx={{ mt: 2 }}
+            >
+              Caricamento dell’analisi fiscale
+              di El Toro…
+            </Alert>
+          ) : taxAnalysisError ? (
+            <Alert
+              severity="warning"
+              action={
+                <Button
+                  size="small"
+                  onClick={() =>
+                    void loadTaxAnalysis()
+                  }
+                >
+                  Riprova
+                </Button>
+              }
+              sx={{ mt: 2 }}
+            >
+              {taxAnalysisError}
+            </Alert>
+          ) : null}
 
         {settingsError ? (
           <Alert
