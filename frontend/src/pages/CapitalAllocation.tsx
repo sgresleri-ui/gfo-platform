@@ -61,12 +61,6 @@ function dateLabel(
 
 const capitalBlocks = [
   {
-    label: "Capitale di breve periodo",
-    description:
-      "Somme necessarie per obiettivi e acquisti previsti nei prossimi anni.",
-    source: "Budget e Planning",
-  },
-  {
     label: "Capitale investibile",
     description:
       "Quota realmente disponibile per investimenti finanziari di lungo termine.",
@@ -379,6 +373,13 @@ export default function CapitalAllocation() {
         expectedPropertySales,
     );
 
+  const residualAfterCommitments =
+    Math.max(
+      0,
+      preliminaryNetProceeds -
+        netFutureCommitments,
+    );
+
   const loadingSaleData =
     loadingProperties ||
     loadingSaleExpenses;
@@ -386,6 +387,14 @@ export default function CapitalAllocation() {
   const saleDataError =
     propertiesError ??
     saleExpensesError;
+
+  const loadingResidualCapital =
+    loadingSaleData ||
+    loadingPlanning;
+
+  const residualCapitalError =
+    saleDataError ??
+    planningError;
 
   const refreshSaleData = () => {
     void loadProperties();
@@ -718,6 +727,131 @@ export default function CapitalAllocation() {
                 {euro(
                   expectedPropertySales,
                 )}
+              </Typography>
+            </>
+          )}
+        </Paper>
+
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2.25,
+            border: "1px solid",
+            borderColor:
+              residualCapitalError
+                ? "error.main"
+                : "primary.main",
+            minHeight: 190,
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent:
+                "space-between",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
+            <Typography
+              variant="overline"
+              color={
+                residualCapitalError
+                  ? "error.main"
+                  : "primary.main"
+              }
+            >
+              Calcolo automatico
+            </Typography>
+
+            <Chip
+              size="small"
+              color={
+                residualCapitalError
+                  ? "error"
+                  : "success"
+              }
+              label={
+                residualCapitalError
+                  ? "Errore"
+                  : "Dati disponibili"
+              }
+            />
+          </Box>
+
+          <Typography
+            variant="h6"
+            sx={{
+              mt: 0.5,
+              fontWeight: 750,
+            }}
+          >
+            Capitale residuo dopo gli impegni
+          </Typography>
+
+          {loadingResidualCapital ? (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mt: 2,
+              }}
+            >
+              <CircularProgress size={20} />
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
+                Calcolo…
+              </Typography>
+            </Box>
+          ) : residualCapitalError ? (
+            <Typography
+              variant="body2"
+              color="error.main"
+              sx={{ mt: 1.5 }}
+            >
+              Calcolo non disponibile.
+            </Typography>
+          ) : (
+            <>
+              <Typography
+                variant="h5"
+                sx={{
+                  mt: 1.5,
+                  fontWeight: 800,
+                }}
+              >
+                {euro(
+                  residualAfterCommitments,
+                )}
+              </Typography>
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 0.75 }}
+              >
+                Realizzo netto preliminare meno
+                gli impegni netti del{" "}
+                {firstPlanningYear?.year ??
+                  "primo anno"}.
+              </Typography>
+
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{
+                  display: "block",
+                  mt: 1,
+                }}
+              >
+                Non è ancora il capitale
+                investibile definitivo: mancano
+                fiscalità, riserva minima e
+                fabbisogni di breve periodo.
               </Typography>
             </>
           )}
