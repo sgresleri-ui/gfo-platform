@@ -618,6 +618,15 @@ export default function CapitalAllocation() {
   const fiscalEstimateComplete =
     estimatedTaxReserve > 0;
 
+  const estimatesChanged =
+    platformSettings !== null &&
+    (
+      estimatedTaxReserve !==
+        platformSettings.estimatedTaxReserve ||
+      futureSaleCosts !==
+        platformSettings.futureSaleCosts
+    );
+
   const refreshSaleData = () => {
     void loadProperties();
     void loadSaleExpenses();
@@ -1420,11 +1429,13 @@ export default function CapitalAllocation() {
             value={
               estimatedTaxReserveInput
             }
-            onChange={(event) =>
-              setEstimatedTaxReserveInput(
-                event.target.value,
-              )
-            }
+              onChange={(event) => {
+                setEstimatedTaxReserveInput(
+                  event.target.value,
+                );
+                setEstimateSaveSuccess(false);
+                setEstimateSaveError(null);
+              }}
             slotProps={{
               htmlInput: {
                 inputMode: "decimal",
@@ -1437,11 +1448,13 @@ export default function CapitalAllocation() {
             size="small"
             label="Costi futuri di vendita (€)"
             value={futureSaleCostsInput}
-            onChange={(event) =>
-              setFutureSaleCostsInput(
-                event.target.value,
-              )
-            }
+              onChange={(event) => {
+                setFutureSaleCostsInput(
+                  event.target.value,
+                );
+                setEstimateSaveSuccess(false);
+                setEstimateSaveError(null);
+              }}
             slotProps={{
               htmlInput: {
                 inputMode: "decimal",
@@ -1465,10 +1478,11 @@ export default function CapitalAllocation() {
         >
           <Button
             variant="contained"
-            disabled={
-              loadingSettings ||
-              savingEstimates
-            }
+              disabled={
+                loadingSettings ||
+                savingEstimates ||
+                !estimatesChanged
+              }
             onClick={async () => {
               setSavingEstimates(true);
               setEstimateSaveError(null);
