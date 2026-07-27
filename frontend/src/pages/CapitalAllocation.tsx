@@ -25,9 +25,11 @@ import {
 } from "react-router-dom";
 
 import {
+  assessPlanningAllocationScenario,
   getLedgerTransactions,
   getPropertiesOverview,
   type LedgerTransaction,
+  type PlanningIntegratedScenarioAssessmentResponse,
   type PropertiesOverviewResponse,
 } from "../services/api";
 
@@ -59,12 +61,6 @@ function dateLabel(
 
 const capitalBlocks = [
   {
-    label: "Riserve e impegni futuri",
-    description:
-      "Liquidità di sicurezza, rate immobiliari e spese previste dal Budget.",
-    source: "Budget e Liquidità",
-  },
-  {
     label: "Capitale di breve periodo",
     description:
       "Somme necessarie per obiettivi e acquisti previsti nei prossimi anni.",
@@ -88,6 +84,7 @@ const decisionSteps = [
 
 const dataSources = [
   "Patrimonio",
+  "Ledger",
   "Budget",
   "Planning",
   "IPS",
@@ -129,6 +126,24 @@ export default function CapitalAllocation() {
   const [
     saleExpensesError,
     setSaleExpensesError,
+  ] = useState<string | null>(null);
+
+  const [
+    planningAssessment,
+    setPlanningAssessment,
+  ] =
+    useState<PlanningIntegratedScenarioAssessmentResponse | null>(
+      null,
+    );
+
+  const [
+    loadingPlanning,
+    setLoadingPlanning,
+  ] = useState(true);
+
+  const [
+    planningError,
+    setPlanningError,
   ] = useState<string | null>(null);
 
   const loadProperties =
@@ -175,12 +190,65 @@ export default function CapitalAllocation() {
       }
     }, []);
 
+  const loadPlanning =
+    useCallback(async () => {
+      setLoadingPlanning(true);
+      setPlanningError(null);
+
+      try {
+        const result =
+          await assessPlanningAllocationScenario({
+            initialCapitalAdjustment: 0,
+            annualReturnAdjustmentPct: 0,
+            annualCostAdjustmentPct: 0,
+            annualRevenueAdjustmentPct: 0,
+            expenseInflationDeltaPct: 0,
+            events: [],
+
+            allocation: {
+              liquidityReturnDeltaPct: 0,
+              investmentsReturnDeltaPct: 0,
+              realEstateReturnDeltaPct: 0,
+              otherAssetsReturnDeltaPct: 0,
+              liquidityTaxRatePct: 0,
+              investmentsTaxRatePct: 0,
+              rebalancingCostRatePct: 0,
+              rebalancingMinimumCost: 0,
+
+              positiveCashFlowDestination:
+                "LIQUIDITY",
+
+              deficitFundingOrder: [
+                "LIQUIDITY",
+                "INVESTMENTS",
+                "OTHER_ASSETS",
+                "REAL_ESTATE",
+              ],
+
+              transfers: [],
+            },
+          });
+
+        setPlanningAssessment(result);
+      } catch (error) {
+        console.error(error);
+
+        setPlanningError(
+          "Impossibile caricare gli impegni futuri dal Planning.",
+        );
+      } finally {
+        setLoadingPlanning(false);
+      }
+    }, []);
+
   useEffect(() => {
     void loadProperties();
     void loadSaleExpenses();
+    void loadPlanning();
   }, [
     loadProperties,
     loadSaleExpenses,
+    loadPlanning,
   ]);
 
   const heldForSale = useMemo(
@@ -288,6 +356,29 @@ export default function CapitalAllocation() {
         registeredSaleExpenses,
     );
 
+  const firstPlanningYear =
+    planningAssessment?.allocation.years[0] ??
+    null;
+
+  const grossFutureCommitments =
+    firstPlanningYear
+      ? firstPlanningYear.budget
+          .extraordinaryExpenses +
+        firstPlanningYear.budget
+          .propertyInvestments
+      : 0;
+
+  const expectedPropertySales =
+    firstPlanningYear?.budget
+      .propertySales ?? 0;
+
+  const netFutureCommitments =
+    Math.max(
+      0,
+      grossFutureCommitments -
+        expectedPropertySales,
+    );
+
   const loadingSaleData =
     loadingProperties ||
     loadingSaleExpenses;
@@ -344,11 +435,11 @@ export default function CapitalAllocation() {
         severity="info"
         sx={{ mb: 3 }}
       >
-        Fonti collegate: patrimonio immobiliare
-        e ledger delle transazioni. Il realizzo
-        netto preliminare considera le spese di
-        vendita già registrate, ma non ancora le
-        imposte stimate e gli impegni futuri.
+        Fonti collegate: patrimonio immobiliare,
+        ledger delle transazioni e Planning
+        ufficiale. Il realizzo netto preliminare
+        viene ora confrontato con gli impegni
+        futuri previsti dal Budget.
       </Alert>
 
       <Box
@@ -488,6 +579,145 @@ export default function CapitalAllocation() {
                   ? "immobile"
                   : "immobili"}{" "}
                 destinati alla vendita
+              </Typography>
+            </>
+          )}
+        </Paper>
+
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2.25,
+            border: "1px solid",
+            borderColor:
+              planningError
+                ? "error.main"
+                : "primary.main",
+            minHeight: 190,
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent:
+                "space-between",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
+            <Typography
+              variant="overline"
+              color={
+                planningError
+                  ? "error.main"
+                  : "primary.main"
+              }
+            >
+              Fonte collegata
+            </Typography>
+
+            <Chip
+              size="small"
+              color={
+                planningError
+                  ? "error"
+                  : firstPlanningYear
+                    ? "success"
+                    : "default"
+              }
+              label={
+                planningError
+                  ? "Errore"
+                  : firstPlanningYear
+                    ? "Planning disponibile"
+                    : "Nessun dato"
+              }
+            />
+          </Box>
+
+          <Typography
+            variant="h6"
+            sx={{
+              mt: 0.5,
+              fontWeight: 750,
+            }}
+          >
+            Riserve e impegni futuri
+          </Typography>
+
+          {loadingPlanning ? (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mt: 2,
+              }}
+            >
+              <CircularProgress size={20} />
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
+                Caricamento…
+              </Typography>
+            </Box>
+          ) : planningError ? (
+            <Button
+              size="small"
+              startIcon={
+                <RefreshRoundedIcon />
+              }
+              onClick={() =>
+                void loadPlanning()
+              }
+              sx={{ mt: 1.5 }}
+            >
+              Riprova
+            </Button>
+          ) : (
+            <>
+              <Typography
+                variant="h5"
+                sx={{
+                  mt: 1.5,
+                  fontWeight: 800,
+                }}
+              >
+                {euro(
+                  netFutureCommitments,
+                )}
+              </Typography>
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 0.75 }}
+              >
+                Impegni netti del{" "}
+                {firstPlanningYear?.year ??
+                  "primo anno"}{" "}
+                dopo la vendita immobiliare
+                prevista.
+              </Typography>
+
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{
+                  display: "block",
+                  mt: 1,
+                }}
+              >
+                Lordi{" "}
+                {euro(
+                  grossFutureCommitments,
+                )}{" "}
+                · vendite previste{" "}
+                {euro(
+                  expectedPropertySales,
+                )}
               </Typography>
             </>
           )}
@@ -990,8 +1220,12 @@ export default function CapitalAllocation() {
                   label={source}
                   variant="outlined"
                   color={
-                    source ===
-                    "Patrimonio"
+                    [
+                      "Patrimonio",
+                      "Ledger",
+                      "Budget",
+                      "Planning",
+                    ].includes(source)
                       ? "success"
                       : "default"
                   }
