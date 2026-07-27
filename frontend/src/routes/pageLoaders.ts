@@ -1,5 +1,6 @@
 export const pageLoaders = {
   budget: () => import("../pages/Budget"),
+  capitalAllocation: () => import("../pages/CapitalAllocation"),
   dashboard: () => import("../pages/Dashboard"),
   dataCatalog: () => import("../pages/DataCatalog"),
   dataQuality: () => import("../pages/DataQuality"),

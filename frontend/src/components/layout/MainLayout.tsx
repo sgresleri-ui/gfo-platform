@@ -36,6 +36,7 @@ import {
 
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import AccountBalanceWalletRoundedIcon from "@mui/icons-material/AccountBalanceWalletRounded";
+import AccountBalanceRoundedIcon from "@mui/icons-material/AccountBalanceRounded";
 import ShowChartRoundedIcon from "@mui/icons-material/ShowChartRounded";
 import SavingsRoundedIcon from "@mui/icons-material/SavingsRounded";
 import HomeWorkRoundedIcon from "@mui/icons-material/HomeWorkRounded";
@@ -166,6 +167,13 @@ const navigation = [
     icon: <TimelineRoundedIcon />,
     load: pageLoaders.planning,
   },
+    {
+      section: "Gestione patrimoniale",
+      label: "Allocazione Capitale",
+      path: "/capital-allocation",
+      icon: <AccountBalanceRoundedIcon />,
+      load: pageLoaders.capitalAllocation,
+    },
   {
     section: "Operatività",
     label: "Calendario Operativo",

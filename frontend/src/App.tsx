@@ -13,6 +13,7 @@ import MainLayout from "./components/layout/MainLayout";
 import { pageLoaders } from "./routes/pageLoaders";
 
 const Budget = lazy(pageLoaders.budget);
+const CapitalAllocation = lazy(pageLoaders.capitalAllocation);
 const Dashboard = lazy(pageLoaders.dashboard);
 const DataCatalog = lazy(pageLoaders.dataCatalog);
 const DataQuality = lazy(pageLoaders.dataQuality);
@@ -112,6 +113,11 @@ function App() {
           path="planning"
           element={<Planning />}
         />
+
+          <Route
+            path="capital-allocation"
+            element={<CapitalAllocation />}
+          />
 
         <Route
           path="operational-calendar"
