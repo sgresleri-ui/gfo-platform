@@ -52,6 +52,8 @@ const DEFAULT_SETTINGS: PlatformSettingsInput = {
   automaticRefresh: true,
   showArchivedPositions: false,
   requireDecisionNotes: true,
+  estimatedTaxReserve: 0,
+  futureSaleCosts: 0,
 };
 
 function toSettingsForm(
@@ -72,6 +74,10 @@ function toSettingsForm(
       value.showArchivedPositions,
     requireDecisionNotes:
       value.requireDecisionNotes,
+      estimatedTaxReserve:
+        value.estimatedTaxReserve,
+      futureSaleCosts:
+        value.futureSaleCosts,
   };
 }
 

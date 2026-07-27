@@ -328,6 +328,8 @@ export type PlatformSettingsInput = {
   automaticRefresh: boolean;
   showArchivedPositions: boolean;
   requireDecisionNotes: boolean;
+  estimatedTaxReserve: number;
+  futureSaleCosts: number;
 };
 
 export type PlatformSettingsResponse =
@@ -347,7 +349,7 @@ export async function getPlatformSettings(): Promise<PlatformSettingsResponse> {
 }
 
 export async function updatePlatformSettings(
-  settings: PlatformSettingsInput,
+  settings: Partial<PlatformSettingsInput>,
 ): Promise<PlatformSettingsResponse> {
   const response = await fetch(
     `${API_URL}/settings`,

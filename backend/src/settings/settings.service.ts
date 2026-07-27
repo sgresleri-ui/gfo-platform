@@ -13,6 +13,8 @@ export type PlatformSettingsInput = {
   automaticRefresh: boolean;
   showArchivedPositions: boolean;
   requireDecisionNotes: boolean;
+  estimatedTaxReserve: number;
+  futureSaleCosts: number;
 };
 
 const DEFAULT_SETTINGS: PlatformSettingsInput = {
@@ -27,6 +29,8 @@ const DEFAULT_SETTINGS: PlatformSettingsInput = {
   automaticRefresh: true,
   showArchivedPositions: false,
   requireDecisionNotes: true,
+  estimatedTaxReserve: 0,
+  futureSaleCosts: 0,
 };
 
 @Injectable()
@@ -100,6 +104,20 @@ export class SettingsService {
         typeof input.requireDecisionNotes === 'boolean'
           ? input.requireDecisionNotes
           : current.requireDecisionNotes,
+
+      estimatedTaxReserve:
+        typeof input.estimatedTaxReserve === 'number' &&
+        Number.isFinite(input.estimatedTaxReserve) &&
+        input.estimatedTaxReserve >= 0
+          ? input.estimatedTaxReserve
+          : current.estimatedTaxReserve,
+
+      futureSaleCosts:
+        typeof input.futureSaleCosts === 'number' &&
+        Number.isFinite(input.futureSaleCosts) &&
+        input.futureSaleCosts >= 0
+          ? input.futureSaleCosts
+          : current.futureSaleCosts,
     };
 
     return this.prisma.platformSetting.upsert({

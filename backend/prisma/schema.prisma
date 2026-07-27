@@ -90,6 +90,8 @@ model PlatformSetting {
   automaticRefresh       Boolean  @default(true)
   showArchivedPositions  Boolean  @default(false)
   requireDecisionNotes   Boolean  @default(true)
+  estimatedTaxReserve    Float    @default(0)
+  futureSaleCosts        Float    @default(0)
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 }

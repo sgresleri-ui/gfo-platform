@@ -322,6 +322,14 @@ export default function CapitalAllocation() {
           await getPlatformSettings();
 
         setPlatformSettings(result);
+
+        setEstimatedTaxReserveInput(
+          String(result.estimatedTaxReserve),
+        );
+
+        setFutureSaleCostsInput(
+          String(result.futureSaleCosts),
+        );
       } catch (error) {
         console.error(error);
 
