@@ -20,11 +20,13 @@ import {
   controllers: [
     LedgerController,
   ],
-
   providers: [
     LedgerService,
     TransactionLedgerService,
     TransactionImportService,
+  ],
+  exports: [
+    LedgerService,
   ],
 })
 export class LedgerModule {}
