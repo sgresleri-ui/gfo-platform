@@ -4015,6 +4015,15 @@ export type ElToroTaxAnalysisResponse = {
     status: "NEEDS_VALIDATION";
   };
 
+  planningEstimates: {
+    estimatedTaxReserve: number;
+    futureSaleCosts: number;
+    totalEstimatedDeductions: number;
+    netProceedsAfterEstimates: number;
+    source: "PLATFORM_SETTINGS";
+    status: "USER_ESTIMATE" | "NOT_SET";
+  };
+
   evidence: {
     recordedSellingCostTransactionCount:
       number;

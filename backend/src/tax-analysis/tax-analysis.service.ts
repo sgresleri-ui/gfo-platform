@@ -108,6 +108,37 @@ export class TaxAnalysisService {
           recordedSellingCosts,
       );
 
+    const estimatedTaxReserve =
+      this.roundMoney(
+        Math.max(
+          0,
+          settings.estimatedTaxReserve,
+        ),
+      );
+
+    const futureSaleCosts =
+      this.roundMoney(
+        Math.max(
+          0,
+          settings.futureSaleCosts,
+        ),
+      );
+
+    const totalPlanningEstimates =
+      this.roundMoney(
+        estimatedTaxReserve +
+          futureSaleCosts,
+      );
+
+    const netProceedsAfterEstimates =
+      this.roundMoney(
+        Math.max(
+          0,
+          netProceedsBeforeTax -
+            totalPlanningEstimates,
+        ),
+      );
+
     return {
       property: {
         id: property.id,
@@ -155,6 +186,19 @@ export class TaxAnalysisService {
         status: 'NEEDS_VALIDATION',
       },
 
+      planningEstimates: {
+        estimatedTaxReserve,
+        futureSaleCosts,
+        totalEstimatedDeductions:
+          totalPlanningEstimates,
+        netProceedsAfterEstimates,
+        source: 'PLATFORM_SETTINGS',
+        status:
+          totalPlanningEstimates > 0
+            ? 'USER_ESTIMATE'
+            : 'NOT_SET',
+      },
+
       evidence: {
         recordedSellingCostTransactionCount:
           saleExpenseTransactions.length,
@@ -179,6 +223,7 @@ export class TaxAnalysisService {
         'La differenza rispetto al costo storico non rappresenta automaticamente la plusvalenza imponibile.',
         'La residenza fiscale effettiva deve essere verificata alla data del rogito.',
         'Imposta e ricavo netto dopo fiscalità richiedono validazione professionale.',
+        'La riserva fiscale salvata è una stima manuale prudenziale e non rappresenta un’imposta calcolata.',
       ],
     };
   }
