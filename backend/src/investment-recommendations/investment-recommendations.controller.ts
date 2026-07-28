@@ -1,6 +1,9 @@
-import { Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put } from '@nestjs/common';
 
-import { InvestmentRecommendationsService } from './investment-recommendations.service';
+import {
+  InvestmentRecommendationsService,
+  type UpdateElToroEntryPlanInput,
+} from './investment-recommendations.service';
 
 @Controller('investment-recommendations')
 export class InvestmentRecommendationsController {
@@ -16,5 +19,18 @@ export class InvestmentRecommendationsController {
   @Post('el-toro/generate')
   generateElToroRecommendation() {
     return this.investmentRecommendationsService.generateElToroRecommendation();
+  }
+
+  @Get('el-toro/plan')
+  getElToroEntryPlan() {
+    return this.investmentRecommendationsService.getElToroEntryPlan();
+  }
+
+  @Put('el-toro/plan')
+  updateElToroEntryPlan(
+    @Body()
+    input: UpdateElToroEntryPlanInput,
+  ) {
+    return this.investmentRecommendationsService.updateElToroEntryPlan(input);
   }
 }

@@ -17,6 +17,8 @@ import AutoGraphRoundedIcon from "@mui/icons-material/AutoGraphRounded";
 import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 
+import InvestmentEntryPlanLab from "./InvestmentEntryPlanLab";
+
 import {
   generateElToroInvestmentRecommendation,
   getElToroInvestmentRecommendation,
@@ -582,76 +584,11 @@ export default function InvestmentRecommendationPanel({
 
           <Divider sx={{ my: 3 }} />
 
-          <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
-            Piano di ingresso per tranche
-          </Typography>
-
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: {
-                xs: "1fr",
-                md: "repeat(2, minmax(0, 1fr))",
-                xl: "repeat(4, minmax(0, 1fr))",
-              },
-              gap: 1.25,
-              mt: 1.5,
-            }}
-          >
-            {recommendation.tranches.map((tranche) => (
-              <Box
-                key={tranche.number}
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2,
-                  bgcolor: "action.hover",
-                }}
-              >
-                <Typography variant="overline" color="primary.main">
-                  Tranche {tranche.number} · {tranche.timing}
-                </Typography>
-
-                <Typography
-                  variant="h6"
-                  sx={{
-                    mt: 0.25,
-                    fontWeight: 850,
-                  }}
-                >
-                  {euro(tranche.amount)}
-                </Typography>
-
-                <Typography variant="caption" color="text.secondary">
-                  {tranche.percentage}% del capitale core
-                </Typography>
-
-                <Box
-                  sx={{
-                    mt: 1.25,
-                    display: "grid",
-                    gap: 0.4,
-                  }}
-                >
-                  {tranche.orders.map((order) => (
-                    <Typography key={order.assetClass} variant="caption">
-                      {order.label}: <strong>{euro(order.amount)}</strong>
-                    </Typography>
-                  ))}
-                </Box>
-
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{
-                    display: "block",
-                    mt: 1.25,
-                  }}
-                >
-                  {tranche.trigger}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
+          <InvestmentEntryPlanLab
+            recommendationId={recommendation.id}
+            refreshToken={refreshToken}
+            recommendationIsCurrent={recommendation.isCurrent}
+          />
 
           <Divider sx={{ my: 3 }} />
 

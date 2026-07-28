@@ -1,3 +1,5 @@
+import { BadRequestException } from '@nestjs/common';
+
 import { CapitalAllocationService } from '../capital-allocation/capital-allocation.service';
 import { InvestmentsService } from '../investments/investments.service';
 import { IpsClassificationService } from '../ips/ips-classification.service';
@@ -113,16 +115,44 @@ describe('InvestmentRecommendationsService', () => {
       ],
     };
 
+    let lastSnapshot: Record<string, unknown> | null = null;
+    let storedPlan: Record<string, unknown> | null = null;
     const prisma = {
       investmentRecommendationSnapshot: {
+        findFirst: jest.fn().mockImplementation(() => lastSnapshot),
         create: jest
           .fn()
-          .mockImplementation(
-            ({ data }: { data: Record<string, unknown> }) => ({
+          .mockImplementation(({ data }: { data: Record<string, unknown> }) => {
+            lastSnapshot = {
               id: 'recommendation-1',
               generatedAt: new Date('2026-07-28T12:00:00.000Z'),
               ...data,
-            }),
+            };
+
+            return lastSnapshot;
+          }),
+      },
+      investmentRecommendationPlan: {
+        findUnique: jest.fn().mockImplementation(() => storedPlan),
+        upsert: jest
+          .fn()
+          .mockImplementation(
+            ({
+              create,
+              update,
+            }: {
+              create: Record<string, unknown>;
+              update: Record<string, unknown>;
+            }) => {
+              storedPlan = {
+                id: 1,
+                createdAt: new Date('2026-07-28T13:00:00.000Z'),
+                updatedAt: new Date('2026-07-28T13:00:00.000Z'),
+                ...(storedPlan ? update : create),
+              };
+
+              return storedPlan;
+            },
           ),
       },
     } as unknown as PrismaService;
@@ -203,5 +233,69 @@ describe('InvestmentRecommendationsService', () => {
     expect(tranches.reduce((sum, tranche) => sum + tranche.amount, 0)).toBe(
       500_000,
     );
+  });
+
+  it('compares a base and a cautious entry plan with temporary XEON parking', async () => {
+    const service = createService(true);
+
+    await service.generateElToroRecommendation();
+
+    const result = await service.getElToroEntryPlan();
+    const plan = result.plan;
+    const base = plan?.scenarios.find((scenario) => scenario.code === 'BASE');
+    const cautious = plan?.scenarios.find(
+      (scenario) => scenario.code === 'CAUTIOUS',
+    );
+
+    expect(plan?.selectedScenario).toBe('BASE');
+    expect(base?.tranches.map((tranche) => tranche.amount)).toEqual([
+      200_000, 100_000, 100_000, 100_000,
+    ]);
+    expect(cautious?.tranches).toHaveLength(6);
+    expect(cautious?.allocatedCapital).toBe(500_000);
+    expect(cautious?.tranches[0].temporaryParkingAfter).toBe(375_000);
+    expect(cautious?.tranches[5].temporaryParkingAfter).toBe(0);
+    expect(plan?.validation.scheduleReconciled).toBe(true);
+    expect(plan?.execution.status).toBe('BLOCKED');
+    expect(plan?.fiscalStatus).toBe('NEEDS_VALIDATION');
+  });
+
+  it('persists the preferred scenario and an editable reconciled schedule', async () => {
+    const service = createService(true);
+
+    const generated = await service.generateElToroRecommendation();
+    const result = await service.updateElToroEntryPlan({
+      recommendationId: generated.recommendation.id,
+      selectedScenario: 'CAUTIOUS',
+      tranchePercentages: [30, 14, 14, 14, 14, 14],
+      fundingAccount: 'RakBank EUR',
+      executionBroker: 'Interactive Brokers',
+      notes: 'Bozza da validare prima di ogni ordine.',
+    });
+    const selected = result.plan.scenarios.find(
+      (scenario) => scenario.code === 'CAUTIOUS',
+    );
+
+    expect(result.plan.saved).toBe(true);
+    expect(result.plan.selectedScenario).toBe('CAUTIOUS');
+    expect(result.plan.fundingAccount).toBe('RakBank EUR');
+    expect(result.plan.executionBroker).toBe('Interactive Brokers');
+    expect(selected?.percentages).toEqual([30, 14, 14, 14, 14, 14]);
+    expect(selected?.allocatedCapital).toBe(500_000);
+    expect(selected?.tranches[0].amount).toBe(150_000);
+    expect(result.plan.status).toBe('DRAFT_NEEDS_PROFESSIONAL_VALIDATION');
+  });
+
+  it('rejects a schedule that does not allocate the full core capital', async () => {
+    const service = createService(true);
+    const generated = await service.generateElToroRecommendation();
+
+    await expect(
+      service.updateElToroEntryPlan({
+        recommendationId: generated.recommendation.id,
+        selectedScenario: 'BASE',
+        tranchePercentages: [40, 20, 20, 10],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

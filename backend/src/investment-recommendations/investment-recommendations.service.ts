@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 
 import { CapitalAllocationService } from '../capital-allocation/capital-allocation.service';
 import { InvestmentsService } from '../investments/investments.service';
@@ -8,6 +8,7 @@ import { IpsClassificationService } from '../ips/ips-classification.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 const ENGINE_VERSION = '1.0.0';
+const ENTRY_PLAN_VERSION = '1.0.0';
 const EL_TORO_PROPERTY_CODE = 'PROPERTY_EL_TORO';
 const MARKET_CONTEXT_MAX_AGE_DAYS = 45;
 
@@ -135,6 +136,57 @@ type RecommendationTranche = {
   }>;
 };
 
+type EntryScenarioCode = 'BASE' | 'CAUTIOUS';
+
+type EntryScenarioDefinition = {
+  code: EntryScenarioCode;
+  label: string;
+  description: string;
+  durationDays: number;
+  percentages: number[];
+  timings: string[];
+  triggers: string[];
+};
+
+type StoredEntryPlan = {
+  id: number;
+  recommendationSnapshotId: string;
+  selectedScenario: string;
+  tranchePercentagesJson: string;
+  fundingAccount: string | null;
+  executionBroker: string | null;
+  notes: string | null;
+  status: string;
+  updatedAt: Date;
+};
+
+type EntryPlanRecommendation = {
+  id: string;
+  status: string;
+  isCurrent: boolean;
+  staleReasons: string[];
+  fiscalStatus: 'NEEDS_VALIDATION';
+  capitalPlan: {
+    investibleCapital: number;
+  };
+  dataQuality: {
+    complianceAvailable: boolean;
+  };
+  allocation: {
+    current: IpsOverview['allocation'];
+    proposed: AllocationRow[];
+  };
+};
+
+export type UpdateElToroEntryPlanInput = {
+  recommendationId: string;
+  selectedScenario: EntryScenarioCode;
+  tranchePercentages: number[];
+  fundingAccount?: string | null;
+  executionBroker?: string | null;
+  notes?: string | null;
+};
+
 type CurrentSnapshotData = {
   capitalPlan: {
     investibleCapital: number;
@@ -232,6 +284,48 @@ const INSTRUMENTS: InstrumentDefinition[] = [
   },
 ];
 
+const ENTRY_SCENARIOS: EntryScenarioDefinition[] = [
+  {
+    code: 'BASE',
+    label: 'Ingresso base',
+    description:
+      'Quattro tranche in 90 giorni, coerenti con lo scenario neutrale-prudente del Recommendation Engine.',
+    durationDays: 90,
+    percentages: [40, 20, 20, 20],
+    timings: ['T0', 'T+30 giorni', 'T+60 giorni', 'T+90 giorni'],
+    triggers: [
+      'Disponibilità effettiva del capitale e completamento dei blocchi di validazione.',
+      'Ingresso programmato, salvo variazioni materiali di patrimonio, IPS o fabbisogni.',
+      'Conferma di liquidità protetta, IPS e adeguatezza degli strumenti.',
+      'Completamento del piano; ogni rinvio richiede una nuova decisione documentata.',
+    ],
+  },
+  {
+    code: 'CAUTIOUS',
+    label: 'Ingresso prudente',
+    description:
+      'Sei tranche in 150 giorni per ridurre il rischio di timing; il capitale non ancora attivato resta temporaneamente parcheggiabile in XEON.',
+    durationDays: 150,
+    percentages: [25, 15, 15, 15, 15, 15],
+    timings: [
+      'T0',
+      'T+30 giorni',
+      'T+60 giorni',
+      'T+90 giorni',
+      'T+120 giorni',
+      'T+150 giorni',
+    ],
+    triggers: [
+      'Disponibilità effettiva del capitale e completamento dei blocchi di validazione.',
+      'Ingresso programmato e verifica dell’assenza di nuovi fabbisogni familiari.',
+      'Conferma di liquidità protetta, IPS e adeguatezza degli strumenti.',
+      'Revisione intermedia del contesto, senza market timing discrezionale.',
+      'Conferma di costi, KID e disponibilità degli strumenti presso il broker.',
+      'Completamento del piano; ogni rinvio richiede una nuova decisione documentata.',
+    ],
+  },
+];
+
 @Injectable()
 export class InvestmentRecommendationsService {
   constructor(
@@ -257,6 +351,25 @@ export class InvestmentRecommendationsService {
     const parsed: unknown = JSON.parse(value);
 
     return parsed as T;
+  }
+
+  private normalizeOptionalText(
+    value: string | null | undefined,
+    maximumLength: number,
+  ): string | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    const normalized = value.trim();
+
+    if (normalized.length > maximumLength) {
+      throw new BadRequestException(
+        `Il testo non può superare ${maximumLength} caratteri.`,
+      );
+    }
+
+    return normalized.length > 0 ? normalized : null;
   }
 
   private async loadInputs(): Promise<RecommendationInputs> {
@@ -287,10 +400,8 @@ export class InvestmentRecommendationsService {
         positionId: item.positionId,
         valueBase: item.valueBase,
         ipsAssetClass: item.ipsAssetClass,
-        classificationMode:
-          item.classificationMode,
-        lookThroughAllocation:
-          item.lookThroughAllocation,
+        classificationMode: item.classificationMode,
+        lookThroughAllocation: item.lookThroughAllocation,
         updatedAt: item.updatedAt,
       })),
     };
@@ -541,6 +652,307 @@ export class InvestmentRecommendationsService {
     });
   }
 
+  private getEntryScenarioDefinition(
+    code: string,
+  ): EntryScenarioDefinition | null {
+    return ENTRY_SCENARIOS.find((scenario) => scenario.code === code) ?? null;
+  }
+
+  private validateTranchePercentages(
+    scenario: EntryScenarioDefinition,
+    percentages: number[],
+  ): number[] {
+    if (
+      !Array.isArray(percentages) ||
+      percentages.length !== scenario.percentages.length
+    ) {
+      throw new BadRequestException(
+        `Lo scenario ${scenario.label} richiede ${scenario.percentages.length} tranche.`,
+      );
+    }
+
+    const normalized = percentages.map((value) =>
+      this.roundPercentage(Number(value)),
+    );
+
+    if (
+      normalized.some(
+        (value) => !Number.isFinite(value) || value <= 0 || value > 100,
+      )
+    ) {
+      throw new BadRequestException(
+        'Ogni tranche deve avere una percentuale maggiore di zero e non superiore al 100%.',
+      );
+    }
+
+    const total = this.roundPercentage(
+      normalized.reduce((sum, value) => sum + value, 0),
+    );
+
+    if (Math.abs(total - 100) > 0.0001) {
+      throw new BadRequestException(
+        `Le percentuali delle tranche devono totalizzare 100%. Totale corrente: ${total}%.`,
+      );
+    }
+
+    return normalized;
+  }
+
+  private buildEntryScenario(
+    definition: EntryScenarioDefinition,
+    allocation: AllocationRow[],
+    investibleCapital: number,
+    customPercentages?: number[],
+  ) {
+    const percentages = customPercentages
+      ? this.validateTranchePercentages(definition, customPercentages)
+      : definition.percentages;
+    const perClass = new Map<string, number[]>();
+
+    for (const item of allocation) {
+      let allocated = 0;
+
+      const amounts = percentages.map((percentage, index) => {
+        if (index === percentages.length - 1) {
+          return this.roundMoney(item.newCapitalAmount - allocated);
+        }
+
+        const amount = this.roundMoney(
+          item.newCapitalAmount * (percentage / 100),
+        );
+
+        allocated = this.roundMoney(allocated + amount);
+
+        return amount;
+      });
+
+      perClass.set(item.code, amounts);
+    }
+
+    let cumulativeAmount = 0;
+    const tranches = percentages.map((percentage, index) => {
+      const orders = allocation
+        .map((item) => ({
+          assetClass: item.code,
+          label: item.label,
+          amount: perClass.get(item.code)?.[index] ?? 0,
+        }))
+        .filter((item) => item.amount > 0);
+      const amount = this.roundMoney(
+        orders.reduce((sum, order) => sum + order.amount, 0),
+      );
+
+      cumulativeAmount = this.roundMoney(cumulativeAmount + amount);
+
+      return {
+        number: index + 1,
+        percentage,
+        timing: definition.timings[index],
+        trigger: definition.triggers[index],
+        amount,
+        cumulativeAmount,
+        temporaryParkingAfter: this.roundMoney(
+          Math.max(0, investibleCapital - cumulativeAmount),
+        ),
+        orders,
+      };
+    });
+    const allocatedCapital = this.roundMoney(
+      tranches.reduce((sum, tranche) => sum + tranche.amount, 0),
+    );
+
+    return {
+      code: definition.code,
+      label: definition.label,
+      description: definition.description,
+      durationDays: definition.durationDays,
+      percentages,
+      allocatedCapital,
+      reconciled: allocatedCapital === this.roundMoney(investibleCapital),
+      temporaryParking: {
+        ticker: 'XEON',
+        isin: 'LU0290358497',
+        role: 'Parcheggio temporaneo massimo del capitale non ancora attivato; non modifica l’allocazione strategica finale.',
+      },
+      tranches,
+    };
+  }
+
+  private validateProjectedIps(recommendation: EntryPlanRecommendation): {
+    assessed: boolean;
+    withinLimits: boolean | null;
+    breaches: Array<{
+      code: string;
+      label: string;
+      projectedWeight: number;
+      minimum: number | null;
+      maximum: number | null;
+      direction: 'BELOW_MINIMUM' | 'ABOVE_MAXIMUM';
+    }>;
+  } {
+    if (!recommendation.dataQuality.complianceAvailable) {
+      return {
+        assessed: false,
+        withinLimits: null,
+        breaches: [],
+      };
+    }
+
+    const breaches: Array<{
+      code: string;
+      label: string;
+      projectedWeight: number;
+      minimum: number | null;
+      maximum: number | null;
+      direction: 'BELOW_MINIMUM' | 'ABOVE_MAXIMUM';
+    }> = [];
+
+    for (const proposed of recommendation.allocation.proposed) {
+      const ipsClass = recommendation.allocation.current.find(
+        (item) => item.code === proposed.code,
+      );
+
+      if (!ipsClass || proposed.projectedWeight === null) {
+        continue;
+      }
+
+      if (
+        ipsClass.minimum !== null &&
+        proposed.projectedWeight < ipsClass.minimum
+      ) {
+        breaches.push({
+          code: proposed.code,
+          label: proposed.label,
+          projectedWeight: proposed.projectedWeight,
+          minimum: ipsClass.minimum,
+          maximum: ipsClass.maximum,
+          direction: 'BELOW_MINIMUM',
+        });
+
+        continue;
+      }
+
+      if (
+        ipsClass.maximum !== null &&
+        proposed.projectedWeight > ipsClass.maximum
+      ) {
+        breaches.push({
+          code: proposed.code,
+          label: proposed.label,
+          projectedWeight: proposed.projectedWeight,
+          minimum: ipsClass.minimum,
+          maximum: ipsClass.maximum,
+          direction: 'ABOVE_MAXIMUM',
+        });
+      }
+    }
+
+    return {
+      assessed: true,
+      withinLimits: breaches.length === 0,
+      breaches,
+    };
+  }
+
+  private buildEntryPlanResponse(
+    recommendation: EntryPlanRecommendation,
+    storedPlan: StoredEntryPlan | null,
+    staleSavedPlan: boolean,
+  ) {
+    const storedScenario = storedPlan
+      ? this.getEntryScenarioDefinition(storedPlan.selectedScenario)
+      : null;
+    const selectedScenario = storedScenario?.code ?? 'BASE';
+    let storedPercentages: number[] | undefined;
+    const warnings: string[] = [
+      'Il piano è una bozza operativa: non genera né trasmette ordini.',
+      'Fiscalità El Toro e capitale definitivamente investibile restano NEEDS_VALIDATION fino alla validazione professionale.',
+      'Il parcheggio XEON è temporaneo e deve essere verificato per KID, costi, fiscalità, adeguatezza e disponibilità presso il broker.',
+    ];
+
+    if (storedPlan && !staleSavedPlan && storedScenario) {
+      try {
+        storedPercentages = this.validateTranchePercentages(
+          storedScenario,
+          this.parseJson<number[]>(storedPlan.tranchePercentagesJson),
+        );
+      } catch {
+        warnings.unshift(
+          'La ripartizione salvata non è più valida ed è stata sostituita con quella predefinita.',
+        );
+      }
+    }
+
+    if (staleSavedPlan) {
+      warnings.unshift(
+        'Il piano salvato appartiene a una proposta precedente: selezione e tranche devono essere confermate sullo snapshot corrente.',
+      );
+    }
+
+    const scenarios = ENTRY_SCENARIOS.map((definition) =>
+      this.buildEntryScenario(
+        definition,
+        recommendation.allocation.proposed,
+        recommendation.capitalPlan.investibleCapital,
+        definition.code === selectedScenario ? storedPercentages : undefined,
+      ),
+    );
+    const selected = scenarios.find(
+      (scenario) => scenario.code === selectedScenario,
+    );
+    const ipsValidation = this.validateProjectedIps(recommendation);
+    const scheduleReconciled = selected?.reconciled ?? false;
+    const readyForProfessionalValidation =
+      recommendation.isCurrent &&
+      scheduleReconciled &&
+      recommendation.status === 'NEEDS_VALIDATION';
+    const derivedStatus = !recommendation.isCurrent
+      ? 'DRAFT_STALE'
+      : !scheduleReconciled
+        ? 'DRAFT_INVALID'
+        : ipsValidation.withinLimits === false
+          ? 'DRAFT_NEEDS_IPS_REVIEW'
+          : 'DRAFT_NEEDS_PROFESSIONAL_VALIDATION';
+
+    return {
+      planVersion: ENTRY_PLAN_VERSION,
+      recommendationId: recommendation.id,
+      saved:
+        storedPlan !== null &&
+        !staleSavedPlan &&
+        storedPlan.recommendationSnapshotId === recommendation.id,
+      selectedScenario,
+      scenarios,
+      fundingAccount: staleSavedPlan
+        ? null
+        : (storedPlan?.fundingAccount ?? null),
+      executionBroker: staleSavedPlan
+        ? null
+        : (storedPlan?.executionBroker ?? null),
+      notes: staleSavedPlan ? null : (storedPlan?.notes ?? null),
+      status: storedPlan && !staleSavedPlan ? storedPlan.status : derivedStatus,
+      updatedAt:
+        storedPlan && !staleSavedPlan
+          ? storedPlan.updatedAt.toISOString()
+          : null,
+      fiscalStatus: recommendation.fiscalStatus,
+      execution: {
+        automatedExecution: false,
+        status: 'BLOCKED' as const,
+        blockingReason:
+          'La fiscalità resta NEEDS_VALIDATION e la bozza deve essere approvata professionalmente prima di qualunque ordine.',
+      },
+      validation: {
+        investibleCapital: recommendation.capitalPlan.investibleCapital,
+        allocatedCapital: selected?.allocatedCapital ?? 0,
+        scheduleReconciled,
+        ips: ipsValidation,
+        readyForProfessionalValidation,
+      },
+      warnings,
+    };
+  }
+
   private determineStatus(inputs: RecommendationInputs): RecommendationStatus {
     if (
       inputs.capitalPlan.reconciliation.fundingGap > 0 ||
@@ -627,7 +1039,7 @@ export class InvestmentRecommendationsService {
       generatedAt: snapshot.generatedAt.toISOString(),
       isCurrent,
       staleReasons,
-      fiscalStatus: 'NEEDS_VALIDATION',
+      fiscalStatus: 'NEEDS_VALIDATION' as const,
       execution: {
         automatedExecution: false,
         status: 'BLOCKED',
@@ -765,6 +1177,128 @@ export class InvestmentRecommendationsService {
         automatedExecution: false,
       },
       recommendation: this.parseSnapshot(snapshot, true, []),
+    };
+  }
+
+  async getElToroEntryPlan() {
+    const recommendationResponse = await this.getLatestElToroRecommendation();
+    const recommendation = recommendationResponse.recommendation;
+
+    if (!recommendation) {
+      return {
+        plan: null,
+      };
+    }
+
+    const storedPlan =
+      await this.prisma.investmentRecommendationPlan.findUnique({
+        where: {
+          sourcePropertyCode: EL_TORO_PROPERTY_CODE,
+        },
+      });
+    const staleSavedPlan =
+      storedPlan !== null &&
+      storedPlan.recommendationSnapshotId !== recommendation.id;
+
+    return {
+      plan: this.buildEntryPlanResponse(
+        recommendation,
+        storedPlan,
+        staleSavedPlan,
+      ),
+    };
+  }
+
+  async updateElToroEntryPlan(input: UpdateElToroEntryPlanInput) {
+    const recommendationResponse = await this.getLatestElToroRecommendation();
+    const recommendation = recommendationResponse.recommendation;
+
+    if (!recommendation) {
+      throw new BadRequestException(
+        'Genera prima una proposta di investimento El Toro.',
+      );
+    }
+
+    if (
+      !input ||
+      typeof input.recommendationId !== 'string' ||
+      input.recommendationId !== recommendation.id
+    ) {
+      throw new BadRequestException(
+        'La bozza non corrisponde all’ultima proposta. Ricarica il Recommendation Engine.',
+      );
+    }
+
+    if (!recommendation.isCurrent) {
+      throw new BadRequestException(
+        'La proposta non è più allineata agli input correnti. Rigenerala prima di salvare il piano.',
+      );
+    }
+
+    if (recommendation.status !== 'NEEDS_VALIDATION') {
+      throw new BadRequestException(
+        'Il piano può essere salvato solo dopo avere completato capitale, classificazione IPS e aggiornamento mercati.',
+      );
+    }
+
+    const scenario = this.getEntryScenarioDefinition(input.selectedScenario);
+
+    if (!scenario) {
+      throw new BadRequestException(
+        'Seleziona uno scenario di ingresso valido.',
+      );
+    }
+
+    const percentages = this.validateTranchePercentages(
+      scenario,
+      input.tranchePercentages,
+    );
+    const scenarioPlan = this.buildEntryScenario(
+      scenario,
+      recommendation.allocation.proposed,
+      recommendation.capitalPlan.investibleCapital,
+      percentages,
+    );
+
+    if (!scenarioPlan.reconciled) {
+      throw new BadRequestException(
+        'Gli importi delle tranche non riconciliano con il capitale core investibile.',
+      );
+    }
+
+    const ipsValidation = this.validateProjectedIps(recommendation);
+    const status =
+      ipsValidation.withinLimits === false
+        ? 'DRAFT_NEEDS_IPS_REVIEW'
+        : 'DRAFT_NEEDS_PROFESSIONAL_VALIDATION';
+    const savedPlan = await this.prisma.investmentRecommendationPlan.upsert({
+      where: {
+        sourcePropertyCode: EL_TORO_PROPERTY_CODE,
+      },
+      update: {
+        recommendationSnapshotId: recommendation.id,
+        selectedScenario: scenario.code,
+        tranchePercentagesJson: JSON.stringify(percentages),
+        fundingAccount: this.normalizeOptionalText(input.fundingAccount, 120),
+        executionBroker: this.normalizeOptionalText(input.executionBroker, 120),
+        notes: this.normalizeOptionalText(input.notes, 2_000),
+        status,
+      },
+      create: {
+        id: 1,
+        sourcePropertyCode: EL_TORO_PROPERTY_CODE,
+        recommendationSnapshotId: recommendation.id,
+        selectedScenario: scenario.code,
+        tranchePercentagesJson: JSON.stringify(percentages),
+        fundingAccount: this.normalizeOptionalText(input.fundingAccount, 120),
+        executionBroker: this.normalizeOptionalText(input.executionBroker, 120),
+        notes: this.normalizeOptionalText(input.notes, 2_000),
+        status,
+      },
+    });
+
+    return {
+      plan: this.buildEntryPlanResponse(recommendation, savedPlan, false),
     };
   }
 }

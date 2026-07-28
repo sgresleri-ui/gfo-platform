@@ -129,6 +129,23 @@ model InvestmentRecommendationSnapshot {
   @@index([status])
 }
 
+model InvestmentRecommendationPlan {
+  id                       Int      @id @default(1)
+  sourcePropertyCode       String   @unique @default("PROPERTY_EL_TORO")
+  recommendationSnapshotId String
+  selectedScenario         String   @default("BASE")
+  tranchePercentagesJson   String   @default("[]")
+  fundingAccount           String?
+  executionBroker          String?
+  notes                    String?
+  status                   String   @default("DRAFT")
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@index([recommendationSnapshotId])
+  @@index([status])
+}
+
 model DecisionLogEntry {
   id               String   @id
   decisionDate     DateTime

@@ -4410,3 +4410,128 @@ export async function generateElToroInvestmentRecommendation(): Promise<Investme
     "Unable to generate El Toro investment recommendation",
   );
 }
+
+export type InvestmentEntryScenarioCode =
+  | "BASE"
+  | "CAUTIOUS";
+
+export type InvestmentEntryPlanTranche = {
+  number: number;
+  percentage: number;
+  timing: string;
+  trigger: string;
+  amount: number;
+  cumulativeAmount: number;
+  temporaryParkingAfter: number;
+  orders: Array<{
+    assetClass: string;
+    label: string;
+    amount: number;
+  }>;
+};
+
+export type InvestmentEntryScenario = {
+  code: InvestmentEntryScenarioCode;
+  label: string;
+  description: string;
+  durationDays: number;
+  percentages: number[];
+  allocatedCapital: number;
+  reconciled: boolean;
+  temporaryParking: {
+    ticker: "XEON";
+    isin: "LU0290358497";
+    role: string;
+  };
+  tranches: InvestmentEntryPlanTranche[];
+};
+
+export type InvestmentEntryPlan = {
+  planVersion: string;
+  recommendationId: string;
+  saved: boolean;
+  selectedScenario:
+    InvestmentEntryScenarioCode;
+  scenarios: InvestmentEntryScenario[];
+  fundingAccount: string | null;
+  executionBroker: string | null;
+  notes: string | null;
+  status:
+    | "DRAFT_STALE"
+    | "DRAFT_INVALID"
+    | "DRAFT_NEEDS_IPS_REVIEW"
+    | "DRAFT_NEEDS_PROFESSIONAL_VALIDATION";
+  updatedAt: string | null;
+  fiscalStatus: "NEEDS_VALIDATION";
+  execution: {
+    automatedExecution: false;
+    status: "BLOCKED";
+    blockingReason: string;
+  };
+  validation: {
+    investibleCapital: number;
+    allocatedCapital: number;
+    scheduleReconciled: boolean;
+    ips: {
+      assessed: boolean;
+      withinLimits: boolean | null;
+      breaches: Array<{
+        code: string;
+        label: string;
+        projectedWeight: number;
+        minimum: number | null;
+        maximum: number | null;
+        direction:
+          | "BELOW_MINIMUM"
+          | "ABOVE_MAXIMUM";
+      }>;
+    };
+    readyForProfessionalValidation: boolean;
+  };
+  warnings: string[];
+};
+
+export type InvestmentEntryPlanResponse = {
+  plan: InvestmentEntryPlan | null;
+};
+
+export type UpdateInvestmentEntryPlanInput = {
+  recommendationId: string;
+  selectedScenario:
+    InvestmentEntryScenarioCode;
+  tranchePercentages: number[];
+  fundingAccount?: string | null;
+  executionBroker?: string | null;
+  notes?: string | null;
+};
+
+export async function getElToroInvestmentEntryPlan(): Promise<InvestmentEntryPlanResponse> {
+  const response = await fetch(
+    `${API_URL}/investment-recommendations/el-toro/plan`,
+  );
+
+  return readJson<InvestmentEntryPlanResponse>(
+    response,
+    "Unable to load El Toro entry plan",
+  );
+}
+
+export async function updateElToroInvestmentEntryPlan(
+  input: UpdateInvestmentEntryPlanInput,
+): Promise<InvestmentEntryPlanResponse> {
+  const response = await fetch(
+    `${API_URL}/investment-recommendations/el-toro/plan`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+
+  return readJson<InvestmentEntryPlanResponse>(
+    response,
+    "Unable to update El Toro entry plan",
+  );
+}
