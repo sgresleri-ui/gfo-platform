@@ -26,6 +26,7 @@ import {
 
 type ElToroCapitalPlanPanelProps = {
   refreshToken: string;
+  onPlanSaved?: () => void;
 };
 
 function euro(value: number): string {
@@ -66,6 +67,7 @@ function roundMoney(
 
 export default function ElToroCapitalPlanPanel({
   refreshToken,
+  onPlanSaved,
 }: ElToroCapitalPlanPanelProps) {
   const [
     plan,
@@ -608,6 +610,7 @@ export default function ElToroCapitalPlanPanel({
 
               applyPlan(result);
               setSaved(true);
+              onPlanSaved?.();
             } catch (error) {
               console.error(error);
 

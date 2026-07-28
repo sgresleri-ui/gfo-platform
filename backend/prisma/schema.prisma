@@ -107,6 +107,28 @@ model CapitalAllocationPlan {
   updatedAt               DateTime @updatedAt
 }
 
+model InvestmentRecommendationSnapshot {
+  id                     String   @id @default(cuid())
+  sourcePropertyCode     String
+  engineVersion          String
+  status                 String
+  inputHash              String
+  investibleCapital      Float
+  dataCoveragePercentage Float
+  marketContextAsOf      DateTime
+  marketRegime           String
+  marketContextJson      String
+  currentAllocationJson  String
+  proposedAllocationJson String
+  instrumentsJson        String
+  tranchesJson           String
+  warningsJson           String
+  generatedAt            DateTime @default(now())
+
+  @@index([sourcePropertyCode, generatedAt])
+  @@index([status])
+}
+
 model DecisionLogEntry {
   id               String   @id
   decisionDate     DateTime

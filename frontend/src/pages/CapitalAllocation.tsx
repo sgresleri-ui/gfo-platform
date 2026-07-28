@@ -26,6 +26,7 @@ import {
 } from "react-router-dom";
 
 import ElToroCapitalPlanPanel from "../components/ElToroCapitalPlanPanel";
+import InvestmentRecommendationPanel from "../components/InvestmentRecommendationPanel";
 
 import {
   assessPlanningAllocationScenario,
@@ -234,6 +235,11 @@ export default function CapitalAllocation() {
     estimateSaveSuccess,
     setEstimateSaveSuccess,
   ] = useState(false);
+
+  const [
+    capitalPlanVersion,
+    setCapitalPlanVersion,
+  ] = useState(0);
 
   const loadProperties =
     useCallback(async () => {
@@ -1751,6 +1757,23 @@ export default function CapitalAllocation() {
 
       <ElToroCapitalPlanPanel
         refreshToken={[
+          taxAnalysis?.planningEstimates
+            .estimatedTaxReserve ?? 0,
+          taxAnalysis?.planningEstimates
+            .futureSaleCosts ?? 0,
+          taxAnalysis?.planningEstimates
+            .status ?? "loading",
+        ].join(":")}
+        onPlanSaved={() =>
+          setCapitalPlanVersion(
+            (version) => version + 1,
+          )
+        }
+      />
+
+      <InvestmentRecommendationPanel
+        refreshToken={[
+          capitalPlanVersion,
           taxAnalysis?.planningEstimates
             .estimatedTaxReserve ?? 0,
           taxAnalysis?.planningEstimates

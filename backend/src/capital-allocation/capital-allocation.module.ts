@@ -10,5 +10,6 @@ import { CapitalAllocationService } from './capital-allocation.service';
   imports: [PrismaModule, TaxAnalysisModule],
   controllers: [CapitalAllocationController],
   providers: [CapitalAllocationService],
+  exports: [CapitalAllocationService],
 })
 export class CapitalAllocationModule {}

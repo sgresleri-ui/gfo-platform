@@ -22,6 +22,7 @@ import { PropertiesModule } from './properties/properties.module';
 import { BudgetModule } from './budget/budget.module';
 import { TaxAnalysisModule } from './tax-analysis/tax-analysis.module';
 import { CapitalAllocationModule } from './capital-allocation/capital-allocation.module';
+import { InvestmentRecommendationsModule } from './investment-recommendations/investment-recommendations.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { WealthModule } from './wealth/wealth.module';
 
@@ -50,6 +51,7 @@ import { WealthModule } from './wealth/wealth.module';
     BudgetModule,
     TaxAnalysisModule,
     CapitalAllocationModule,
+    InvestmentRecommendationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

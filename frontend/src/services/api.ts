@@ -4152,3 +4152,167 @@ export async function updateElToroCapitalAllocationPlan(
     "Unable to update El Toro capital allocation plan",
   );
 }
+
+export type InvestmentRecommendationStatus =
+  | "BLOCKED_CAPITAL_PLAN"
+  | "NEEDS_DATA"
+  | "NEEDS_MARKET_UPDATE"
+  | "NEEDS_VALIDATION"
+  | "READY_FOR_APPROVAL";
+
+export type InvestmentRecommendationAllocationRow = {
+  code: string;
+  label: string;
+  targetWeight: number;
+  currentValue: number;
+  currentWeight: number | null;
+  gapToTargetBeforeNewCapital:
+    number | null;
+  newCapitalAmount: number;
+  newCapitalWeight: number;
+  projectedValue: number;
+  projectedWeight: number | null;
+  action: "INCREASE" | "HOLD";
+};
+
+export type InvestmentRecommendationInstrument = {
+  assetClass: string;
+  ticker: string;
+  name: string;
+  isin: string;
+  domicile: string;
+  structure: string;
+  incomeTreatment: string;
+  replication: string;
+  tradingCurrency: string;
+  role: string;
+  sourceUrl: string;
+  proposedAmount: number;
+  proposedWeight: number;
+  overlap: {
+    exactHolding: boolean;
+    methodology:
+      "NAME_AND_ISIN_SCREENING";
+    potentialOverlapValue: number;
+    positions: Array<{
+      code: string;
+      name: string;
+      marketValue: number;
+    }>;
+  };
+};
+
+export type InvestmentRecommendation = {
+  id: string;
+  engineVersion: string;
+  status:
+    InvestmentRecommendationStatus;
+  generatedAt: string;
+  isCurrent: boolean;
+  staleReasons: string[];
+  fiscalStatus: "NEEDS_VALIDATION";
+  execution: {
+    automatedExecution: false;
+    status: "BLOCKED";
+    requiredActions: string[];
+  };
+  capitalPlan: {
+    investibleCapital: number;
+    source:
+      | "DOCUMENTED_PLAN"
+      | "USER_PLAN";
+    allocationStatus:
+      ElToroCapitalAllocationStatus;
+    operationalStatus:
+      ElToroCapitalOperationalStatus;
+    fiscalStatus: "NEEDS_VALIDATION";
+  };
+  dataQuality: {
+    positionCount: number;
+    classifiedPositions: number;
+    unclassifiedPositions: number;
+    coveragePercentage: number;
+    complianceAvailable: boolean;
+  };
+  allocation: {
+    method:
+      | "GAP_TO_IPS_TARGET"
+      | "IPS_TARGET_REFERENCE";
+    current: Array<{
+      code: string;
+      label: string;
+      strategic: boolean;
+      target: number | null;
+      minimum: number | null;
+      maximum: number | null;
+      value: number;
+      weight: number | null;
+      status: string;
+    }>;
+    proposed:
+      InvestmentRecommendationAllocationRow[];
+  };
+  marketContext: {
+    asOfDate: string;
+    regime: string;
+    entryStance: string;
+    summary: string;
+    observations: string[];
+    sources: Array<{
+      publisher: string;
+      title: string;
+      sourceDate: string;
+      url: string;
+    }>;
+  };
+  instruments:
+    InvestmentRecommendationInstrument[];
+  tranches: Array<{
+    number: number;
+    percentage: number;
+    timing: string;
+    trigger: string;
+    amount: number;
+    orders: Array<{
+      assetClass: string;
+      label: string;
+      amount: number;
+    }>;
+  }>;
+  warnings: string[];
+};
+
+export type InvestmentRecommendationResponse = {
+  engine: {
+    version: string;
+    mode: "NEW_CAPITAL_ONLY";
+    automatedExecution: false;
+  };
+  recommendation:
+    InvestmentRecommendation | null;
+};
+
+export async function getElToroInvestmentRecommendation(): Promise<InvestmentRecommendationResponse> {
+  const response = await fetch(
+    `${API_URL}/investment-recommendations/el-toro`,
+  );
+
+  return readJson<InvestmentRecommendationResponse>(
+    response,
+    "Unable to load El Toro investment recommendation",
+  );
+}
+
+export async function generateElToroInvestmentRecommendation(): Promise<InvestmentRecommendationResponse> {
+  const response = await fetch(
+    `${API_URL}/investment-recommendations/el-toro/generate`,
+    {
+      method: "POST",
+    },
+  );
+
+  return readJson<InvestmentRecommendationResponse>(
+    response,
+    "Unable to generate El Toro investment recommendation",
+  );
+}
