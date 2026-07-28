@@ -17,6 +17,7 @@ import AutoGraphRoundedIcon from "@mui/icons-material/AutoGraphRounded";
 import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 
+import InvestmentDueDiligencePanel from "./InvestmentDueDiligencePanel";
 import InvestmentEntryPlanLab from "./InvestmentEntryPlanLab";
 
 import {
@@ -585,6 +586,14 @@ export default function InvestmentRecommendationPanel({
           <Divider sx={{ my: 3 }} />
 
           <InvestmentEntryPlanLab
+            recommendationId={recommendation.id}
+            refreshToken={refreshToken}
+            recommendationIsCurrent={recommendation.isCurrent}
+          />
+
+          <Divider sx={{ my: 3 }} />
+
+          <InvestmentDueDiligencePanel
             recommendationId={recommendation.id}
             refreshToken={refreshToken}
             recommendationIsCurrent={recommendation.isCurrent}

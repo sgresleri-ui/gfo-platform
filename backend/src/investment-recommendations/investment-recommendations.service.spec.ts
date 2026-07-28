@@ -117,6 +117,7 @@ describe('InvestmentRecommendationsService', () => {
 
     let lastSnapshot: Record<string, unknown> | null = null;
     let storedPlan: Record<string, unknown> | null = null;
+    let storedDueDiligence: Record<string, unknown> | null = null;
     const prisma = {
       investmentRecommendationSnapshot: {
         findFirst: jest.fn().mockImplementation(() => lastSnapshot),
@@ -152,6 +153,29 @@ describe('InvestmentRecommendationsService', () => {
               };
 
               return storedPlan;
+            },
+          ),
+      },
+      investmentDueDiligencePlan: {
+        findUnique: jest.fn().mockImplementation(() => storedDueDiligence),
+        upsert: jest
+          .fn()
+          .mockImplementation(
+            ({
+              create,
+              update,
+            }: {
+              create: Record<string, unknown>;
+              update: Record<string, unknown>;
+            }) => {
+              storedDueDiligence = {
+                id: 1,
+                createdAt: new Date('2026-07-28T16:00:00.000Z'),
+                updatedAt: new Date('2026-07-28T16:00:00.000Z'),
+                ...(storedDueDiligence ? update : create),
+              };
+
+              return storedDueDiligence;
             },
           ),
       },
@@ -295,6 +319,112 @@ describe('InvestmentRecommendationsService', () => {
         recommendationId: generated.recommendation.id,
         selectedScenario: 'BASE',
         tranchePercentages: [40, 20, 20, 10],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('builds a source-backed shortlist without inferring broker availability', async () => {
+    const service = createService(true);
+
+    await service.generateElToroRecommendation();
+
+    const result = await service.getElToroDueDiligence();
+    const dueDiligence = result.dueDiligence;
+    const xeon = dueDiligence?.instruments.find(
+      (instrument) => instrument.isin === 'LU0290358497',
+    );
+    const aggh = dueDiligence?.instruments.find(
+      (instrument) => instrument.isin === 'IE00BDBRDM35',
+    );
+    const wgld = dueDiligence?.instruments.find(
+      (instrument) => instrument.isin === 'JE00BN2CJ301',
+    );
+
+    expect(dueDiligence?.instruments).toHaveLength(6);
+    expect(dueDiligence?.status).toBe('DRAFT_DUE_DILIGENCE');
+    expect(dueDiligence?.validation.progress.selectedAssetClasses).toBe(3);
+    expect(
+      xeon?.brokerRoutes.find((route) => route.broker === 'FINECO')
+        ?.effectiveStatus,
+    ).toBe('PUBLICLY_CONFIRMED');
+    expect(
+      aggh?.brokerRoutes.find((route) => route.broker === 'FINECO')
+        ?.effectiveStatus,
+    ).toBe('NOT_VERIFIED');
+    expect(wgld?.ucitsClassification).toBe('UCITS_ELIGIBLE_ETC_NOT_FUND');
+    expect(dueDiligence?.execution.status).toBe('BLOCKED');
+  });
+
+  it('persists completed documentary checks and explicit broker confirmations', async () => {
+    const service = createService(true);
+    const generated = await service.generateElToroRecommendation();
+    const initial = await service.getElToroDueDiligence();
+    const reviews = initial.dueDiligence.instruments.map(
+      (instrument: {
+        role: string;
+        assetClass: string;
+        review: {
+          isin: string;
+          selected: boolean;
+          preferredBroker: string | null;
+          checks: Record<string, boolean>;
+          brokerAvailability: Record<string, string>;
+          notes: string | null;
+        };
+      }) => ({
+        ...instrument.review,
+        selected: instrument.role === 'PRIMARY',
+        checks: Object.fromEntries(
+          Object.keys(instrument.review.checks).map((code) => [code, true]),
+        ),
+        preferredBroker:
+          instrument.assetClass === 'GOLD' ? 'INTERACTIVE_BROKERS' : 'FINECO',
+        brokerAvailability: {
+          ...instrument.review.brokerAvailability,
+          FINECO:
+            instrument.assetClass === 'MONEY_MARKET'
+              ? 'NOT_VERIFIED'
+              : 'USER_CONFIRMED',
+          INTERACTIVE_BROKERS:
+            instrument.assetClass === 'GOLD'
+              ? 'USER_CONFIRMED'
+              : 'NOT_VERIFIED',
+        },
+      }),
+    );
+
+    const result = await service.updateElToroDueDiligence({
+      recommendationId: generated.recommendation.id,
+      reviews,
+      notes: 'Verifiche documentali completate; fiscalità ancora da validare.',
+    });
+
+    expect(result.dueDiligence.saved).toBe(true);
+    expect(result.dueDiligence.status).toBe('READY_FOR_PROFESSIONAL_REVIEW');
+    expect(result.dueDiligence.validation.checklistComplete).toBe(true);
+    expect(result.dueDiligence.validation.brokerRoutingComplete).toBe(true);
+    expect(result.dueDiligence.execution.status).toBe('BLOCKED');
+  });
+
+  it('rejects two selected instruments in the same IPS class', async () => {
+    const service = createService(true);
+    const generated = await service.generateElToroRecommendation();
+    const initial = await service.getElToroDueDiligence();
+    const reviews = initial.dueDiligence.instruments.map(
+      (instrument: {
+        assetClass: string;
+        review: Record<string, unknown>;
+      }) => ({
+        ...instrument.review,
+        selected:
+          instrument.assetClass === 'BONDS' ? true : instrument.review.selected,
+      }),
+    );
+
+    await expect(
+      service.updateElToroDueDiligence({
+        recommendationId: generated.recommendation.id,
+        reviews,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });

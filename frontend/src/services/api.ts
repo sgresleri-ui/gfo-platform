@@ -4535,3 +4535,176 @@ export async function updateElToroInvestmentEntryPlan(
     "Unable to update El Toro entry plan",
   );
 }
+
+export type InvestmentDueDiligenceCheckCode =
+  | "KID_AND_DOCUMENTS"
+  | "STRUCTURE"
+  | "COSTS"
+  | "SIZE_AND_LIQUIDITY"
+  | "OVERLAP";
+
+export type InvestmentBrokerCode =
+  | "FINECO"
+  | "INTERACTIVE_BROKERS";
+
+export type InvestmentBrokerUserStatus =
+  | "NOT_VERIFIED"
+  | "USER_CONFIRMED"
+  | "NOT_AVAILABLE";
+
+export type InvestmentBrokerEffectiveStatus =
+  | InvestmentBrokerUserStatus
+  | "PUBLICLY_CONFIRMED";
+
+export type InvestmentDueDiligenceReview = {
+  isin: string;
+  selected: boolean;
+  preferredBroker: InvestmentBrokerCode | null;
+  checks: Record<InvestmentDueDiligenceCheckCode, boolean>;
+  brokerAvailability: Record<
+    InvestmentBrokerCode,
+    InvestmentBrokerUserStatus
+  >;
+  notes: string | null;
+};
+
+export type InvestmentDueDiligenceInstrument = {
+  assetClass: "BONDS" | "MONEY_MARKET" | "GOLD";
+  assetClassLabel: string;
+  role: "PRIMARY" | "ALTERNATIVE";
+  ticker: string;
+  name: string;
+  isin: string;
+  issuer: string;
+  domicile: string;
+  structure: string;
+  ucitsClassification:
+    | "UCITS_FUND"
+    | "UCITS_ELIGIBLE_ETC_NOT_FUND";
+  incomeTreatment: string;
+  replication: string;
+  tradingCurrency: string;
+  ongoingChargePct: number | null;
+  factsAsOf: string;
+  size: string;
+  keyFacts: string[];
+  risks: string[];
+  sources: Array<{
+    publisher: string;
+    title: string;
+    sourceDate: string;
+    url: string;
+  }>;
+  proposedAmount: number;
+  review: InvestmentDueDiligenceReview;
+  brokerRoutes: Array<{
+    broker: InvestmentBrokerCode;
+    brokerLabel: string;
+    venue: string | null;
+    publicStatus: "PUBLICLY_CONFIRMED" | "NOT_VERIFIED";
+    userStatus: InvestmentBrokerUserStatus;
+    effectiveStatus: InvestmentBrokerEffectiveStatus;
+    sourceUrl: string;
+    note: string;
+  }>;
+};
+
+export type InvestmentDueDiligence = {
+  dueDiligenceVersion: string;
+  recommendationId: string;
+  saved: boolean;
+  status:
+    | "DRAFT_SELECTION"
+    | "DRAFT_DUE_DILIGENCE"
+    | "DRAFT_BROKER_VERIFICATION"
+    | "READY_FOR_PROFESSIONAL_REVIEW";
+  notes: string | null;
+  updatedAt: string | null;
+  checks: Array<{
+    code: InvestmentDueDiligenceCheckCode;
+    label: string;
+    description: string;
+  }>;
+  instruments: InvestmentDueDiligenceInstrument[];
+  validation: {
+    selectionComplete: boolean;
+    checklistComplete: boolean;
+    brokerRoutingComplete: boolean;
+    progress: {
+      requiredAssetClasses: number;
+      selectedAssetClasses: number;
+      completedChecklists: number;
+      brokerRoutesConfirmed: number;
+    };
+  };
+  routingPreview: {
+    source: "SAVED_ENTRY_PLAN" | "BASE_SCENARIO_REFERENCE";
+    scenario: {
+      code: InvestmentEntryScenarioCode;
+      label: string;
+      fundingAccount: string | null;
+    };
+    tranches: Array<{
+      number: number;
+      timing: string;
+      amount: number;
+      orders: Array<{
+        assetClass: string;
+        label: string;
+        amount: number;
+        ticker: string | null;
+        isin: string | null;
+        broker: InvestmentBrokerCode | null;
+        brokerStatus: InvestmentBrokerEffectiveStatus;
+        routeStatus: "READY_FOR_REVIEW" | "BLOCKED";
+      }>;
+    }>;
+  } | null;
+  execution: {
+    automatedExecution: false;
+    status: "BLOCKED";
+    blockingReasons: string[];
+  };
+  warnings: string[];
+};
+
+export type InvestmentDueDiligenceResponse = {
+  dueDiligence: InvestmentDueDiligence | null;
+};
+
+export type UpdateInvestmentDueDiligenceInput = {
+  recommendationId: string;
+  reviews: InvestmentDueDiligenceReview[];
+  notes?: string | null;
+};
+
+export async function getElToroInvestmentDueDiligence(): Promise<InvestmentDueDiligenceResponse> {
+  const response = await fetch(
+    `${API_URL}/investment-recommendations/el-toro/due-diligence`,
+  );
+
+  return readJson<InvestmentDueDiligenceResponse>(
+    response,
+    "Unable to load El Toro instrument due diligence",
+  );
+}
+
+export async function updateElToroInvestmentDueDiligence(
+  input: UpdateInvestmentDueDiligenceInput,
+): Promise<InvestmentDueDiligenceResponse> {
+  const response = await fetch(
+    `${API_URL}/investment-recommendations/el-toro/due-diligence`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+
+  return readJson<InvestmentDueDiligenceResponse>(
+    response,
+    "Unable to update El Toro instrument due diligence",
+  );
+}

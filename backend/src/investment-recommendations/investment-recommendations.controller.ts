@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post, Put } from '@nestjs/common';
 
 import {
   InvestmentRecommendationsService,
+  type UpdateElToroDueDiligenceInput,
   type UpdateElToroEntryPlanInput,
 } from './investment-recommendations.service';
 
@@ -32,5 +33,20 @@ export class InvestmentRecommendationsController {
     input: UpdateElToroEntryPlanInput,
   ) {
     return this.investmentRecommendationsService.updateElToroEntryPlan(input);
+  }
+
+  @Get('el-toro/due-diligence')
+  getElToroDueDiligence() {
+    return this.investmentRecommendationsService.getElToroDueDiligence();
+  }
+
+  @Put('el-toro/due-diligence')
+  updateElToroDueDiligence(
+    @Body()
+    input: UpdateElToroDueDiligenceInput,
+  ) {
+    return this.investmentRecommendationsService.updateElToroDueDiligence(
+      input,
+    );
   }
 }

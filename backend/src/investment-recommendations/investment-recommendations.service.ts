@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 const ENGINE_VERSION = '1.0.0';
 const ENTRY_PLAN_VERSION = '1.0.0';
+const DUE_DILIGENCE_VERSION = '1.0.0';
 const EL_TORO_PROPERTY_CODE = 'PROPERTY_EL_TORO';
 const MARKET_CONTEXT_MAX_AGE_DAYS = 45;
 
@@ -187,6 +188,91 @@ export type UpdateElToroEntryPlanInput = {
   notes?: string | null;
 };
 
+type DueDiligenceCheckCode =
+  | 'KID_AND_DOCUMENTS'
+  | 'STRUCTURE'
+  | 'COSTS'
+  | 'SIZE_AND_LIQUIDITY'
+  | 'OVERLAP';
+
+type BrokerCode = 'FINECO' | 'INTERACTIVE_BROKERS';
+
+type UserBrokerAvailability =
+  'NOT_VERIFIED' | 'USER_CONFIRMED' | 'NOT_AVAILABLE';
+
+type EffectiveBrokerAvailability =
+  UserBrokerAvailability | 'PUBLICLY_CONFIRMED';
+
+type DueDiligenceReview = {
+  isin: string;
+  selected: boolean;
+  preferredBroker: BrokerCode | null;
+  checks: Record<DueDiligenceCheckCode, boolean>;
+  brokerAvailability: Record<BrokerCode, UserBrokerAvailability>;
+  notes: string | null;
+};
+
+type StoredDueDiligencePlan = {
+  id: number;
+  recommendationSnapshotId: string;
+  reviewsJson: string;
+  notes: string | null;
+  status: string;
+  updatedAt: Date;
+};
+
+type DueDiligenceSource = {
+  publisher: string;
+  title: string;
+  sourceDate: string;
+  url: string;
+};
+
+type DueDiligenceBrokerRoute = {
+  broker: BrokerCode;
+  brokerLabel: string;
+  venue: string | null;
+  publicStatus: 'PUBLICLY_CONFIRMED' | 'NOT_VERIFIED';
+  sourceUrl: string;
+  note: string;
+};
+
+type DueDiligenceInstrument = {
+  assetClass: 'BONDS' | 'MONEY_MARKET' | 'GOLD';
+  assetClassLabel: string;
+  role: 'PRIMARY' | 'ALTERNATIVE';
+  ticker: string;
+  name: string;
+  isin: string;
+  issuer: string;
+  domicile: string;
+  structure: string;
+  ucitsClassification: 'UCITS_FUND' | 'UCITS_ELIGIBLE_ETC_NOT_FUND';
+  incomeTreatment: string;
+  replication: string;
+  tradingCurrency: string;
+  ongoingChargePct: number | null;
+  factsAsOf: string;
+  size: string;
+  keyFacts: string[];
+  risks: string[];
+  sources: DueDiligenceSource[];
+  brokerRoutes: DueDiligenceBrokerRoute[];
+};
+
+export type UpdateElToroDueDiligenceInput = {
+  recommendationId: string;
+  reviews: Array<{
+    isin: string;
+    selected: boolean;
+    preferredBroker?: BrokerCode | null;
+    checks: Partial<Record<DueDiligenceCheckCode, boolean>>;
+    brokerAvailability: Partial<Record<BrokerCode, UserBrokerAvailability>>;
+    notes?: string | null;
+  }>;
+  notes?: string | null;
+};
+
 type CurrentSnapshotData = {
   capitalPlan: {
     investibleCapital: number;
@@ -281,6 +367,294 @@ const INSTRUMENTS: InstrumentDefinition[] = [
     sourceUrl:
       'https://www.wisdomtree.com/ie/products/commodities/wisdomtree-core-physical-gold',
     overlapTokens: ['GOLD', 'ORO', 'PHYSICAL GOLD'],
+  },
+];
+
+const DUE_DILIGENCE_CHECKS: Array<{
+  code: DueDiligenceCheckCode;
+  label: string;
+  description: string;
+}> = [
+  {
+    code: 'KID_AND_DOCUMENTS',
+    label: 'KID e documenti',
+    description:
+      'KID, factsheet e documentazione ufficiale della specifica classe/ISIN sono stati letti.',
+  },
+  {
+    code: 'STRUCTURE',
+    label: 'Struttura e replica',
+    description:
+      'Domicilio, struttura giuridica, replica, collateral/custodia e rischi specifici sono stati compresi.',
+  },
+  {
+    code: 'COSTS',
+    label: 'Costi complessivi',
+    description:
+      'TER/MER, spread, commissioni del broker e costi di cambio sono stati verificati.',
+  },
+  {
+    code: 'SIZE_AND_LIQUIDITY',
+    label: 'Dimensione e liquidità',
+    description:
+      'Dimensione, mercato di quotazione, valuta, lotto, spread e modalità di esecuzione sono adeguati.',
+  },
+  {
+    code: 'OVERLAP',
+    label: 'Coerenza e overlap',
+    description:
+      'Ruolo nel portafoglio, concentrazioni e sovrapposizioni con le posizioni esistenti sono stati valutati.',
+  },
+];
+
+const FINECO_SOURCE =
+  'https://it.finecobank.com/trading/etf/etf-zero-commissioni/';
+const IBKR_MARKETS_SOURCE =
+  'https://www.interactivebrokers.com/en/trading/global-market-access.php';
+
+function brokerRoutes(
+  finecoPubliclyConfirmed = false,
+): DueDiligenceBrokerRoute[] {
+  return [
+    {
+      broker: 'FINECO',
+      brokerLabel: 'Fineco',
+      venue: finecoPubliclyConfirmed ? 'Catalogo ETF Fineco' : null,
+      publicStatus: finecoPubliclyConfirmed
+        ? 'PUBLICLY_CONFIRMED'
+        : 'NOT_VERIFIED',
+      sourceUrl: FINECO_SOURCE,
+      note: finecoPubliclyConfirmed
+        ? 'ISIN presente nella lista pubblica Fineco degli ETF a zero commissioni. Verificare comunque negoziabilità e condizioni nel conto.'
+        : 'La disponibilità del singolo ISIN non è attestata da una fonte pubblica: cercarlo nel conto Fineco prima dell’approvazione.',
+    },
+    {
+      broker: 'INTERACTIVE_BROKERS',
+      brokerLabel: 'Interactive Brokers',
+      venue: null,
+      publicStatus: 'NOT_VERIFIED',
+      sourceUrl: IBKR_MARKETS_SOURCE,
+      note: 'IBKR offre accesso ai mercati europei rilevanti, ma ciò non conferma il singolo contratto. Cercare l’ISIN in Client Portal/TWS.',
+    },
+  ];
+}
+
+const DUE_DILIGENCE_INSTRUMENTS: DueDiligenceInstrument[] = [
+  {
+    assetClass: 'BONDS',
+    assetClassLabel: 'Obbligazionario',
+    role: 'PRIMARY',
+    ticker: 'AGGH',
+    name: 'iShares Core Global Aggregate Bond UCITS ETF EUR Hedged (Acc)',
+    isin: 'IE00BDBRDM35',
+    issuer: 'iShares',
+    domicile: 'Irlanda',
+    structure: 'ETF UCITS',
+    ucitsClassification: 'UCITS_FUND',
+    incomeTreatment: 'Accumulazione',
+    replication: 'Fisica campionata',
+    tradingCurrency: 'EUR',
+    ongoingChargePct: 0.1,
+    factsAsOf: '2026-07-24',
+    size: 'Classe circa EUR 2,47 mld; fondo circa USD 14,04 mld',
+    keyFacts: [
+      'Benchmark globale investment grade; copertura valutaria della classe in EUR.',
+      'Circa 19.977 titoli; duration effettiva 6,05 anni e YTM 4,04%.',
+    ],
+    risks: [
+      'Rischio tasso e credito; la copertura valutaria riduce ma non elimina tutti i rischi.',
+      'Overlap potenziale con fondi obbligazionari esistenti da verificare.',
+    ],
+    sources: [
+      {
+        publisher: 'iShares',
+        title: 'Scheda ufficiale AGGH',
+        sourceDate: '2026-07-24',
+        url: 'https://www.ishares.com/uk/individual/en/products/291770/ishares-core-global-aggregate-bond-ucits-etf',
+      },
+    ],
+    brokerRoutes: brokerRoutes(),
+  },
+  {
+    assetClass: 'BONDS',
+    assetClassLabel: 'Obbligazionario',
+    role: 'ALTERNATIVE',
+    ticker: 'VAGF',
+    name: 'Vanguard Global Aggregate Bond UCITS ETF EUR Hedged Acc',
+    isin: 'IE00BG47KH54',
+    issuer: 'Vanguard',
+    domicile: 'Irlanda',
+    structure: 'ETF UCITS',
+    ucitsClassification: 'UCITS_FUND',
+    incomeTreatment: 'Accumulazione',
+    replication: 'Fisica campionata',
+    tradingCurrency: 'EUR',
+    ongoingChargePct: null,
+    factsAsOf: '2026-06-30',
+    size: 'Classe circa EUR 2,15 mld; fondo circa EUR 5,43 mld',
+    keyFacts: [
+      'Quotato in EUR su Borsa Italiana e Deutsche Börse.',
+      '12.266 obbligazioni; duration 6,2 anni, YTM 4,1% e qualità media AA-.',
+    ],
+    risks: [
+      'Costo corrente da confermare sul KID più recente prima del confronto finale.',
+      'Rischio tasso e credito; possibili differenze di indice rispetto ad AGGH.',
+    ],
+    sources: [
+      {
+        publisher: 'Vanguard',
+        title: 'Scheda ufficiale VAGF',
+        sourceDate: '2026-06-30',
+        url: 'https://www.vanguard.co.uk/professional/product/etf/bond/9443/global-aggregate-bond-ucits-etf-eur-hedged-accumulating',
+      },
+    ],
+    brokerRoutes: brokerRoutes(),
+  },
+  {
+    assetClass: 'MONEY_MARKET',
+    assetClassLabel: 'Money Market e liquidità strategica',
+    role: 'PRIMARY',
+    ticker: 'XEON',
+    name: 'Xtrackers II EUR Overnight Rate Swap UCITS ETF 1C',
+    isin: 'LU0290358497',
+    issuer: 'DWS Xtrackers',
+    domicile: 'Lussemburgo',
+    structure: 'ETF UCITS',
+    ucitsClassification: 'UCITS_FUND',
+    incomeTreatment: 'Capitalizzazione',
+    replication: 'Sintetica tramite swap',
+    tradingCurrency: 'EUR',
+    ongoingChargePct: 0.1,
+    factsAsOf: '2026-07-28',
+    size: 'Dimensione da confermare sul factsheet/KID corrente',
+    keyFacts: [
+      'Replica un rendimento overnight in EUR ed è destinato al parcheggio temporaneo e alla liquidità strategica.',
+      'Fineco pubblica lo specifico ISIN nella propria lista ETF a zero commissioni.',
+    ],
+    risks: [
+      'Replica sintetica: verificare controparte, collateral e indice nel KID.',
+      'Non è equivalente a un deposito bancario e il capitale non è garantito.',
+    ],
+    sources: [
+      {
+        publisher: 'DWS',
+        title: 'Scheda ufficiale XEON',
+        sourceDate: '2026-07-28',
+        url: 'https://etf.dws.com/en-gb/LU0290358497-eur-overnight-rate-swap-ucits-etf-1c/',
+      },
+      {
+        publisher: 'Fineco',
+        title: 'ETF a zero commissioni',
+        sourceDate: '2026-07-28',
+        url: FINECO_SOURCE,
+      },
+    ],
+    brokerRoutes: brokerRoutes(true),
+  },
+  {
+    assetClass: 'MONEY_MARKET',
+    assetClassLabel: 'Money Market e liquidità strategica',
+    role: 'ALTERNATIVE',
+    ticker: 'LEONIA',
+    name: 'Amundi EUR Overnight Return UCITS ETF Acc',
+    isin: 'FR0010510800',
+    issuer: 'Amundi',
+    domicile: 'Francia',
+    structure: 'ETF UCITS',
+    ucitsClassification: 'UCITS_FUND',
+    incomeTreatment: 'Capitalizzazione',
+    replication: 'Da verificare sul KID corrente',
+    tradingCurrency: 'EUR',
+    ongoingChargePct: 0.1,
+    factsAsOf: '2026-07-27',
+    size: 'Dimensione da confermare sul factsheet/KID corrente',
+    keyFacts: [
+      'Quotato su Borsa Italiana con lotto minimo 1 e benchmark Solactive Overnight.',
+      'Commissioni totali annue indicate da Borsa Italiana: 0,10%.',
+    ],
+    risks: [
+      'Metodo di replica e rischi di controparte da confermare sul KID corrente.',
+      'Disponibilità presso Fineco o IBKR non ancora verificata per ISIN.',
+    ],
+    sources: [
+      {
+        publisher: 'Borsa Italiana',
+        title: 'Scheda mercato LEONIA',
+        sourceDate: '2026-07-27',
+        url: 'https://www.borsaitaliana.it/borsa/etf/scheda/FR0010510800-ETFP.html',
+      },
+    ],
+    brokerRoutes: brokerRoutes(),
+  },
+  {
+    assetClass: 'GOLD',
+    assetClassLabel: 'Oro',
+    role: 'PRIMARY',
+    ticker: 'WGLD',
+    name: 'WisdomTree Core Physical Gold',
+    isin: 'JE00BN2CJ301',
+    issuer: 'WisdomTree',
+    domicile: 'Jersey',
+    structure: 'ETC garantito da oro fisico allocato',
+    ucitsClassification: 'UCITS_ELIGIBLE_ETC_NOT_FUND',
+    incomeTreatment: 'Non applicabile',
+    replication: 'Oro fisico allocato',
+    tradingCurrency: 'EUR',
+    ongoingChargePct: 0.12,
+    factsAsOf: '2026-07-27',
+    size: 'AUM circa USD 1,90 mld',
+    keyFacts: [
+      'Titolo di debito ETC: eleggibile UCITS, ma non è un fondo UCITS.',
+      'Oro allocato custodito presso HSBC; quotazioni EUR anche su Borsa Italiana e Xetra.',
+    ],
+    risks: [
+      'Rischio oro, emittente/struttura ETC e assenza di copertura valutaria.',
+      'Verificare trattamento fiscale italiano e documentazione dell’ETC.',
+    ],
+    sources: [
+      {
+        publisher: 'WisdomTree',
+        title: 'Scheda ufficiale WGLD',
+        sourceDate: '2026-07-27',
+        url: 'https://www.wisdomtree.com/gb/products/commodities/wisdomtree-core-physical-gold',
+      },
+    ],
+    brokerRoutes: brokerRoutes(),
+  },
+  {
+    assetClass: 'GOLD',
+    assetClassLabel: 'Oro',
+    role: 'ALTERNATIVE',
+    ticker: 'SGLN',
+    name: 'iShares Physical Gold ETC',
+    isin: 'IE00B4ND3602',
+    issuer: 'iShares',
+    domicile: 'Irlanda',
+    structure: 'ETC garantito da oro fisico',
+    ucitsClassification: 'UCITS_ELIGIBLE_ETC_NOT_FUND',
+    incomeTreatment: 'Non applicabile',
+    replication: 'Oro fisico',
+    tradingCurrency: 'EUR',
+    ongoingChargePct: 0.12,
+    factsAsOf: '2026-07-23',
+    size: 'AUM circa USD 34 mld',
+    keyFacts: [
+      'Titolo ETC: eleggibile UCITS, ma non è un fondo UCITS.',
+      'Quotato in EUR su Borsa Italiana come SGLN e su Xetra come PPFB.',
+    ],
+    risks: [
+      'Rischio oro, emittente/struttura ETC e assenza di copertura valutaria.',
+      'Verificare trattamento fiscale italiano e specifico mercato scelto.',
+    ],
+    sources: [
+      {
+        publisher: 'iShares',
+        title: 'Scheda ufficiale iShares Physical Gold ETC',
+        sourceDate: '2026-07-23',
+        url: 'https://www.ishares.com/it/investitori-professionali/it/prodotti/258441/ishares-physical-gold-etc-fund?siteEntryPassthrough=true&switchLocale=y',
+      },
+    ],
+    brokerRoutes: brokerRoutes(),
   },
 ];
 
@@ -953,6 +1327,378 @@ export class InvestmentRecommendationsService {
     };
   }
 
+  private emptyDueDiligenceChecks(): Record<DueDiligenceCheckCode, boolean> {
+    return {
+      KID_AND_DOCUMENTS: false,
+      STRUCTURE: false,
+      COSTS: false,
+      SIZE_AND_LIQUIDITY: false,
+      OVERLAP: false,
+    };
+  }
+
+  private defaultDueDiligenceReviews(
+    recommendation: EntryPlanRecommendation,
+  ): DueDiligenceReview[] {
+    const amounts = new Map(
+      recommendation.allocation.proposed.map((item) => [
+        item.code,
+        item.newCapitalAmount,
+      ]),
+    );
+
+    return DUE_DILIGENCE_INSTRUMENTS.map((instrument) => ({
+      isin: instrument.isin,
+      selected:
+        instrument.role === 'PRIMARY' &&
+        (amounts.get(instrument.assetClass) ?? 0) > 0,
+      preferredBroker: null,
+      checks: this.emptyDueDiligenceChecks(),
+      brokerAvailability: {
+        FINECO: 'NOT_VERIFIED',
+        INTERACTIVE_BROKERS: 'NOT_VERIFIED',
+      },
+      notes: null,
+    }));
+  }
+
+  private effectiveBrokerAvailability(
+    instrument: DueDiligenceInstrument,
+    review: DueDiligenceReview,
+    broker: BrokerCode,
+  ): EffectiveBrokerAvailability {
+    const userStatus = review.brokerAvailability[broker];
+
+    if (userStatus !== 'NOT_VERIFIED') {
+      return userStatus;
+    }
+
+    return (
+      instrument.brokerRoutes.find((route) => route.broker === broker)
+        ?.publicStatus ?? 'NOT_VERIFIED'
+    );
+  }
+
+  private dueDiligenceStatus(
+    recommendation: EntryPlanRecommendation,
+    reviews: DueDiligenceReview[],
+  ) {
+    const requiredAssetClasses = recommendation.allocation.proposed
+      .filter((item) => item.newCapitalAmount > 0)
+      .map((item) => item.code)
+      .filter((code) =>
+        DUE_DILIGENCE_INSTRUMENTS.some(
+          (instrument) => instrument.assetClass === code,
+        ),
+      );
+    const selectedByClass = new Map<string, DueDiligenceReview>();
+
+    for (const assetClass of requiredAssetClasses) {
+      const selected = reviews.filter((review) => {
+        const instrument = DUE_DILIGENCE_INSTRUMENTS.find(
+          (candidate) => candidate.isin === review.isin,
+        );
+
+        return instrument?.assetClass === assetClass && review.selected;
+      });
+
+      if (selected.length === 1) {
+        selectedByClass.set(assetClass, selected[0]);
+      }
+    }
+
+    const selectionComplete =
+      requiredAssetClasses.length > 0 &&
+      selectedByClass.size === requiredAssetClasses.length;
+    const selectedReviews = Array.from(selectedByClass.values());
+    const checklistComplete =
+      selectionComplete &&
+      selectedReviews.every((review) =>
+        DUE_DILIGENCE_CHECKS.every((check) => review.checks[check.code]),
+      );
+    const brokerRoutingComplete =
+      selectionComplete &&
+      selectedReviews.every((review) => {
+        if (!review.preferredBroker) {
+          return false;
+        }
+
+        const instrument = DUE_DILIGENCE_INSTRUMENTS.find(
+          (candidate) => candidate.isin === review.isin,
+        );
+
+        if (!instrument) {
+          return false;
+        }
+
+        const status = this.effectiveBrokerAvailability(
+          instrument,
+          review,
+          review.preferredBroker,
+        );
+
+        return status === 'PUBLICLY_CONFIRMED' || status === 'USER_CONFIRMED';
+      });
+    const status = !selectionComplete
+      ? 'DRAFT_SELECTION'
+      : !checklistComplete
+        ? 'DRAFT_DUE_DILIGENCE'
+        : !brokerRoutingComplete
+          ? 'DRAFT_BROKER_VERIFICATION'
+          : 'READY_FOR_PROFESSIONAL_REVIEW';
+
+    return {
+      status,
+      requiredAssetClasses,
+      selectedByClass,
+      selectionComplete,
+      checklistComplete,
+      brokerRoutingComplete,
+      progress: {
+        requiredAssetClasses: requiredAssetClasses.length,
+        selectedAssetClasses: selectedByClass.size,
+        completedChecklists: selectedReviews.filter((review) =>
+          DUE_DILIGENCE_CHECKS.every((check) => review.checks[check.code]),
+        ).length,
+        brokerRoutesConfirmed: selectedReviews.filter((review) => {
+          if (!review.preferredBroker) {
+            return false;
+          }
+
+          const instrument = DUE_DILIGENCE_INSTRUMENTS.find(
+            (candidate) => candidate.isin === review.isin,
+          );
+
+          if (!instrument) {
+            return false;
+          }
+
+          const routeStatus = this.effectiveBrokerAvailability(
+            instrument,
+            review,
+            review.preferredBroker,
+          );
+
+          return (
+            routeStatus === 'PUBLICLY_CONFIRMED' ||
+            routeStatus === 'USER_CONFIRMED'
+          );
+        }).length,
+      },
+    };
+  }
+
+  private buildDueDiligenceRoutingPreview(
+    recommendation: EntryPlanRecommendation,
+    entryPlan: StoredEntryPlan | null,
+    reviews: DueDiligenceReview[],
+  ) {
+    const storedScenario =
+      entryPlan?.recommendationSnapshotId === recommendation.id
+        ? this.getEntryScenarioDefinition(entryPlan.selectedScenario)
+        : null;
+    const scenarioDefinition =
+      storedScenario ?? this.getEntryScenarioDefinition('BASE');
+    let percentages: number[] | undefined;
+
+    if (entryPlan && storedScenario) {
+      try {
+        percentages = this.validateTranchePercentages(
+          storedScenario,
+          this.parseJson<number[]>(entryPlan.tranchePercentagesJson),
+        );
+      } catch {
+        percentages = undefined;
+      }
+    }
+
+    if (!scenarioDefinition) {
+      return null;
+    }
+
+    const scenario = this.buildEntryScenario(
+      scenarioDefinition,
+      recommendation.allocation.proposed,
+      recommendation.capitalPlan.investibleCapital,
+      percentages,
+    );
+    const selectedByAssetClass = new Map<
+      string,
+      {
+        instrument: DueDiligenceInstrument;
+        review: DueDiligenceReview;
+      }
+    >();
+
+    for (const review of reviews.filter((item) => item.selected)) {
+      const instrument = DUE_DILIGENCE_INSTRUMENTS.find(
+        (candidate) => candidate.isin === review.isin,
+      );
+
+      if (instrument) {
+        selectedByAssetClass.set(instrument.assetClass, {
+          instrument,
+          review,
+        });
+      }
+    }
+
+    return {
+      source: entryPlan ? 'SAVED_ENTRY_PLAN' : 'BASE_SCENARIO_REFERENCE',
+      scenario: {
+        code: scenario.code,
+        label: scenario.label,
+        fundingAccount:
+          entryPlan?.recommendationSnapshotId === recommendation.id
+            ? entryPlan.fundingAccount
+            : null,
+      },
+      tranches: scenario.tranches.map((tranche) => ({
+        number: tranche.number,
+        timing: tranche.timing,
+        amount: tranche.amount,
+        orders: tranche.orders.map((order) => {
+          const selected = selectedByAssetClass.get(order.assetClass);
+          const preferredBroker = selected?.review.preferredBroker ?? null;
+          const brokerStatus =
+            selected && preferredBroker
+              ? this.effectiveBrokerAvailability(
+                  selected.instrument,
+                  selected.review,
+                  preferredBroker,
+                )
+              : 'NOT_VERIFIED';
+          const routeReady =
+            brokerStatus === 'PUBLICLY_CONFIRMED' ||
+            brokerStatus === 'USER_CONFIRMED';
+
+          return {
+            assetClass: order.assetClass,
+            label: order.label,
+            amount: order.amount,
+            ticker: selected?.instrument.ticker ?? null,
+            isin: selected?.instrument.isin ?? null,
+            broker: preferredBroker,
+            brokerStatus,
+            routeStatus:
+              selected && preferredBroker && routeReady
+                ? 'READY_FOR_REVIEW'
+                : 'BLOCKED',
+          };
+        }),
+      })),
+    };
+  }
+
+  private buildDueDiligenceResponse(
+    recommendation: EntryPlanRecommendation,
+    storedPlan: StoredDueDiligencePlan | null,
+    entryPlan: StoredEntryPlan | null,
+    staleSavedPlan: boolean,
+  ) {
+    let reviews = this.defaultDueDiligenceReviews(recommendation);
+    const warnings = [
+      'La selezione è una shortlist di lavoro: non costituisce un ordine né un giudizio definitivo di adeguatezza.',
+      'La disponibilità presso il broker è considerata confermata solo da una fonte pubblica sullo specifico ISIN o da una verifica effettuata nel conto.',
+      'Fiscalità El Toro e trattamento fiscale degli strumenti restano soggetti a validazione professionale.',
+    ];
+
+    if (storedPlan && !staleSavedPlan) {
+      try {
+        const parsed = this.parseJson<DueDiligenceReview[]>(
+          storedPlan.reviewsJson,
+        );
+        const storedByIsin = new Map(
+          parsed.map((review) => [review.isin, review]),
+        );
+
+        reviews = reviews.map(
+          (review) => storedByIsin.get(review.isin) ?? review,
+        );
+      } catch {
+        warnings.unshift(
+          'La revisione salvata non è leggibile ed è stata sostituita con la shortlist iniziale.',
+        );
+      }
+    }
+
+    if (staleSavedPlan) {
+      warnings.unshift(
+        'La due diligence salvata appartiene a una proposta precedente: selezioni e verifiche devono essere ripetute sullo snapshot corrente.',
+      );
+    }
+
+    const amounts = new Map(
+      recommendation.allocation.proposed.map((item) => [
+        item.code,
+        item.newCapitalAmount,
+      ]),
+    );
+    const validation = this.dueDiligenceStatus(recommendation, reviews);
+    const instruments = DUE_DILIGENCE_INSTRUMENTS.map((instrument) => {
+      const review = reviews.find((item) => item.isin === instrument.isin);
+
+      if (!review) {
+        throw new Error(
+          `Revisione due diligence mancante per ${instrument.isin}.`,
+        );
+      }
+
+      return {
+        ...instrument,
+        proposedAmount: amounts.get(instrument.assetClass) ?? 0,
+        review,
+        brokerRoutes: instrument.brokerRoutes.map((route) => ({
+          ...route,
+          userStatus: review.brokerAvailability[route.broker],
+          effectiveStatus: this.effectiveBrokerAvailability(
+            instrument,
+            review,
+            route.broker,
+          ),
+        })),
+      };
+    });
+
+    return {
+      dueDiligenceVersion: DUE_DILIGENCE_VERSION,
+      recommendationId: recommendation.id,
+      saved:
+        storedPlan !== null &&
+        !staleSavedPlan &&
+        storedPlan.recommendationSnapshotId === recommendation.id,
+      status: validation.status,
+      notes: staleSavedPlan ? null : (storedPlan?.notes ?? null),
+      updatedAt:
+        storedPlan && !staleSavedPlan
+          ? storedPlan.updatedAt.toISOString()
+          : null,
+      checks: DUE_DILIGENCE_CHECKS,
+      instruments,
+      validation: {
+        selectionComplete: validation.selectionComplete,
+        checklistComplete: validation.checklistComplete,
+        brokerRoutingComplete: validation.brokerRoutingComplete,
+        progress: validation.progress,
+      },
+      routingPreview: this.buildDueDiligenceRoutingPreview(
+        recommendation,
+        entryPlan,
+        reviews,
+      ),
+      execution: {
+        automatedExecution: false,
+        status: 'BLOCKED' as const,
+        blockingReasons: [
+          'Fiscalità El Toro: NEEDS_VALIDATION.',
+          'Compatibilità fiscale e adeguatezza degli strumenti da validare professionalmente.',
+          'Quantità, prezzi limite e ordini non vengono generati o trasmessi.',
+        ],
+      },
+      warnings,
+    };
+  }
+
   private determineStatus(inputs: RecommendationInputs): RecommendationStatus {
     if (
       inputs.capitalPlan.reconciliation.fundingGap > 0 ||
@@ -1299,6 +2045,239 @@ export class InvestmentRecommendationsService {
 
     return {
       plan: this.buildEntryPlanResponse(recommendation, savedPlan, false),
+    };
+  }
+
+  async getElToroDueDiligence() {
+    const recommendationResponse = await this.getLatestElToroRecommendation();
+    const recommendation = recommendationResponse.recommendation;
+
+    if (!recommendation) {
+      return {
+        dueDiligence: null,
+      };
+    }
+
+    const [storedPlan, entryPlan] = await Promise.all([
+      this.prisma.investmentDueDiligencePlan.findUnique({
+        where: {
+          sourcePropertyCode: EL_TORO_PROPERTY_CODE,
+        },
+      }),
+      this.prisma.investmentRecommendationPlan.findUnique({
+        where: {
+          sourcePropertyCode: EL_TORO_PROPERTY_CODE,
+        },
+      }),
+    ]);
+    const staleSavedPlan =
+      storedPlan !== null &&
+      storedPlan.recommendationSnapshotId !== recommendation.id;
+
+    return {
+      dueDiligence: this.buildDueDiligenceResponse(
+        recommendation,
+        storedPlan,
+        entryPlan,
+        staleSavedPlan,
+      ),
+    };
+  }
+
+  async updateElToroDueDiligence(input: UpdateElToroDueDiligenceInput) {
+    const recommendationResponse = await this.getLatestElToroRecommendation();
+    const recommendation = recommendationResponse.recommendation;
+
+    if (!recommendation) {
+      throw new BadRequestException(
+        'Genera prima una proposta di investimento El Toro.',
+      );
+    }
+
+    if (
+      !input ||
+      typeof input.recommendationId !== 'string' ||
+      input.recommendationId !== recommendation.id
+    ) {
+      throw new BadRequestException(
+        'La due diligence non corrisponde all’ultima proposta. Ricarica il Recommendation Engine.',
+      );
+    }
+
+    if (!recommendation.isCurrent) {
+      throw new BadRequestException(
+        'La proposta non è più allineata agli input correnti. Rigenerala prima di salvare la due diligence.',
+      );
+    }
+
+    if (recommendation.status !== 'NEEDS_VALIDATION') {
+      throw new BadRequestException(
+        'La due diligence può essere salvata solo dopo avere completato capitale, classificazione IPS e aggiornamento mercati.',
+      );
+    }
+
+    if (!Array.isArray(input.reviews)) {
+      throw new BadRequestException(
+        'Le revisioni degli strumenti non sono valide.',
+      );
+    }
+
+    const defaults = this.defaultDueDiligenceReviews(recommendation);
+    const reviewsByIsin = new Map(
+      defaults.map((review) => [review.isin, review]),
+    );
+    const seen = new Set<string>();
+    const brokerCodes: BrokerCode[] = ['FINECO', 'INTERACTIVE_BROKERS'];
+    const allowedBrokerStatuses: UserBrokerAvailability[] = [
+      'NOT_VERIFIED',
+      'USER_CONFIRMED',
+      'NOT_AVAILABLE',
+    ];
+
+    for (const candidate of input.reviews) {
+      if (
+        !candidate ||
+        typeof candidate.isin !== 'string' ||
+        !reviewsByIsin.has(candidate.isin)
+      ) {
+        throw new BadRequestException(
+          'La revisione contiene uno strumento non presente nella shortlist corrente.',
+        );
+      }
+
+      if (seen.has(candidate.isin)) {
+        throw new BadRequestException(
+          `Lo strumento ${candidate.isin} è presente più di una volta.`,
+        );
+      }
+
+      seen.add(candidate.isin);
+
+      const preferredBroker =
+        candidate.preferredBroker === null ||
+        candidate.preferredBroker === undefined
+          ? null
+          : candidate.preferredBroker;
+
+      if (preferredBroker !== null && !brokerCodes.includes(preferredBroker)) {
+        throw new BadRequestException(
+          `Broker preferito non valido per ${candidate.isin}.`,
+        );
+      }
+
+      const brokerAvailability = brokerCodes.reduce(
+        (result, broker) => {
+          const value =
+            candidate.brokerAvailability?.[broker] ?? 'NOT_VERIFIED';
+
+          if (!allowedBrokerStatuses.includes(value)) {
+            throw new BadRequestException(
+              `Stato broker non valido per ${candidate.isin}.`,
+            );
+          }
+
+          result[broker] = value;
+
+          return result;
+        },
+        {} as Record<BrokerCode, UserBrokerAvailability>,
+      );
+
+      if (
+        preferredBroker &&
+        brokerAvailability[preferredBroker] === 'NOT_AVAILABLE'
+      ) {
+        throw new BadRequestException(
+          `Il broker preferito risulta non disponibile per ${candidate.isin}.`,
+        );
+      }
+
+      const checks = DUE_DILIGENCE_CHECKS.reduce(
+        (result, check) => {
+          result[check.code] = candidate.checks?.[check.code] === true;
+
+          return result;
+        },
+        {} as Record<DueDiligenceCheckCode, boolean>,
+      );
+
+      reviewsByIsin.set(candidate.isin, {
+        isin: candidate.isin,
+        selected: candidate.selected === true,
+        preferredBroker,
+        checks,
+        brokerAvailability,
+        notes: this.normalizeOptionalText(candidate.notes, 1_000),
+      });
+    }
+
+    const reviews = Array.from(reviewsByIsin.values());
+    const amounts = new Map(
+      recommendation.allocation.proposed.map((item) => [
+        item.code,
+        item.newCapitalAmount,
+      ]),
+    );
+
+    for (const instrument of DUE_DILIGENCE_INSTRUMENTS) {
+      const review = reviewsByIsin.get(instrument.isin);
+
+      if (review?.selected && (amounts.get(instrument.assetClass) ?? 0) <= 0) {
+        throw new BadRequestException(
+          `Non è possibile selezionare ${instrument.ticker}: la proposta non assegna capitale alla relativa classe IPS.`,
+        );
+      }
+    }
+
+    for (const assetClass of ['BONDS', 'MONEY_MARKET', 'GOLD'] as const) {
+      const selected = DUE_DILIGENCE_INSTRUMENTS.filter(
+        (instrument) =>
+          instrument.assetClass === assetClass &&
+          reviewsByIsin.get(instrument.isin)?.selected,
+      );
+
+      if (selected.length > 1) {
+        throw new BadRequestException(
+          `Seleziona al massimo uno strumento per ${selected[0].assetClassLabel}.`,
+        );
+      }
+    }
+
+    const validation = this.dueDiligenceStatus(recommendation, reviews);
+    const savedPlan = await this.prisma.investmentDueDiligencePlan.upsert({
+      where: {
+        sourcePropertyCode: EL_TORO_PROPERTY_CODE,
+      },
+      update: {
+        recommendationSnapshotId: recommendation.id,
+        reviewsJson: JSON.stringify(reviews),
+        notes: this.normalizeOptionalText(input.notes, 2_000),
+        status: validation.status,
+      },
+      create: {
+        id: 1,
+        sourcePropertyCode: EL_TORO_PROPERTY_CODE,
+        recommendationSnapshotId: recommendation.id,
+        reviewsJson: JSON.stringify(reviews),
+        notes: this.normalizeOptionalText(input.notes, 2_000),
+        status: validation.status,
+      },
+    });
+    const entryPlan = await this.prisma.investmentRecommendationPlan.findUnique(
+      {
+        where: {
+          sourcePropertyCode: EL_TORO_PROPERTY_CODE,
+        },
+      },
+    );
+
+    return {
+      dueDiligence: this.buildDueDiligenceResponse(
+        recommendation,
+        savedPlan,
+        entryPlan,
+        false,
+      ),
     };
   }
 }
