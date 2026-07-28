@@ -612,8 +612,6 @@ export class IpsClassificationService
           } else {
             classifiedValue +=
               value;
-            strategicValue +=
-              value;
 
             for (
               const component of
@@ -625,11 +623,12 @@ export class IpsClassificationService
                     .ipsAssetClass,
                 );
 
-              if (
-                !definition.strategic
-              ) {
-                continue;
-              }
+              const componentValue =
+                value *
+                (
+                  component.percentage /
+                  100
+                );
 
               classTotals.set(
                 definition.code,
@@ -638,12 +637,21 @@ export class IpsClassificationService
                     definition.code,
                   ) ?? 0
                 ) +
-                  value *
-                    (
-                      component.percentage /
-                      100
-                    ),
+                  componentValue,
               );
+
+              if (
+                definition.strategic
+              ) {
+                strategicValue +=
+                  componentValue;
+              } else if (
+                definition.code ===
+                'OPERATING_CASH'
+              ) {
+                operatingCashValue +=
+                  componentValue;
+              }
             }
           }
         } else {
@@ -1410,14 +1418,6 @@ export class IpsClassificationService
               item.ipsAssetClass,
             );
 
-          if (
-            !definition.strategic
-          ) {
-            throw new BadRequestException(
-              'Il look-through può utilizzare solo classi strategiche.',
-            );
-          }
-
           return {
             ipsAssetClass:
               definition.code,
@@ -1486,11 +1486,48 @@ export class IpsClassificationService
       position.status !==
         'ACTIVE' ||
       position.isLiability ||
-      position.category !==
-        'INVESTMENT'
+      ![
+        'LIQUIDITY',
+        'INVESTMENT',
+      ].includes(
+        position.category,
+      )
     ) {
       throw new BadRequestException(
-        'Posizione di investimento non valida per il look-through.',
+        'Posizione finanziaria non valida per la ripartizione.',
+      );
+    }
+
+    if (
+      position.category ===
+        'INVESTMENT' &&
+      normalized.some(
+        (item) =>
+          !this.definition(
+            item.ipsAssetClass,
+          ).strategic,
+      )
+    ) {
+      throw new BadRequestException(
+        'Il look-through di un investimento può utilizzare solo classi strategiche.',
+      );
+    }
+
+    if (
+      position.category ===
+        'LIQUIDITY' &&
+      normalized.some(
+        (item) =>
+          ![
+            'MONEY_MARKET',
+            'OPERATING_CASH',
+          ].includes(
+            item.ipsAssetClass,
+          ),
+      )
+    ) {
+      throw new BadRequestException(
+        'La liquidità può essere ripartita solo tra quota strategica e quota operativa.',
       );
     }
 

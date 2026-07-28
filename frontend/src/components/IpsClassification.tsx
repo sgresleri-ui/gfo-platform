@@ -356,6 +356,11 @@ export default function IpsClassification() {
   const [saving, setSaving] =
     useState(false);
 
+  const [
+    classificationError,
+    setClassificationError,
+  ] = useState<string | null>(null);
+
   const [notice, setNotice] =
     useState<Notice | null>(null);
 
@@ -417,6 +422,7 @@ export default function IpsClassification() {
       MONEY_MARKET: "",
       GOLD: "",
       ALTERNATIVES: "",
+      OPERATING_CASH: "",
     });
 
   const [lookThroughReason, setLookThroughReason] =
@@ -424,6 +430,9 @@ export default function IpsClassification() {
 
   const [lookThroughSaving, setLookThroughSaving] =
     useState(false);
+
+  const [lookThroughError, setLookThroughError] =
+    useState<string | null>(null);
 
   const loadData = useCallback(
     async () => {
@@ -816,6 +825,7 @@ export default function IpsClassification() {
       MONEY_MARKET: "",
       GOLD: "",
       ALTERNATIVES: "",
+      OPERATING_CASH: "",
     };
 
     for (
@@ -843,6 +853,7 @@ export default function IpsClassification() {
           ?.reason ??
         "",
     );
+    setLookThroughError(null);
     setNotice(null);
   }
 
@@ -850,6 +861,7 @@ export default function IpsClassification() {
     if (!lookThroughSaving) {
       setLookThroughItem(null);
       setLookThroughReason("");
+      setLookThroughError(null);
     }
   }
 
@@ -897,24 +909,21 @@ export default function IpsClassification() {
       Math.abs(total - 100) >
         0.01
     ) {
-      setNotice({
-        severity: "warning",
-        text:
-          "Il look-through deve contenere almeno due componenti e totalizzare il 100%.",
-      });
+      setLookThroughError(
+        "Inserisci almeno due componenti e verifica che il totale sia esattamente 100%.",
+      );
       return;
     }
 
     if (!lookThroughReason.trim()) {
-      setNotice({
-        severity: "warning",
-        text:
-          "Indicare la fonte delle percentuali o la motivazione.",
-      });
+      setLookThroughError(
+        "Inserisci la fonte delle percentuali o una breve motivazione prima di salvare.",
+      );
       return;
     }
 
     setLookThroughSaving(true);
+    setLookThroughError(null);
     setNotice(null);
 
     try {
@@ -925,19 +934,23 @@ export default function IpsClassification() {
       );
       setLookThroughItem(null);
       setLookThroughReason("");
+      setLookThroughError(null);
       setNotice({
         severity: "success",
         text:
-          "Look-through salvato e incluso nell’asset allocation IPS.",
+          lookThroughItem.category ===
+          "LIQUIDITY"
+            ? "Ripartizione della liquidità salvata e inclusa nei calcoli IPS."
+            : "Look-through salvato e incluso nell’asset allocation IPS.",
       });
       await loadData();
     } catch (error) {
       console.error(error);
-      setNotice({
-        severity: "error",
-        text:
-          "Il look-through non è stato salvato.",
-      });
+      setLookThroughError(
+        error instanceof Error
+          ? `Salvataggio non riuscito: ${error.message}`
+          : "Il look-through non è stato salvato. I dati inseriti sono ancora disponibili: verifica il backend e riprova.",
+      );
     } finally {
       setLookThroughSaving(false);
     }
@@ -962,6 +975,7 @@ export default function IpsClassification() {
     );
 
     setConfirmationStep(false);
+    setClassificationError(null);
     setNotice(null);
   }
 
@@ -970,6 +984,7 @@ export default function IpsClassification() {
     setSelectedClass("");
     setReason("");
     setConfirmationStep(false);
+    setClassificationError(null);
   }
 
   function closeDialog() {
@@ -980,25 +995,22 @@ export default function IpsClassification() {
 
   function requestConfirmation() {
     if (!selectedClass) {
-      setNotice({
-        severity: "warning",
-        text:
-          "Selezionare una classe patrimoniale IPS.",
-      });
+      setClassificationError(
+        "Seleziona una classe patrimoniale IPS prima di continuare.",
+      );
 
       return;
     }
 
     if (!reason.trim()) {
-      setNotice({
-        severity: "warning",
-        text:
-          "Indicare la motivazione della classificazione.",
-      });
+      setClassificationError(
+        "Inserisci una breve motivazione della modifica prima di continuare.",
+      );
 
       return;
     }
 
+    setClassificationError(null);
     setNotice(null);
     setConfirmationStep(true);
   }
@@ -1033,6 +1045,7 @@ export default function IpsClassification() {
         : null;
 
     setSaving(true);
+    setClassificationError(null);
     setNotice(null);
 
     try {
@@ -1066,11 +1079,11 @@ export default function IpsClassification() {
     } catch (error) {
       console.error(error);
 
-      setNotice({
-        severity: "error",
-        text:
-          "La classificazione non è stata salvata.",
-      });
+      setClassificationError(
+        error instanceof Error
+          ? `Salvataggio non riuscito: ${error.message}`
+          : "La classificazione non è stata salvata. I dati inseriti sono ancora disponibili: correggi e riprova.",
+      );
     } finally {
       setSaving(false);
     }
@@ -2015,7 +2028,12 @@ export default function IpsClassification() {
                         <Chip
                           size="small"
                           color="success"
-                          label="Look-through"
+                          label={
+                            item.category ===
+                            "LIQUIDITY"
+                              ? "Ripartizione"
+                              : "Look-through"
+                          }
                         />
 
                         <Typography
@@ -2214,8 +2232,12 @@ export default function IpsClassification() {
                         </Button>
                       )}
 
-                      {item.category ===
-                        "INVESTMENT" && (
+                      {[
+                        "INVESTMENT",
+                        "LIQUIDITY",
+                      ].includes(
+                        item.category,
+                      ) && (
                         <Button
                           size="small"
                           variant="text"
@@ -2225,7 +2247,10 @@ export default function IpsClassification() {
                             )
                           }
                         >
-                          Look-through
+                          {item.category ===
+                          "LIQUIDITY"
+                            ? "Ripartisci"
+                            : "Look-through"}
                         </Button>
                       )}
 
@@ -2673,7 +2698,10 @@ export default function IpsClassification() {
         maxWidth="sm"
       >
         <DialogTitle>
-          Composizione look-through
+          {lookThroughItem?.category ===
+          "LIQUIDITY"
+            ? "Ripartizione della liquidità"
+            : "Composizione look-through"}
         </DialogTitle>
 
         <DialogContent>
@@ -2690,10 +2718,20 @@ export default function IpsClassification() {
             severity="info"
             sx={{ mb: 2 }}
           >
-            Inserisci la composizione del
-            fondo riportata dal factsheet.
-            Il totale deve essere 100%.
+            {lookThroughItem?.category ===
+            "LIQUIDITY"
+              ? "Indica quale quota del saldo è liquidità strategica investibile e quale è destinata all’uso operativo o alle emergenze. Il totale deve essere 100%."
+              : "Inserisci la composizione del fondo riportata dal factsheet. Il totale deve essere 100%."}
           </Alert>
+
+          {lookThroughError && (
+            <Alert
+              severity="error"
+              sx={{ mb: 2 }}
+            >
+              {lookThroughError}
+            </Alert>
+          )}
 
           <Box
             sx={{
@@ -2709,7 +2747,16 @@ export default function IpsClassification() {
             {data.allocation
               .filter(
                 (item) =>
-                  item.strategic,
+                  lookThroughItem
+                    ?.category ===
+                  "LIQUIDITY"
+                    ? [
+                        "MONEY_MARKET",
+                        "OPERATING_CASH",
+                      ].includes(
+                        item.code,
+                      )
+                    : item.strategic,
               )
               .map((item) => (
                 <TextField
@@ -2803,7 +2850,10 @@ export default function IpsClassification() {
           >
             {lookThroughSaving
               ? "Salvataggio…"
-              : "Salva look-through"}
+              : lookThroughItem?.category ===
+                  "LIQUIDITY"
+                ? "Salva ripartizione"
+                : "Salva look-through"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -2816,11 +2866,26 @@ export default function IpsClassification() {
       >
         <DialogTitle>
           {confirmationStep
-            ? "Conferma classificazione"
-            : "Classifica posizione"}
+            ? selectedItem &&
+              isClassified(selectedItem)
+              ? "Conferma modifica"
+              : "Conferma classificazione"
+            : selectedItem &&
+                isClassified(selectedItem)
+              ? "Modifica classificazione"
+              : "Classifica posizione"}
         </DialogTitle>
 
         <DialogContent>
+          {classificationError && (
+            <Alert
+              severity="error"
+              sx={{ mb: 2 }}
+            >
+              {classificationError}
+            </Alert>
+          )}
+
           {!confirmationStep ? (
             <>
               <DialogContentText
@@ -2960,7 +3025,7 @@ export default function IpsClassification() {
                 requestConfirmation
               }
             >
-              Continua
+              Verifica modifica
             </Button>
           ) : (
             <>
@@ -2993,7 +3058,12 @@ export default function IpsClassification() {
               >
                 {saving
                   ? "Salvataggio..."
-                  : "Conferma classificazione"}
+                  : selectedItem &&
+                      isClassified(
+                        selectedItem,
+                      )
+                    ? "Salva modifica"
+                    : "Conferma classificazione"}
               </Button>
             </>
           )}
