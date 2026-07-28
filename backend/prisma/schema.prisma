@@ -96,6 +96,17 @@ model PlatformSetting {
   updatedAt              DateTime @updatedAt
 }
 
+model CapitalAllocationPlan {
+  id                      Int      @id @default(1)
+  sourcePropertyCode      String   @unique @default("PROPERTY_EL_TORO")
+  dubaiHomeReserve        Float    @default(0)
+  familyTransitionReserve Float    @default(0)
+  longTermCoreInvestment  Float    @default(0)
+  source                  String   @default("DOCUMENTED_PLAN")
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}
+
 model DecisionLogEntry {
   id               String   @id
   decisionDate     DateTime

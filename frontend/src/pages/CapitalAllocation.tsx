@@ -25,6 +25,8 @@ import {
   Link as RouterLink,
 } from "react-router-dom";
 
+import ElToroCapitalPlanPanel from "../components/ElToroCapitalPlanPanel";
+
 import {
   assessPlanningAllocationScenario,
   getElToroTaxAnalysis,
@@ -379,6 +381,8 @@ export default function CapitalAllocation() {
     }, []);
 
   useEffect(() => {
+    // I loader gestiscono fetch e stati asincroni della pagina.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadProperties();
     void loadSaleExpenses();
     void loadPlanning();
@@ -1744,6 +1748,17 @@ export default function CapitalAllocation() {
           stime.
         </Typography>
       </Paper>
+
+      <ElToroCapitalPlanPanel
+        refreshToken={[
+          taxAnalysis?.planningEstimates
+            .estimatedTaxReserve ?? 0,
+          taxAnalysis?.planningEstimates
+            .futureSaleCosts ?? 0,
+          taxAnalysis?.planningEstimates
+            .status ?? "loading",
+        ].join(":")}
+      />
 
       {!loadingSaleData &&
         !saleDataError && (

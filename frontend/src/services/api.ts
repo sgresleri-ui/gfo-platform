@@ -4048,3 +4048,107 @@ export async function getElToroTaxAnalysis(): Promise<ElToroTaxAnalysisResponse>
     "Unable to load El Toro tax analysis",
   );
 }
+
+export type ElToroCapitalAllocationStatus =
+  | "NOT_SET"
+  | "UNDER_ALLOCATED"
+  | "OVER_ALLOCATED"
+  | "BALANCED";
+
+export type ElToroCapitalOperationalStatus =
+  | "ESTIMATES_NOT_SET"
+  | "FUNDING_GAP"
+  | "ALLOCATION_INCOMPLETE"
+  | "READY_FOR_PROFESSIONAL_VALIDATION";
+
+export type ElToroCapitalAllocationPlanResponse = {
+  property: {
+    code: string;
+    name: string;
+    expectedClosingDate: string | null;
+  };
+
+  plan: {
+    id: number;
+    currency: "EUR";
+    dubaiHomeReserve: number;
+    familyTransitionReserve: number;
+    longTermCoreInvestment: number;
+    totalPlannedAllocation: number;
+    source:
+      | "DOCUMENTED_PLAN"
+      | "USER_PLAN";
+    updatedAt: string;
+  };
+
+  reconciliation: {
+    grossSalePrice: number;
+    debtToRepay: number;
+    recordedSellingCosts: number;
+    estimatedTaxReserve: number;
+    futureSaleCosts: number;
+    availableCapital: number;
+    totalPlannedAllocation: number;
+    unallocatedCapital: number;
+    fundingGap: number;
+    balance: number;
+  };
+
+  status: {
+    allocation:
+      ElToroCapitalAllocationStatus;
+    operational:
+      ElToroCapitalOperationalStatus;
+    fiscal: "NEEDS_VALIDATION";
+    planningEstimates:
+      | "USER_ESTIMATE"
+      | "NOT_SET";
+  };
+
+  constraints: {
+    professionalTaxValidationRequired:
+      true;
+    dubaiHomeReserveInvestibleInEquities:
+      false;
+  };
+
+  warnings: string[];
+};
+
+export type UpdateElToroCapitalAllocationPlanInput = {
+  dubaiHomeReserve: number;
+  familyTransitionReserve: number;
+  longTermCoreInvestment: number;
+};
+
+export async function getElToroCapitalAllocationPlan(): Promise<ElToroCapitalAllocationPlanResponse> {
+  const response = await fetch(
+    `${API_URL}/capital-allocation/el-toro`,
+  );
+
+  return readJson<ElToroCapitalAllocationPlanResponse>(
+    response,
+    "Unable to load El Toro capital allocation plan",
+  );
+}
+
+export async function updateElToroCapitalAllocationPlan(
+  input:
+    UpdateElToroCapitalAllocationPlanInput,
+): Promise<ElToroCapitalAllocationPlanResponse> {
+  const response = await fetch(
+    `${API_URL}/capital-allocation/el-toro`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+
+  return readJson<ElToroCapitalAllocationPlanResponse>(
+    response,
+    "Unable to update El Toro capital allocation plan",
+  );
+}
