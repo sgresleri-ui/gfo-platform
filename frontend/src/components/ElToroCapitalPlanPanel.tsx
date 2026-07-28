@@ -23,6 +23,7 @@ import {
   updateElToroCapitalAllocationPlan,
   type ElToroCapitalAllocationPlanResponse,
 } from "../services/api";
+import { parseLocaleAmount } from "../utils/amounts";
 
 type ElToroCapitalPlanPanelProps = {
   refreshToken: string;
@@ -36,23 +37,6 @@ function euro(value: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-}
-
-function parseAmount(
-  value: string,
-): number {
-  const normalized = value
-    .trim()
-    .replace(/\s/g, "")
-    .replace(/\./g, "")
-    .replace(",", ".");
-
-  const amount = Number(normalized);
-
-  return Number.isFinite(amount) &&
-    amount >= 0
-    ? amount
-    : 0;
 }
 
 function roundMoney(
@@ -176,17 +160,17 @@ export default function ElToroCapitalPlanPanel({
   }, [loadPlan, refreshToken]);
 
   const dubaiHomeReserve =
-    parseAmount(
+    parseLocaleAmount(
       dubaiHomeReserveInput,
     );
 
   const familyTransitionReserve =
-    parseAmount(
+    parseLocaleAmount(
       familyTransitionReserveInput,
     );
 
   const longTermCoreInvestment =
-    parseAmount(
+    parseLocaleAmount(
       longTermCoreInvestmentInput,
     );
 
@@ -593,7 +577,9 @@ export default function ElToroCapitalPlanPanel({
           }
           disabled={
             saving ||
-            !changed
+            !changed ||
+            reconciliation.fundingGap >
+              0
           }
           onClick={async () => {
             setSaving(true);

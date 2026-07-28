@@ -27,6 +27,7 @@ import {
 
 import ElToroCapitalPlanPanel from "../components/ElToroCapitalPlanPanel";
 import InvestmentRecommendationPanel from "../components/InvestmentRecommendationPanel";
+import { parseLocaleAmount } from "../utils/amounts";
 
 import {
   assessPlanningAllocationScenario,
@@ -66,23 +67,6 @@ function dateLabel(
       year: "numeric",
     },
   ).format(new Date(value));
-}
-
-function parseEstimatedAmount(
-  value: string,
-): number {
-  const normalized = value
-    .trim()
-    .replace(/\s/g, "")
-    .replace(/\./g, "")
-    .replace(",", ".");
-
-  const amount = Number(normalized);
-
-  return Number.isFinite(amount) &&
-    amount > 0
-    ? amount
-    : 0;
 }
 
 function residenceLabel(
@@ -608,12 +592,12 @@ export default function CapitalAllocation() {
     );
 
   const estimatedTaxReserve =
-    parseEstimatedAmount(
+    parseLocaleAmount(
       estimatedTaxReserveInput,
     );
 
   const futureSaleCosts =
-    parseEstimatedAmount(
+    parseLocaleAmount(
       futureSaleCostsInput,
     );
 

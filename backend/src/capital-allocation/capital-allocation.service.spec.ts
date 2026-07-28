@@ -74,6 +74,7 @@ describe('CapitalAllocationService', () => {
 
     return {
       service: new CapitalAllocationService(prisma, taxAnalysisService),
+      prisma,
     };
   }
 
@@ -114,5 +115,22 @@ describe('CapitalAllocationService', () => {
         dubaiHomeReserve: -1,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects an over-allocated plan before persisting it', async () => {
+    const { service, prisma } = createService();
+
+    await expect(
+      service.updateElToroPlan({
+        familyTransitionReserve: 276_953.8,
+        longTermCoreInvestment: 3_000_000,
+      }),
+    ).rejects.toThrow(
+      'Le destinazioni pianificate superano il capitale allocabile',
+    );
+
+    expect(
+      prisma.capitalAllocationPlan.update,
+    ).not.toHaveBeenCalled();
   });
 });

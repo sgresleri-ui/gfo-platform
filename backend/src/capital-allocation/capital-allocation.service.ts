@@ -171,7 +171,48 @@ export class CapitalAllocationService {
   }
 
   async updateElToroPlan(input: UpdateElToroCapitalPlanInput) {
-    const current = await this.getStoredPlan();
+    const [current, taxAnalysis] = await Promise.all([
+      this.getStoredPlan(),
+      this.taxAnalysisService.getElToroAnalysis(),
+    ]);
+
+    const nextPlan = {
+      dubaiHomeReserve: this.validateAmount(
+        input.dubaiHomeReserve,
+        current.dubaiHomeReserve,
+        'La riserva casa Dubai',
+      ),
+
+      familyTransitionReserve: this.validateAmount(
+        input.familyTransitionReserve,
+        current.familyTransitionReserve,
+        'La riserva famiglia e trasferimento',
+      ),
+
+      longTermCoreInvestment: this.validateAmount(
+        input.longTermCoreInvestment,
+        current.longTermCoreInvestment,
+        'L’investimento core di lungo periodo',
+      ),
+    };
+
+    const totalPlannedAllocation = this.roundMoney(
+      nextPlan.dubaiHomeReserve +
+        nextPlan.familyTransitionReserve +
+        nextPlan.longTermCoreInvestment,
+    );
+
+    const availableCapital = this.roundMoney(
+      taxAnalysis.planningEstimates.netProceedsAfterEstimates,
+    );
+
+    if (totalPlannedAllocation > availableCapital) {
+      throw new BadRequestException(
+        `Le destinazioni pianificate superano il capitale allocabile di ${this.roundMoney(
+          totalPlannedAllocation - availableCapital,
+        )} EUR.`,
+      );
+    }
 
     const plan = await this.prisma.capitalAllocationPlan.update({
       where: {
@@ -179,29 +220,10 @@ export class CapitalAllocationService {
       },
 
       data: {
-        dubaiHomeReserve: this.validateAmount(
-          input.dubaiHomeReserve,
-          current.dubaiHomeReserve,
-          'La riserva casa Dubai',
-        ),
-
-        familyTransitionReserve: this.validateAmount(
-          input.familyTransitionReserve,
-          current.familyTransitionReserve,
-          'La riserva famiglia e trasferimento',
-        ),
-
-        longTermCoreInvestment: this.validateAmount(
-          input.longTermCoreInvestment,
-          current.longTermCoreInvestment,
-          'L’investimento core di lungo periodo',
-        ),
-
+        ...nextPlan,
         source: 'USER_PLAN',
       },
     });
-
-    const taxAnalysis = await this.taxAnalysisService.getElToroAnalysis();
 
     return this.buildResponse(plan, taxAnalysis);
   }
