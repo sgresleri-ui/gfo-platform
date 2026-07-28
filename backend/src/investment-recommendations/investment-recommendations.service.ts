@@ -287,6 +287,10 @@ export class InvestmentRecommendationsService {
         positionId: item.positionId,
         valueBase: item.valueBase,
         ipsAssetClass: item.ipsAssetClass,
+        classificationMode:
+          item.classificationMode,
+        lookThroughAllocation:
+          item.lookThroughAllocation,
         updatedAt: item.updatedAt,
       })),
     };

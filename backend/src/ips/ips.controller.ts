@@ -69,6 +69,53 @@ export class IpsController {
       .getAuditHistory();
   }
 
+  @Post('classifications/confirm-suggestions')
+  confirmClassificationSuggestions(
+    @Body('items')
+    items: Array<{
+      positionId: number;
+      suggestedClass: string;
+    }>,
+
+    @Body('confirm')
+    confirm: boolean,
+  ) {
+    return this.classificationService
+      .confirmSuggestions(
+        items,
+        confirm,
+      );
+  }
+
+  @Post('classifications/:positionId/look-through')
+  updateClassificationLookThrough(
+    @Param(
+      'positionId',
+      ParseIntPipe,
+    )
+    positionId: number,
+
+    @Body('allocations')
+    allocations: Array<{
+      ipsAssetClass: string;
+      percentage: number;
+    }>,
+
+    @Body('reason')
+    reason: string,
+
+    @Body('confirm')
+    confirm: boolean,
+  ) {
+    return this.classificationService
+      .updateLookThrough(
+        positionId,
+        allocations,
+        reason,
+        confirm,
+      );
+  }
+
   @Post('classifications/:positionId')
   updateClassification(
     @Param(

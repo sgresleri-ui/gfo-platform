@@ -1824,6 +1824,14 @@ export type IpsClassificationItem = {
   currency: string;
   valueBase: number;
   ipsAssetClass: IpsAssetClassCode | null;
+  classificationMode:
+    | "SINGLE_CLASS"
+    | "LOOK_THROUGH"
+    | null;
+  lookThroughAllocation: Array<{
+    ipsAssetClass: IpsAssetClassCode;
+    percentage: number;
+  }>;
   source: string | null;
   rationale: string | null;
   updatedAt: string | null;
@@ -1836,6 +1844,19 @@ export type IpsClassificationItem = {
     | null;
 
   suggestionReason: string | null;
+  suggestionSourceUrl: string | null;
+  suggestedLookThrough: {
+    allocations: Array<{
+      ipsAssetClass: IpsAssetClassCode;
+      percentage: number;
+    }>;
+    method:
+      | "BENCHMARK_PROXY"
+      | "FACTSHEET_PROXY";
+    asOfDate: string;
+    reason: string;
+    sourceUrl: string;
+  } | null;
 
   reviewStatus: IpsReviewStatus | null;
   reviewNote: string | null;
@@ -1855,6 +1876,8 @@ export type IpsClassificationOverviewResponse = {
     classifiedPositions: number;
     unclassifiedPositions: number;
     suggestedPositions: number;
+    highConfidenceSuggestions: number;
+    mediumConfidenceSuggestions: number;
     pendingInformationPositions: number;
     deferredPositions: number;
     totalFinancialValue: number;
@@ -1955,6 +1978,77 @@ export async function updateIpsPositionClassification(
   }>(
     response,
     "Unable to update IPS classification",
+  );
+}
+
+export async function confirmIpsClassificationSuggestions(
+  items: Array<{
+    positionId: number;
+    suggestedClass: IpsAssetClassCode;
+  }>,
+): Promise<{
+  updated: number;
+  positionIds: number[];
+  summary:
+    IpsClassificationOverviewResponse["summary"];
+}> {
+  const response = await fetch(
+    `${API_URL}/ips/classifications/confirm-suggestions`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        items,
+        confirm: true,
+      }),
+    },
+  );
+
+  return readJson<{
+    updated: number;
+    positionIds: number[];
+    summary:
+      IpsClassificationOverviewResponse["summary"];
+  }>(
+    response,
+    "Unable to confirm IPS classification suggestions",
+  );
+}
+
+export async function updateIpsPositionLookThrough(
+  positionId: number,
+  allocations: Array<{
+    ipsAssetClass: IpsAssetClassCode;
+    percentage: number;
+  }>,
+  reason: string,
+): Promise<{
+  updated: boolean;
+  positionId: number;
+}> {
+  const response = await fetch(
+    `${API_URL}/ips/classifications/${positionId}/look-through`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        allocations,
+        reason,
+        confirm: true,
+      }),
+    },
+  );
+
+  return readJson<{
+    updated: boolean;
+    positionId: number;
+  }>(
+    response,
+    "Unable to update IPS look-through",
   );
 }
 

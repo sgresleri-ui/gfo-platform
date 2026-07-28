@@ -26,12 +26,13 @@ rm -rf "$PROJECT/backend/dist"
 
 if ! (
   cd "$PROJECT/backend" &&
+  npx prisma generate &&
   npx prisma migrate deploy
 ) >> "$LOG_DIR/backend.log" 2>&1; then
   open "$LOG_DIR"
 
   osascript -e \
-    'display alert "GFO Platform" message "Aggiornamento del database non riuscito. Il backup è stato conservato e l’avvio è stato interrotto." as warning'
+    'display alert "GFO Platform" message "Aggiornamento Prisma o database non riuscito. Il backup è stato conservato e l’avvio è stato interrotto." as warning'
 
   exit 1
 fi

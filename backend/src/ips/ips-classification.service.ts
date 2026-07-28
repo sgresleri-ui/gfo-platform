@@ -72,6 +72,131 @@ const IPS_ASSET_CLASSES = [
 type IpsAssetClassCode =
   (typeof IPS_ASSET_CLASSES)[number]['code'];
 
+type LookThroughAllocation = {
+  ipsAssetClass: IpsAssetClassCode;
+  percentage: number;
+};
+
+const VERIFIED_ISIN_CLASSIFICATIONS:
+  Record<
+    string,
+    {
+      code: IpsAssetClassCode;
+      reason: string;
+      sourceUrl: string;
+    }
+  > = {
+    LU0133265339: {
+      code: 'EQUITY_GLOBAL',
+      reason:
+        'Goldman Sachs identifica il comparto come Europe CORE Equity Portfolio.',
+      sourceUrl:
+        'https://am.gs.com/en-lu/advisors/funds/detail/PV100011/LU0133265339/goldman-sachs-europe-core-equity-portfolio',
+    },
+    LU0094557526: {
+      code: 'EQUITY_GLOBAL',
+      reason:
+        'MFS dichiara un investimento prevalente in società europee e titoli azionari.',
+      sourceUrl:
+        'https://www.mfs.com/en-de/investment-professional/product-strategies/meridian-funds/LU0094557526-european-research-fund.html',
+    },
+    LU0552385295: {
+      code: 'EQUITY_GLOBAL',
+      reason:
+        'Morgan Stanley identifica il comparto come fondo azionario globale growth.',
+      sourceUrl:
+        'https://www.morganstanley.com/im/en-be/intermediary-investor/products/morgan-stanley-investment-funds/global-equity/global-opportunity-fund.shareClass.A.html',
+    },
+    LU1545601657: {
+      code: 'EQUITY_GLOBAL',
+      reason:
+        'Il comparto FAM Sustainable è classificato come azionario internazionale.',
+      sourceUrl:
+        'https://finecoassetmanagement.com/archives/products/fam-sustainable-2',
+    },
+    LU0248184466: {
+      code: 'EQUITY_GLOBAL',
+      reason:
+        'Schroders dichiara almeno due terzi del patrimonio in azioni asiatiche ex Japan.',
+      sourceUrl:
+        'https://api.schroders.com/document-store/SISF-Asian-Opportunities-EUR-A-Acc-FMR-LUEN.pdf',
+    },
+    LU0594300096: {
+      code: 'EQUITY_GLOBAL',
+      reason:
+        'Fidelity dichiara almeno il 70% in azioni di società cinesi o di Hong Kong.',
+      sourceUrl:
+        'https://www.fidelity.lu/funds/factsheet/LU0594300096',
+    },
+    LU1670707527: {
+      code: 'EQUITY_GLOBAL',
+      reason:
+        'M&G identifica il comparto come European Strategic Value azionario.',
+      sourceUrl:
+        'https://www.mandg.com/investments/professional-investor/en-ie/funds/mg-lux-european-strategic-value-fund/lu1670707527',
+    },
+    LU0115139569: {
+      code: 'EQUITY_GLOBAL',
+      reason:
+        'Invesco dichiara un portafoglio globale prevalentemente azionario nel settore consumer.',
+      sourceUrl:
+        'https://www.invesco.com/lu/en/financial-products/sicav/invesco-global-consumer-trends-fund-e-eur-acc-shares.html',
+    },
+  };
+
+const LOOK_THROUGH_SUGGESTIONS:
+  Record<
+    string,
+    {
+      allocations: LookThroughAllocation[];
+      method:
+        | 'BENCHMARK_PROXY'
+        | 'FACTSHEET_PROXY';
+      asOfDate: string;
+      reason: string;
+      sourceUrl: string;
+    }
+  > = {
+    IE0009514989: {
+      allocations: [
+        {
+          ipsAssetClass:
+            'EQUITY_GLOBAL',
+          percentage: 60,
+        },
+        {
+          ipsAssetClass: 'BONDS',
+          percentage: 40,
+        },
+      ],
+      method: 'BENCHMARK_PROXY',
+      asOfDate: '2026-07-28',
+      reason:
+        'Proxy iniziale basata sul benchmark 60% S&P 500 / 40% Bloomberg US Aggregate indicato nel KIID. Il fondo non replica il benchmark: verificare e aggiornare con il factsheet corrente.',
+      sourceUrl:
+        'https://documents.janushenderson.com/prod/documents/docId/VQICPT',
+    },
+    LU1097688714: {
+      allocations: [
+        {
+          ipsAssetClass:
+            'EQUITY_GLOBAL',
+          percentage: 46.5,
+        },
+        {
+          ipsAssetClass: 'BONDS',
+          percentage: 53.5,
+        },
+      ],
+      method: 'FACTSHEET_PROXY',
+      asOfDate: '2026-06-30',
+      reason:
+        'Proxy iniziale: i settori azionari del factsheet Invesco al 30 giugno 2026 sommano il 46,5%; il residuo è attribuito prudenzialmente all’obbligazionario e deve essere verificato per l’eventuale quota di cassa.',
+      sourceUrl:
+        'https://www.invesco.com/content/dam/invesco/hk/en/pdf/our-funds/invesco-global-income-fund/HKEN-GlbIncome.pdf',
+    },
+  };
+
 @Injectable()
 export class IpsClassificationService
   implements OnModuleDestroy
@@ -97,6 +222,25 @@ export class IpsClassificationService
     );
   }
 
+  private parseLookThrough(
+    value: string | null,
+  ): LookThroughAllocation[] {
+    if (!value) {
+      return [];
+    }
+
+    try {
+      const parsed: unknown =
+        JSON.parse(value);
+
+      return Array.isArray(parsed)
+        ? parsed as LookThroughAllocation[]
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
   private suggestClass(
     position: {
       code: string;
@@ -110,6 +254,7 @@ export class IpsClassificationService
       | 'HIGH'
       | 'MEDIUM';
     reason: string;
+    sourceUrl: string | null;
   } | null {
     const searchableText = [
       position.code,
@@ -118,6 +263,27 @@ export class IpsClassificationService
     ]
       .join(' ')
       .toUpperCase();
+
+    const isin =
+      position.code
+        .match(
+          /(?:IE|LU|AT|DE|IT)[A-Z0-9]{10}/,
+        )?.[0] ??
+      null;
+
+    const verified =
+      isin
+        ? VERIFIED_ISIN_CLASSIFICATIONS[
+            isin
+          ]
+        : null;
+
+    if (verified) {
+      return {
+        ...verified,
+        confidence: 'HIGH',
+      };
+    }
 
     if (
       position.category ===
@@ -130,6 +296,7 @@ export class IpsClassificationService
 
         reason:
           'La posizione è registrata nella categoria Liquidità. Verificare se si tratta di liquidità operativa o strategica.',
+        sourceUrl: null,
       };
     }
 
@@ -154,6 +321,7 @@ export class IpsClassificationService
 
         reason:
           'Il nome o il codice identifica uno strumento monetario o overnight.',
+        sourceUrl: null,
       };
     }
 
@@ -177,6 +345,7 @@ export class IpsClassificationService
 
         reason:
           'Il nome identifica un’esposizione all’oro.',
+        sourceUrl: null,
       };
     }
 
@@ -184,9 +353,11 @@ export class IpsClassificationService
       [
         'BOND',
         'OBBLIG',
+        ' OBB ',
         'TREASURY',
         'GOVERNMENT BOND',
         'CORPORATE BOND',
+        'CORP BN',
         'FIXED INCOME',
         'ERNX',
       ].some((token) =>
@@ -202,6 +373,7 @@ export class IpsClassificationService
 
         reason:
           'Il nome o il codice identifica uno strumento obbligazionario.',
+        sourceUrl: null,
       };
     }
 
@@ -209,8 +381,20 @@ export class IpsClassificationService
       [
         'EQUITY',
         'AZION',
+        ' EQ ',
+        'AKTIEN',
+        'ARTIF INTELLI',
+        'BRANDS',
+        'DIVID',
+        'EM MRK',
+        'EU ST EQ',
+        'FOCUS EQ',
+        'GL EQ',
+        'GLOBAL EQUITY',
+        'MEGATRENDS',
         'MSCI',
         'WORLD',
+        'WOR TEC',
         'S&P 500',
         'VALUE',
         'MOMENTUM',
@@ -225,10 +409,20 @@ export class IpsClassificationService
       return {
         code: 'EQUITY_GLOBAL',
 
-        confidence: 'MEDIUM',
+        confidence:
+          (position.subcategory ?? '')
+            .trim()
+            .toUpperCase() === 'ETF'
+            ? 'HIGH'
+            : 'MEDIUM',
 
         reason:
-          'Il nome o il codice contiene riferimenti tipici di strumenti azionari.',
+          (position.subcategory ?? '')
+            .trim()
+            .toUpperCase() === 'ETF'
+            ? 'L’ETF replica esplicitamente un indice o un segmento azionario.'
+            : 'Il nome o il codice contiene riferimenti tipici di strumenti azionari; verificare il mandato del fondo.',
+        sourceUrl: null,
       };
     }
 
@@ -252,6 +446,7 @@ export class IpsClassificationService
 
         reason:
           'Il nome contiene riferimenti a investimenti alternativi.',
+        sourceUrl: null,
       };
     }
 
@@ -263,10 +458,11 @@ export class IpsClassificationService
       return {
         code: 'EQUITY_GLOBAL',
 
-        confidence: 'MEDIUM',
+        confidence: 'HIGH',
 
         reason:
-          'La posizione è un ETF e non presenta indicatori di obbligazionario, monetario, oro o investimenti alternativi.',
+          'La posizione è un ETF e non presenta indicatori di obbligazionario, monetario, oro o investimenti alternativi; viene trattata come esposizione azionaria.',
+        sourceUrl: null,
       };
     }
 
@@ -363,11 +559,93 @@ export class IpsClassificationService
               position.subcategory,
           });
 
+        const isin =
+          position.code
+            .match(
+              /(?:IE|LU|AT|DE|IT)[A-Z0-9]{10}/,
+            )?.[0] ??
+          null;
+
+        const suggestedLookThrough =
+          !position
+            .ipsClassification &&
+          isin
+            ? LOOK_THROUGH_SUGGESTIONS[
+                isin
+              ] ?? null
+            : null;
+
         const classification =
           position.ipsClassification;
 
+        const lookThrough =
+          classification
+              ?.ipsAssetClass ===
+            'LOOK_THROUGH'
+            ? this.parseLookThrough(
+                classification
+                  .allocationJson,
+              )
+            : [];
+
         if (!classification) {
           unclassifiedValue += value;
+        } else if (
+          classification
+            .ipsAssetClass ===
+          'LOOK_THROUGH'
+        ) {
+          const validLookThrough =
+            lookThrough.length > 0 &&
+            Math.abs(
+              lookThrough.reduce(
+                (sum, item) =>
+                  sum +
+                  item.percentage,
+                0,
+              ) - 100,
+            ) < 0.01;
+
+          if (!validLookThrough) {
+            unclassifiedValue +=
+              value;
+          } else {
+            classifiedValue +=
+              value;
+            strategicValue +=
+              value;
+
+            for (
+              const component of
+              lookThrough
+            ) {
+              const definition =
+                this.definition(
+                  component
+                    .ipsAssetClass,
+                );
+
+              if (
+                !definition.strategic
+              ) {
+                continue;
+              }
+
+              classTotals.set(
+                definition.code,
+                (
+                  classTotals.get(
+                    definition.code,
+                  ) ?? 0
+                ) +
+                  value *
+                    (
+                      component.percentage /
+                      100
+                    ),
+              );
+            }
+          }
         } else {
           classifiedValue += value;
 
@@ -423,8 +701,24 @@ export class IpsClassificationService
 
           ipsAssetClass:
             classification
-              ?.ipsAssetClass ??
-            null,
+              ?.ipsAssetClass ===
+            'LOOK_THROUGH'
+              ? null
+              : classification
+                  ?.ipsAssetClass ??
+                null,
+
+          classificationMode:
+            classification
+                ?.ipsAssetClass ===
+              'LOOK_THROUGH'
+              ? 'LOOK_THROUGH'
+              : classification
+                  ? 'SINGLE_CLASS'
+                  : null,
+
+          lookThroughAllocation:
+            lookThrough,
 
           source:
             classification
@@ -460,6 +754,15 @@ export class IpsClassificationService
               ? null
               : suggestion?.reason ??
                 null,
+
+          suggestionSourceUrl:
+            classification
+              ? null
+              : suggestion
+                  ?.sourceUrl ??
+                null,
+
+          suggestedLookThrough,
 
           reviewStatus:
             position
@@ -685,14 +988,18 @@ export class IpsClassificationService
           items.filter(
             (item) =>
               item.ipsAssetClass !==
-              null,
+                null ||
+              item.classificationMode ===
+                'LOOK_THROUGH',
           ).length,
 
         unclassifiedPositions:
           items.filter(
             (item) =>
               item.ipsAssetClass ===
-              null,
+                null &&
+              item.classificationMode !==
+                'LOOK_THROUGH',
           ).length,
 
         suggestedPositions:
@@ -702,6 +1009,24 @@ export class IpsClassificationService
                 null &&
               item.suggestedClass !==
                 null,
+          ).length,
+
+        highConfidenceSuggestions:
+          items.filter(
+            (item) =>
+              item.ipsAssetClass ===
+                null &&
+              item.suggestionConfidence ===
+                'HIGH',
+          ).length,
+
+        mediumConfidenceSuggestions:
+          items.filter(
+            (item) =>
+              item.ipsAssetClass ===
+                null &&
+              item.suggestionConfidence ===
+                'MEDIUM',
           ).length,
 
         pendingInformationPositions:
@@ -895,6 +1220,9 @@ export class IpsClassificationService
                     rationale:
                       normalizedReason,
 
+                    allocationJson:
+                      null,
+
                     confirmed: true,
                   },
                 });
@@ -1032,6 +1360,322 @@ export class IpsClassificationService
           : {
               resolved: false,
             },
+    };
+  }
+
+  async updateLookThrough(
+    positionId: number,
+    allocations: Array<{
+      ipsAssetClass: string;
+      percentage: number;
+    }>,
+    reason: string,
+    confirmed: boolean,
+  ) {
+    if (!confirmed) {
+      throw new BadRequestException(
+        'Il look-through richiede conferma esplicita.',
+      );
+    }
+
+    if (
+      !Number.isInteger(positionId) ||
+      positionId <= 0
+    ) {
+      throw new BadRequestException(
+        'Identificativo posizione non valido.',
+      );
+    }
+
+    if (
+      !Array.isArray(allocations) ||
+      allocations.length < 2
+    ) {
+      throw new BadRequestException(
+        'Indicare almeno due componenti del fondo.',
+      );
+    }
+
+    const normalized =
+      allocations
+        .filter(
+          (item) =>
+            Number(
+              item.percentage,
+            ) > 0,
+        )
+        .map((item) => {
+          const definition =
+            this.definition(
+              item.ipsAssetClass,
+            );
+
+          if (
+            !definition.strategic
+          ) {
+            throw new BadRequestException(
+              'Il look-through può utilizzare solo classi strategiche.',
+            );
+          }
+
+          return {
+            ipsAssetClass:
+              definition.code,
+            percentage:
+              this.round(
+                Number(
+                  item.percentage,
+                ),
+                4,
+              ),
+          };
+        });
+
+    const uniqueClasses =
+      new Set(
+        normalized.map(
+          (item) =>
+            item.ipsAssetClass,
+        ),
+      );
+
+    const total =
+      normalized.reduce(
+        (sum, item) =>
+          sum +
+          item.percentage,
+        0,
+      );
+
+    if (
+      normalized.length < 2 ||
+      uniqueClasses.size !==
+        normalized.length ||
+      Math.abs(total - 100) >
+        0.01
+    ) {
+      throw new BadRequestException(
+        'Le componenti devono essere distinte e totalizzare il 100%.',
+      );
+    }
+
+    const normalizedReason =
+      reason?.trim();
+
+    if (!normalizedReason) {
+      throw new BadRequestException(
+        'Indicare la fonte o la motivazione del look-through.',
+      );
+    }
+
+    const position =
+      await this.prisma
+        .wealthPosition
+        .findUnique({
+          where: {
+            id: positionId,
+          },
+          include: {
+            ipsClassification: true,
+            ipsClassificationReview: true,
+          },
+        });
+
+    if (
+      !position ||
+      position.status !==
+        'ACTIVE' ||
+      position.isLiability ||
+      position.category !==
+        'INVESTMENT'
+    ) {
+      throw new BadRequestException(
+        'Posizione di investimento non valida per il look-through.',
+      );
+    }
+
+    const oldClass =
+      position.ipsClassification
+        ?.ipsAssetClass ??
+      null;
+
+    await this.prisma.$transaction(
+      async (transaction) => {
+        await transaction
+          .ipsPositionClassification
+          .upsert({
+            where: {
+              positionId,
+            },
+            create: {
+              positionId,
+              ipsAssetClass:
+                'LOOK_THROUGH',
+              allocationJson:
+                JSON.stringify(
+                  normalized,
+                ),
+              source:
+                'USER_CONFIRMED_LOOK_THROUGH',
+              rationale:
+                normalizedReason,
+              confirmed: true,
+            },
+            update: {
+              ipsAssetClass:
+                'LOOK_THROUGH',
+              allocationJson:
+                JSON.stringify(
+                  normalized,
+                ),
+              source:
+                'USER_CONFIRMED_LOOK_THROUGH',
+              rationale:
+                normalizedReason,
+              confirmed: true,
+            },
+          });
+
+        await transaction
+          .ipsClassificationAudit
+          .create({
+            data: {
+              positionId,
+              positionCode:
+                position.code,
+              oldClass,
+              newClass:
+                'LOOK_THROUGH',
+              reason:
+                normalizedReason,
+              source:
+                'USER_CONFIRMED_LOOK_THROUGH',
+            },
+          });
+
+        if (
+          position
+            .ipsClassificationReview
+        ) {
+          await transaction
+            .ipsClassificationReview
+            .delete({
+              where: {
+                positionId,
+              },
+            });
+        }
+      },
+    );
+
+    return {
+      updated: true,
+      positionId,
+      allocation: normalized,
+    };
+  }
+
+  async confirmSuggestions(
+    items: Array<{
+      positionId: number;
+      suggestedClass: string;
+    }>,
+    confirmed: boolean,
+  ) {
+    if (!confirmed) {
+      throw new BadRequestException(
+        'La conferma massiva richiede conferma esplicita.',
+      );
+    }
+
+    if (
+      !Array.isArray(items) ||
+      items.length === 0
+    ) {
+      throw new BadRequestException(
+        'Selezionare almeno un suggerimento da confermare.',
+      );
+    }
+
+    const uniqueIds =
+      new Set(
+        items.map(
+          (item) => item.positionId,
+        ),
+      );
+
+    if (
+      uniqueIds.size !== items.length
+    ) {
+      throw new BadRequestException(
+        'La selezione contiene posizioni duplicate.',
+      );
+    }
+
+    const overview =
+      await this.getOverview();
+
+    const currentItems =
+      new Map(
+        overview.items.map(
+          (item) => [
+            item.positionId,
+            item,
+          ],
+        ),
+      );
+
+    const validated =
+      items.map((item) => {
+        const current =
+          currentItems.get(
+            item.positionId,
+          );
+
+        if (
+          !current ||
+          current.ipsAssetClass !==
+            null ||
+          current.suggestedClass !==
+            item.suggestedClass
+        ) {
+          throw new BadRequestException(
+            `Il suggerimento per la posizione ${item.positionId} non è più valido. Aggiornare i dati e riprovare.`,
+          );
+        }
+
+        return {
+          positionId:
+            item.positionId,
+          suggestedClass:
+            item.suggestedClass,
+          reason:
+            current.suggestionReason ??
+            'Suggerimento del motore IPS confermato dall’utente.',
+        };
+      });
+
+    for (const item of validated) {
+      await this.updateClassification(
+        item.positionId,
+        item.suggestedClass,
+        item.reason,
+        true,
+      );
+    }
+
+    const updatedOverview =
+      await this.getOverview();
+
+    return {
+      updated: validated.length,
+      positionIds:
+        validated.map(
+          (item) =>
+            item.positionId,
+        ),
+      summary:
+        updatedOverview.summary,
     };
   }
 

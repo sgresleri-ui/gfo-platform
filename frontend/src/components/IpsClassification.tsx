@@ -9,6 +9,7 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   Dialog,
@@ -35,12 +36,15 @@ import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import PlaylistPlayRoundedIcon from "@mui/icons-material/PlaylistPlayRounded";
+import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 
 import {
+  confirmIpsClassificationSuggestions,
   getIpsClassificationAudit,
   getIpsClassificationReviewAudit,
   getIpsClassifications,
   updateIpsPositionClassification,
+  updateIpsPositionLookThrough,
   updateIpsPositionReview,
   type IpsAllocationStatus,
   type IpsAssetClassCode,
@@ -303,6 +307,16 @@ function statusColor(
   return "default";
 }
 
+function isClassified(
+  item: IpsClassificationItem,
+): boolean {
+  return (
+    item.ipsAssetClass !== null ||
+    item.classificationMode ===
+      "LOOK_THROUGH"
+  );
+}
+
 export default function IpsClassification() {
   const [data, setData] =
     useState<IpsClassificationOverviewResponse | null>(
@@ -345,6 +359,15 @@ export default function IpsClassification() {
   const [notice, setNotice] =
     useState<Notice | null>(null);
 
+  const [selectedSuggestions, setSelectedSuggestions] =
+    useState<number[]>([]);
+
+  const [bulkConfirmationOpen, setBulkConfirmationOpen] =
+    useState(false);
+
+  const [bulkSaving, setBulkSaving] =
+    useState(false);
+
   const [searchTerm, setSearchTerm] =
     useState("");
 
@@ -382,6 +405,26 @@ export default function IpsClassification() {
   const [reviewSaving, setReviewSaving] =
     useState(false);
 
+  const [lookThroughItem, setLookThroughItem] =
+    useState<IpsClassificationItem | null>(
+      null,
+    );
+
+  const [lookThroughValues, setLookThroughValues] =
+    useState<Record<string, string>>({
+      EQUITY_GLOBAL: "",
+      BONDS: "",
+      MONEY_MARKET: "",
+      GOLD: "",
+      ALTERNATIVES: "",
+    });
+
+  const [lookThroughReason, setLookThroughReason] =
+    useState("");
+
+  const [lookThroughSaving, setLookThroughSaving] =
+    useState(false);
+
   const loadData = useCallback(
     async () => {
       setLoading(true);
@@ -398,6 +441,20 @@ export default function IpsClassification() {
         ]);
 
         setData(overview);
+        setSelectedSuggestions((current) =>
+          current.filter((positionId) => {
+            const item = overview.items.find(
+              (candidate) =>
+                candidate.positionId ===
+                positionId,
+            );
+
+            return Boolean(
+              item?.suggestedClass &&
+                !isClassified(item),
+            );
+          }),
+        );
         setAudits(auditResult.audits);
         setReviewAudits(
           reviewAuditResult.audits,
@@ -482,15 +539,15 @@ export default function IpsClassification() {
       [...(data?.items ?? [])].sort(
         (left, right) => {
           if (
-            left.ipsAssetClass === null &&
-            right.ipsAssetClass !== null
+            !isClassified(left) &&
+            isClassified(right)
           ) {
             return -1;
           }
 
           if (
-            left.ipsAssetClass !== null &&
-            right.ipsAssetClass === null
+            isClassified(left) &&
+            !isClassified(right)
           ) {
             return 1;
           }
@@ -538,38 +595,33 @@ export default function IpsClassification() {
             (
               reviewFilter ===
                 "UNCLASSIFIED" &&
-              item.ipsAssetClass ===
-                null
+              !isClassified(item)
             ) ||
             (
               reviewFilter ===
                 "SUGGESTED" &&
-              item.ipsAssetClass ===
-                null &&
+              !isClassified(item) &&
               item.suggestedClass !==
                 null
             ) ||
             (
               reviewFilter ===
                 "PENDING_INFORMATION" &&
-              item.ipsAssetClass ===
-                null &&
+              !isClassified(item) &&
               item.reviewStatus ===
                 "PENDING_INFORMATION"
             ) ||
             (
               reviewFilter ===
                 "DEFERRED" &&
-              item.ipsAssetClass ===
-                null &&
+              !isClassified(item) &&
               item.reviewStatus ===
                 "DEFERRED"
             ) ||
             (
               reviewFilter ===
                 "CLASSIFIED" &&
-              item.ipsAssetClass !==
-                null
+              isClassified(item)
             );
 
           return (
@@ -592,11 +644,85 @@ export default function IpsClassification() {
     () =>
       visibleItems.find(
         (item) =>
-          item.ipsAssetClass ===
-          null,
+          !isClassified(item),
       ) ?? null,
     [visibleItems],
   );
+
+  const selectableSuggestions = useMemo(
+    () =>
+      visibleItems.filter(
+        (item) =>
+          !isClassified(item) &&
+          item.suggestedClass !== null,
+      ),
+    [visibleItems],
+  );
+
+  const highConfidenceSuggestions = useMemo(
+    () =>
+      selectableSuggestions.filter(
+        (item) =>
+          item.suggestionConfidence ===
+          "HIGH",
+      ),
+    [selectableSuggestions],
+  );
+
+  const selectedSuggestionItems = useMemo(
+    () =>
+      (data?.items ?? []).filter(
+        (item) =>
+          selectedSuggestions.includes(
+            item.positionId,
+          ) &&
+          item.suggestedClass !== null &&
+          !isClassified(item),
+      ),
+    [data, selectedSuggestions],
+  );
+
+  async function confirmSelectedSuggestions() {
+    if (
+      selectedSuggestionItems.length === 0
+    ) {
+      return;
+    }
+
+    setBulkSaving(true);
+    setNotice(null);
+
+    try {
+      const result =
+        await confirmIpsClassificationSuggestions(
+          selectedSuggestionItems.map(
+            (item) => ({
+              positionId:
+                item.positionId,
+              suggestedClass:
+                item.suggestedClass as IpsAssetClassCode,
+            }),
+          ),
+        );
+
+      setBulkConfirmationOpen(false);
+      setSelectedSuggestions([]);
+      setNotice({
+        severity: "success",
+        text: `${result.updated} classificazioni confermate. Il Recommendation Engine può ora utilizzare la nuova copertura IPS.`,
+      });
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      setNotice({
+        severity: "error",
+        text:
+          "I suggerimenti non sono stati confermati. Aggiornare i dati e riprovare.",
+      });
+    } finally {
+      setBulkSaving(false);
+    }
+  }
 
   function reviewStatusLabel(
     status: IpsReviewStatus,
@@ -681,6 +807,142 @@ export default function IpsClassification() {
     }
   }
 
+  function openLookThroughDialog(
+    item: IpsClassificationItem,
+  ) {
+    const values: Record<string, string> = {
+      EQUITY_GLOBAL: "",
+      BONDS: "",
+      MONEY_MARKET: "",
+      GOLD: "",
+      ALTERNATIVES: "",
+    };
+
+    for (
+      const component of
+      (
+        item.lookThroughAllocation
+          .length > 0
+          ? item.lookThroughAllocation
+          : item.suggestedLookThrough
+              ?.allocations ?? []
+      )
+    ) {
+      values[
+        component.ipsAssetClass
+      ] = String(
+        component.percentage,
+      );
+    }
+
+    setLookThroughItem(item);
+    setLookThroughValues(values);
+    setLookThroughReason(
+      item.rationale ??
+        item.suggestedLookThrough
+          ?.reason ??
+        "",
+    );
+    setNotice(null);
+  }
+
+  function closeLookThroughDialog() {
+    if (!lookThroughSaving) {
+      setLookThroughItem(null);
+      setLookThroughReason("");
+    }
+  }
+
+  async function saveLookThrough() {
+    if (!lookThroughItem) {
+      return;
+    }
+
+    const allocations =
+      Object.entries(
+        lookThroughValues,
+      )
+        .map(
+          ([
+            ipsAssetClass,
+            rawPercentage,
+          ]) => ({
+            ipsAssetClass:
+              ipsAssetClass as IpsAssetClassCode,
+            percentage: Number(
+              rawPercentage
+                .trim()
+                .replace(",", "."),
+            ),
+          }),
+        )
+        .filter(
+          (item) =>
+            Number.isFinite(
+              item.percentage,
+            ) &&
+            item.percentage > 0,
+        );
+
+    const total =
+      allocations.reduce(
+        (sum, item) =>
+          sum +
+          item.percentage,
+        0,
+      );
+
+    if (
+      allocations.length < 2 ||
+      Math.abs(total - 100) >
+        0.01
+    ) {
+      setNotice({
+        severity: "warning",
+        text:
+          "Il look-through deve contenere almeno due componenti e totalizzare il 100%.",
+      });
+      return;
+    }
+
+    if (!lookThroughReason.trim()) {
+      setNotice({
+        severity: "warning",
+        text:
+          "Indicare la fonte delle percentuali o la motivazione.",
+      });
+      return;
+    }
+
+    setLookThroughSaving(true);
+    setNotice(null);
+
+    try {
+      await updateIpsPositionLookThrough(
+        lookThroughItem.positionId,
+        allocations,
+        lookThroughReason.trim(),
+      );
+      setLookThroughItem(null);
+      setLookThroughReason("");
+      setNotice({
+        severity: "success",
+        text:
+          "Look-through salvato e incluso nell’asset allocation IPS.",
+      });
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      setNotice({
+        severity: "error",
+        text:
+          "Il look-through non è stato salvato.",
+      });
+    } finally {
+      setLookThroughSaving(false);
+    }
+  }
+
   function openDialog(
     item: IpsClassificationItem,
     useSuggestion = false,
@@ -758,15 +1020,13 @@ export default function IpsClassification() {
               (item) =>
                 item.positionId !==
                   selectedItem.positionId &&
-                item.ipsAssetClass ===
-                  null,
+                !isClassified(item),
             ) ??
             sortedItems.find(
               (item) =>
                 item.positionId !==
                   selectedItem.positionId &&
-                item.ipsAssetClass ===
-                  null,
+                !isClassified(item),
             ) ??
             null
           )
@@ -942,8 +1202,22 @@ export default function IpsClassification() {
             {data.summary.suggestedPositions}
           </strong>{" "}
           possibili classificazioni. Sono
-          indicazioni preliminari e non vengono
-          applicate automaticamente.
+          indicazioni preliminari:{" "}
+          <strong>
+            {
+              data.summary
+                .highConfidenceSuggestions
+            }
+          </strong>{" "}
+          ad alta confidenza e{" "}
+          <strong>
+            {
+              data.summary
+                .mediumConfidenceSuggestions
+            }
+          </strong>{" "}
+          da verificare. Nessuna viene applicata
+          automaticamente.
         </Alert>
       )}
 
@@ -1518,6 +1792,73 @@ export default function IpsClassification() {
           visualizzate su{" "}
           {data.summary.positions}.
         </Typography>
+
+        {selectableSuggestions.length > 0 && (
+          <Box
+            sx={{
+              mt: 2,
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              flexWrap: "wrap",
+            }}
+          >
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={
+                <AutoAwesomeRoundedIcon />
+              }
+              onClick={() =>
+                setSelectedSuggestions(
+                  highConfidenceSuggestions.map(
+                    (item) =>
+                      item.positionId,
+                  ),
+                )
+              }
+              disabled={
+                highConfidenceSuggestions.length ===
+                0
+              }
+            >
+              Seleziona alta confidenza
+            </Button>
+
+            <Button
+              size="small"
+              variant="contained"
+              disabled={
+                selectedSuggestionItems.length ===
+                0
+              }
+              onClick={() =>
+                setBulkConfirmationOpen(
+                  true,
+                )
+              }
+            >
+              Conferma selezionati (
+              {
+                selectedSuggestionItems.length
+              }
+              )
+            </Button>
+
+            {selectedSuggestions.length > 0 && (
+              <Button
+                size="small"
+                onClick={() =>
+                  setSelectedSuggestions(
+                    [],
+                  )
+                }
+              >
+                Deseleziona
+              </Button>
+            )}
+          </Box>
+        )}
       </Paper>
 
       <TableContainer
@@ -1533,6 +1874,49 @@ export default function IpsClassification() {
         <Table stickyHeader>
           <TableHead>
             <TableRow>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  size="small"
+                  checked={
+                    highConfidenceSuggestions.length >
+                      0 &&
+                    highConfidenceSuggestions.every(
+                      (item) =>
+                        selectedSuggestions.includes(
+                          item.positionId,
+                        ),
+                    )
+                  }
+                  indeterminate={
+                    highConfidenceSuggestions.some(
+                      (item) =>
+                        selectedSuggestions.includes(
+                          item.positionId,
+                        ),
+                    ) &&
+                    !highConfidenceSuggestions.every(
+                      (item) =>
+                        selectedSuggestions.includes(
+                          item.positionId,
+                        ),
+                    )
+                  }
+                  disabled={
+                    highConfidenceSuggestions.length ===
+                    0
+                  }
+                  onChange={(event) =>
+                    setSelectedSuggestions(
+                      event.target.checked
+                        ? highConfidenceSuggestions.map(
+                            (item) =>
+                              item.positionId,
+                          )
+                        : [],
+                    )
+                  }
+                />
+              </TableCell>
               <TableCell>
                 Posizione
               </TableCell>
@@ -1564,6 +1948,36 @@ export default function IpsClassification() {
                   key={item.code}
                   hover
                 >
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      size="small"
+                      disabled={
+                        isClassified(
+                          item,
+                        ) ||
+                        item.suggestedClass ===
+                          null
+                      }
+                      checked={selectedSuggestions.includes(
+                        item.positionId,
+                      )}
+                      onChange={(event) =>
+                        setSelectedSuggestions(
+                          (current) =>
+                            event.target.checked
+                              ? [
+                                  ...current,
+                                  item.positionId,
+                                ]
+                              : current.filter(
+                                  (positionId) =>
+                                    positionId !==
+                                    item.positionId,
+                                ),
+                        )
+                      }
+                    />
+                  </TableCell>
                   <TableCell>
                     <Typography
                       variant="body2"
@@ -1595,7 +2009,32 @@ export default function IpsClassification() {
                   </TableCell>
 
                   <TableCell>
-                    {item.ipsAssetClass ? (
+                    {item.classificationMode ===
+                    "LOOK_THROUGH" ? (
+                      <Box>
+                        <Chip
+                          size="small"
+                          color="success"
+                          label="Look-through"
+                        />
+
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{
+                            display: "block",
+                            mt: 0.6,
+                          }}
+                        >
+                          {item.lookThroughAllocation
+                            .map(
+                              (component) =>
+                                `${classLabels.get(component.ipsAssetClass) ?? component.ipsAssetClass} ${component.percentage}%`,
+                            )
+                            .join(" · ")}
+                        </Typography>
+                      </Box>
+                    ) : item.ipsAssetClass ? (
                       <Chip
                         size="small"
                         color="success"
@@ -1641,7 +2080,33 @@ export default function IpsClassification() {
                   </TableCell>
 
                   <TableCell>
-                    {item.suggestedClass ? (
+                    {item.suggestedLookThrough ? (
+                      <Box>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 750,
+                          }}
+                        >
+                          Look-through proposto
+                        </Typography>
+
+                        <Chip
+                          size="small"
+                          color="warning"
+                          variant="outlined"
+                          label={
+                            item
+                              .suggestedLookThrough
+                              .method ===
+                            "BENCHMARK_PROXY"
+                              ? "Proxy benchmark"
+                              : "Proxy factsheet"
+                          }
+                          sx={{ mt: 0.6 }}
+                        />
+                      </Box>
+                    ) : item.suggestedClass ? (
                       <Box>
                         <Typography
                           variant="body2"
@@ -1673,7 +2138,55 @@ export default function IpsClassification() {
                   </TableCell>
 
                   <TableCell>
-                    {item.rationale ?? "—"}
+                    {item.rationale ??
+                      item.suggestionReason ??
+                      "—"}
+
+                    {item.suggestionSourceUrl && (
+                      <Button
+                        size="small"
+                        component="a"
+                        href={
+                          item.suggestionSourceUrl
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                        endIcon={
+                          <OpenInNewRoundedIcon />
+                        }
+                        sx={{
+                          display: "flex",
+                          width: "fit-content",
+                          mt: 0.5,
+                        }}
+                      >
+                        Fonte ufficiale
+                      </Button>
+                    )}
+
+                    {item.suggestedLookThrough && (
+                      <Button
+                        size="small"
+                        component="a"
+                        href={
+                          item
+                            .suggestedLookThrough
+                            .sourceUrl
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                        endIcon={
+                          <OpenInNewRoundedIcon />
+                        }
+                        sx={{
+                          display: "flex",
+                          width: "fit-content",
+                          mt: 0.5,
+                        }}
+                      >
+                        Fonte composizione
+                      </Button>
+                    )}
                   </TableCell>
 
                   <TableCell align="right">
@@ -1685,7 +2198,9 @@ export default function IpsClassification() {
                         flexWrap: "wrap",
                       }}
                     >
-                      {!item.ipsAssetClass && (
+                      {!item.ipsAssetClass &&
+                        item.classificationMode !==
+                          "LOOK_THROUGH" && (
                         <Button
                           size="small"
                           variant="text"
@@ -1699,12 +2214,29 @@ export default function IpsClassification() {
                         </Button>
                       )}
 
+                      {item.category ===
+                        "INVESTMENT" && (
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() =>
+                            openLookThroughDialog(
+                              item,
+                            )
+                          }
+                        >
+                          Look-through
+                        </Button>
+                      )}
+
                       <Button
                         size="small"
                         variant="outlined"
                         startIcon={
                           item.suggestedClass &&
-                          !item.ipsAssetClass ? (
+                          !isClassified(
+                            item,
+                          ) ? (
                             <AutoAwesomeRoundedIcon />
                           ) : (
                             <EditRoundedIcon />
@@ -1715,12 +2247,17 @@ export default function IpsClassification() {
                             item,
                             Boolean(
                               item.suggestedClass &&
-                                !item.ipsAssetClass,
+                                !isClassified(
+                                  item,
+                                ),
                             ),
                           )
                         }
                       >
-                        {item.ipsAssetClass
+                        {item.classificationMode ===
+                        "LOOK_THROUGH"
+                          ? "Modifica"
+                          : item.ipsAssetClass
                           ? "Modifica"
                           : item.suggestedClass
                             ? "Valuta suggerimento"
@@ -1846,6 +2383,77 @@ export default function IpsClassification() {
           </TableContainer>
         )}
       </Paper>
+
+      <Dialog
+        open={bulkConfirmationOpen}
+        onClose={() => {
+          if (!bulkSaving) {
+            setBulkConfirmationOpen(
+              false,
+            );
+          }
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Confermare i suggerimenti IPS?
+        </DialogTitle>
+
+        <DialogContent>
+          <DialogContentText>
+            Verranno classificate{" "}
+            <strong>
+              {
+                selectedSuggestionItems.length
+              }
+            </strong>{" "}
+            posizioni. Ogni modifica sarà
+            registrata nell’audit trail e
+            influenzerà il calcolo della
+            Capital Allocation.
+          </DialogContentText>
+
+          <Alert
+            severity="warning"
+            sx={{ mt: 2 }}
+          >
+            I suggerimenti sono assistiti:
+            conferma solo le posizioni di cui
+            riconosci correttamente la classe
+            patrimoniale.
+          </Alert>
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            disabled={bulkSaving}
+            onClick={() =>
+              setBulkConfirmationOpen(
+                false,
+              )
+            }
+          >
+            Annulla
+          </Button>
+
+          <Button
+            variant="contained"
+            disabled={
+              bulkSaving ||
+              selectedSuggestionItems.length ===
+                0
+            }
+            onClick={() =>
+              void confirmSelectedSuggestions()
+            }
+          >
+            {bulkSaving
+              ? "Salvataggio…"
+              : "Conferma classificazioni"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Paper
         elevation={0}
@@ -2054,6 +2662,148 @@ export default function IpsClassification() {
             {reviewSaving
               ? "Salvataggio..."
               : "Conferma stato"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={lookThroughItem !== null}
+        onClose={closeLookThroughDialog}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          Composizione look-through
+        </DialogTitle>
+
+        <DialogContent>
+          <DialogContentText
+            sx={{ mb: 2 }}
+          >
+            Posizione:{" "}
+            <strong>
+              {lookThroughItem?.name}
+            </strong>
+          </DialogContentText>
+
+          <Alert
+            severity="info"
+            sx={{ mb: 2 }}
+          >
+            Inserisci la composizione del
+            fondo riportata dal factsheet.
+            Il totale deve essere 100%.
+          </Alert>
+
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm:
+                  "repeat(2, minmax(0, 1fr))",
+              },
+              gap: 2,
+            }}
+          >
+            {data.allocation
+              .filter(
+                (item) =>
+                  item.strategic,
+              )
+              .map((item) => (
+                <TextField
+                  key={item.code}
+                  size="small"
+                  label={`${item.label} (%)`}
+                  value={
+                    lookThroughValues[
+                      item.code
+                    ] ?? ""
+                  }
+                  onChange={(event) =>
+                    setLookThroughValues(
+                      (current) => ({
+                        ...current,
+                        [item.code]:
+                          event.target
+                            .value,
+                      }),
+                    )
+                  }
+                  slotProps={{
+                    htmlInput: {
+                      inputMode:
+                        "decimal",
+                    },
+                  }}
+                />
+              ))}
+          </Box>
+
+          <Typography
+            variant="body2"
+            sx={{
+              mt: 2,
+              fontWeight: 750,
+            }}
+          >
+            Totale:{" "}
+            {Object.values(
+              lookThroughValues,
+            ).reduce(
+              (sum, value) =>
+                sum +
+                (
+                  Number(
+                    value
+                      .trim()
+                      .replace(
+                        ",",
+                        ".",
+                      ),
+                  ) || 0
+                ),
+              0,
+            )}
+            %
+          </Typography>
+
+          <TextField
+            fullWidth
+            multiline
+            minRows={3}
+            label="Fonte o motivazione"
+            value={lookThroughReason}
+            onChange={(event) =>
+              setLookThroughReason(
+                event.target.value,
+              )
+            }
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            disabled={lookThroughSaving}
+            onClick={
+              closeLookThroughDialog
+            }
+          >
+            Annulla
+          </Button>
+
+          <Button
+            variant="contained"
+            disabled={lookThroughSaving}
+            onClick={() =>
+              void saveLookThrough()
+            }
+          >
+            {lookThroughSaving
+              ? "Salvataggio…"
+              : "Salva look-through"}
           </Button>
         </DialogActions>
       </Dialog>
