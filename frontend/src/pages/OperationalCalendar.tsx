@@ -41,6 +41,7 @@ import {
   type OperationalTaskPriority,
   type OperationalTaskStatus,
 } from "../services/api";
+import { parseFlexibleDecimal } from "../utils/amounts";
 
 type TaskForm = {
   dueDate: string;
@@ -341,15 +342,13 @@ export default function OperationalCalendar() {
     const amount =
       form.amount.trim() === ""
         ? null
-        : Number(
-            form.amount
-              .trim()
-              .replace(",", "."),
+        : parseFlexibleDecimal(
+            form.amount,
           );
 
     if (
-      amount !== null &&
-      !Number.isFinite(amount)
+      form.amount.trim() !== "" &&
+      amount === null
     ) {
       setError(
         "L’importo inserito non è valido.",
@@ -1044,6 +1043,11 @@ export default function OperationalCalendar() {
                 )
               }
               placeholder="0"
+              slotProps={{
+                htmlInput: {
+                  inputMode: "decimal",
+                },
+              }}
             />
 
             <TextField

@@ -2389,7 +2389,11 @@ export class InvestmentRecommendationsService {
               return null;
             }
 
-            const parsed = Number(value);
+            const normalized =
+              typeof value === 'string'
+                ? value.trim().replace(',', '.')
+                : value;
+            const parsed = Number(normalized);
 
             if (
               !Number.isFinite(parsed) ||

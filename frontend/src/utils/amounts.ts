@@ -5,6 +5,33 @@ function removeAll(
   return value.split(separator).join("");
 }
 
+export function parseFlexibleDecimal(
+  value: string,
+): number | null {
+  const compact = value
+    .trim()
+    .replace(/[\s\u00a0€%]/g, "");
+
+  if (
+    compact.length === 0 ||
+    !/^[+-]?\d+(?:[.,]\d+)?$/.test(
+      compact,
+    )
+  ) {
+    return null;
+  }
+
+  const normalized = compact.replace(
+    ",",
+    ".",
+  );
+  const parsed = Number(normalized);
+
+  return Number.isFinite(parsed)
+    ? parsed
+    : null;
+}
+
 export function parseLocaleAmount(
   value: string,
 ): number {

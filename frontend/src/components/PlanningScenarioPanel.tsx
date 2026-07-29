@@ -73,6 +73,7 @@ import {
   type PlanningScenarioResponse,
   type SimulatePlanningScenarioInput,
 } from "../services/api";
+import { parseFlexibleDecimal } from "../utils/amounts";
 
 type ScenarioForm = {
   name: string;
@@ -202,19 +203,10 @@ function readScenarioLabDraft():
 function parseNumber(
   value: string,
 ): number {
-  const normalized = value
-    .trim()
-    .replace(",", ".");
-
-  if (!normalized) {
-    return 0;
-  }
-
-  const parsed = Number(normalized);
-
-  return Number.isFinite(parsed)
-    ? parsed
-    : 0;
+  return (
+    parseFlexibleDecimal(value) ??
+    (value.trim() ? Number.NaN : 0)
+  );
 }
 
 function formatCurrency(
@@ -1201,6 +1193,34 @@ export default function PlanningScenarioPanel() {
       if (invalidEvent) {
         setError(
           "Completa correttamente tutti gli eventi straordinari.",
+        );
+        return;
+      }
+
+      const numericFormValues = [
+        form.initialCapitalAdjustment,
+        form.annualReturnAdjustmentPct,
+        form.annualCostAdjustmentPct,
+        form.annualRevenueAdjustmentPct,
+        form.expenseInflationDeltaPct,
+        form.liquidityReturnDeltaPct,
+        form.investmentsReturnDeltaPct,
+        form.realEstateReturnDeltaPct,
+        form.otherAssetsReturnDeltaPct,
+        form.liquidityTaxRatePct ?? "0",
+        form.investmentsTaxRatePct ?? "0",
+        form.rebalancingCostRatePct ?? "0",
+        form.rebalancingMinimumCost ?? "0",
+      ].map(parseNumber);
+
+      if (
+        numericFormValues.some(
+          (value) =>
+            !Number.isFinite(value),
+        )
+      ) {
+        setError(
+          "Uno o più valori numerici non sono validi. Usa indifferentemente il punto o la virgola per i decimali, senza separatori delle migliaia.",
         );
         return;
       }
@@ -2400,7 +2420,7 @@ export default function PlanningScenarioPanel() {
       >
         <TextField
           label="Rettifica capitale iniziale"
-          type="number"
+          type="text"
           value={
             form.initialCapitalAdjustment
           }
@@ -2416,7 +2436,7 @@ export default function PlanningScenarioPanel() {
 
         <TextField
           label="Rendimento annuale"
-          type="number"
+          type="text"
           value={
             form.annualReturnAdjustmentPct
           }
@@ -2432,7 +2452,7 @@ export default function PlanningScenarioPanel() {
 
         <TextField
           label="Costi annuali"
-          type="number"
+          type="text"
           value={
             form.annualCostAdjustmentPct
           }
@@ -2448,7 +2468,7 @@ export default function PlanningScenarioPanel() {
 
         <TextField
           label="Ricavi annuali"
-          type="number"
+          type="text"
           value={
             form.annualRevenueAdjustmentPct
           }
@@ -2464,7 +2484,7 @@ export default function PlanningScenarioPanel() {
 
         <TextField
           label="Inflazione aggiuntiva"
-          type="number"
+          type="text"
           value={
             form.expenseInflationDeltaPct
           }
@@ -2775,7 +2795,7 @@ export default function PlanningScenarioPanel() {
         >
           <TextField
             label="Liquidità · delta %"
-            type="number"
+            type="text"
             size="small"
             value={
               form.liquidityReturnDeltaPct
@@ -2795,7 +2815,7 @@ export default function PlanningScenarioPanel() {
 
           <TextField
             label="Investimenti · delta %"
-            type="number"
+            type="text"
             size="small"
             value={
               form.investmentsReturnDeltaPct
@@ -2815,7 +2835,7 @@ export default function PlanningScenarioPanel() {
 
           <TextField
             label="Immobili · delta %"
-            type="number"
+            type="text"
             size="small"
             value={
               form.realEstateReturnDeltaPct
@@ -2835,7 +2855,7 @@ export default function PlanningScenarioPanel() {
 
           <TextField
             label="Altri attivi · delta %"
-            type="number"
+            type="text"
             size="small"
             value={
               form.otherAssetsReturnDeltaPct
@@ -2855,7 +2875,7 @@ export default function PlanningScenarioPanel() {
 
           <TextField
             label="Imposta liquidità %"
-            type="number"
+            type="text"
             size="small"
             value={
               form.liquidityTaxRatePct ??
@@ -2878,7 +2898,7 @@ export default function PlanningScenarioPanel() {
 
           <TextField
             label="Imposta investimenti %"
-            type="number"
+            type="text"
             size="small"
             value={
               form.investmentsTaxRatePct ??
@@ -2901,7 +2921,7 @@ export default function PlanningScenarioPanel() {
 
           <TextField
             label="Costo ribilanciamento %"
-            type="number"
+            type="text"
             size="small"
             value={
               form.rebalancingCostRatePct ??
@@ -2924,7 +2944,7 @@ export default function PlanningScenarioPanel() {
 
           <TextField
             label="Costo minimo operazione €"
-            type="number"
+            type="text"
             size="small"
             value={
               form.rebalancingMinimumCost ??
@@ -2980,7 +3000,7 @@ export default function PlanningScenarioPanel() {
               >
                 <TextField
                   label="Anno"
-                  type="number"
+                  type="text"
                   size="small"
                   value={event.year}
                   onChange={(
@@ -3013,7 +3033,7 @@ export default function PlanningScenarioPanel() {
 
                 <TextField
                   label="Importo"
-                  type="number"
+                  type="text"
                   size="small"
                   value={event.amount}
                   onChange={(

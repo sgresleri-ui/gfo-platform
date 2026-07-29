@@ -512,6 +512,51 @@ describe('InvestmentRecommendationsService', () => {
     expect(result.dueDiligence.status).toBe('DRAFT_BROKER_VERIFICATION');
   });
 
+  it('normalizes comma decimals in broker execution evidence', async () => {
+    const service = createService(true);
+    const generated = await service.generateElToroRecommendation();
+    const initial = await service.getElToroDueDiligence();
+    const targetIsin = initial.dueDiligence.instruments[0].isin;
+    const reviews = initial.dueDiligence.instruments.map(
+      (instrument: {
+        review: {
+          brokerExecution: Record<string, Record<string, unknown>>;
+        };
+      }) =>
+        instrument.review === initial.dueDiligence.instruments[0].review
+          ? {
+              ...instrument.review,
+              brokerExecution: {
+                ...instrument.review.brokerExecution,
+                FINECO: {
+                  observedAt: '2026-07-29T10:00:00.000Z',
+                  venue: 'XETRA',
+                  bid: '23,58',
+                  ask: '23,60',
+                  referenceOrderAmount: '100000,50',
+                  commissionAmount: '7,50',
+                  regularSession: true,
+                  notes: null,
+                },
+              },
+            }
+          : instrument.review,
+    );
+
+    const result = await service.updateElToroDueDiligence({
+      recommendationId: generated.recommendation.id,
+      reviews: reviews as never,
+    });
+    const saved = result.dueDiligence.instruments.find(
+      (instrument) => instrument.isin === targetIsin,
+    )?.review.brokerExecution.FINECO;
+
+    expect(saved?.bid).toBe(23.58);
+    expect(saved?.ask).toBe(23.6);
+    expect(saved?.referenceOrderAmount).toBe(100_000.5);
+    expect(saved?.commissionAmount).toBe(7.5);
+  });
+
   it('rejects two selected instruments in the same IPS class', async () => {
     const service = createService(true);
     const generated = await service.generateElToroRecommendation();

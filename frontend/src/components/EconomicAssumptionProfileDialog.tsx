@@ -16,6 +16,7 @@ import type {
   EconomicAssumptionProfile,
   EconomicAssumptionProfileInput,
 } from "../services/api";
+import { parseFlexibleDecimal } from "../utils/amounts";
 
 export type EconomicProfileSourceValues = {
   liquidityReturnDeltaPct: string;
@@ -87,15 +88,11 @@ function normalizeCode(
 function parseNumber(
   value: string,
 ): number {
-  const parsed = Number(
-    value
-      .trim()
-      .replace(",", "."),
-  );
+  const parsed =
+    parseFlexibleDecimal(value);
 
-  return Number.isFinite(parsed)
-    ? parsed
-    : 0;
+  return parsed ??
+    (value.trim() ? Number.NaN : 0);
 }
 
 function createDraft(
@@ -301,6 +298,56 @@ function EconomicAssumptionProfileDialogContent({
       return;
     }
 
+    const numericValues = {
+      liquidityReturnDeltaPct:
+        parseNumber(
+          draft.liquidityReturnDeltaPct,
+        ),
+      investmentsReturnDeltaPct:
+        parseNumber(
+          draft.investmentsReturnDeltaPct,
+        ),
+      realEstateReturnDeltaPct:
+        parseNumber(
+          draft.realEstateReturnDeltaPct,
+        ),
+      otherAssetsReturnDeltaPct:
+        parseNumber(
+          draft.otherAssetsReturnDeltaPct,
+        ),
+      liquidityTaxRatePct:
+        parseNumber(
+          draft.liquidityTaxRatePct,
+        ),
+      investmentsTaxRatePct:
+        parseNumber(
+          draft.investmentsTaxRatePct,
+        ),
+      rebalancingCostRatePct:
+        parseNumber(
+          draft.rebalancingCostRatePct,
+        ),
+      rebalancingMinimumCost:
+        parseNumber(
+          draft.rebalancingMinimumCost,
+        ),
+    };
+
+    if (
+      Object.values(
+        numericValues,
+      ).some(
+        (value) =>
+          !Number.isFinite(value),
+      )
+    ) {
+      setValidationError(
+        "Uno o più valori numerici non sono validi. Usa indifferentemente il punto o la virgola per i decimali, senza separatori delle migliaia.",
+      );
+
+      return;
+    }
+
     setValidationError("");
 
     onSave({
@@ -316,53 +363,7 @@ function EconomicAssumptionProfileDialogContent({
           .trim() ||
         "Not specified",
 
-      liquidityReturnDeltaPct:
-        parseNumber(
-          draft
-            .liquidityReturnDeltaPct,
-        ),
-
-      investmentsReturnDeltaPct:
-        parseNumber(
-          draft
-            .investmentsReturnDeltaPct,
-        ),
-
-      realEstateReturnDeltaPct:
-        parseNumber(
-          draft
-            .realEstateReturnDeltaPct,
-        ),
-
-      otherAssetsReturnDeltaPct:
-        parseNumber(
-          draft
-            .otherAssetsReturnDeltaPct,
-        ),
-
-      liquidityTaxRatePct:
-        parseNumber(
-          draft
-            .liquidityTaxRatePct,
-        ),
-
-      investmentsTaxRatePct:
-        parseNumber(
-          draft
-            .investmentsTaxRatePct,
-        ),
-
-      rebalancingCostRatePct:
-        parseNumber(
-          draft
-            .rebalancingCostRatePct,
-        ),
-
-      rebalancingMinimumCost:
-        parseNumber(
-          draft
-            .rebalancingMinimumCost,
-        ),
+      ...numericValues,
     });
   }
 
@@ -556,7 +557,6 @@ function EconomicAssumptionProfileDialogContent({
               <TextField
                 key={item.field}
                 label={item.label}
-                type="number"
                 value={
                   draft[item.field]
                 }
@@ -569,6 +569,7 @@ function EconomicAssumptionProfileDialogContent({
                 }
                 slotProps={{
                   htmlInput: {
+                    inputMode: "decimal",
                     step: item.step,
                   },
                 }}

@@ -1,7 +1,44 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parseLocaleAmount } from "../src/utils/amounts.ts";
+import {
+  parseFlexibleDecimal,
+  parseLocaleAmount,
+} from "../src/utils/amounts.ts";
+
+test("interpreta punto e virgola come separatori decimali equivalenti", () => {
+  assert.equal(
+    parseFlexibleDecimal("23.613"),
+    23.613,
+  );
+  assert.equal(
+    parseFlexibleDecimal("23,613"),
+    23.613,
+  );
+  assert.equal(
+    parseFlexibleDecimal("-0.25"),
+    -0.25,
+  );
+  assert.equal(
+    parseFlexibleDecimal("-0,25"),
+    -0.25,
+  );
+});
+
+test("rifiuta separatori ambigui nei campi decimali", () => {
+  assert.equal(
+    parseFlexibleDecimal("1.234,56"),
+    null,
+  );
+  assert.equal(
+    parseFlexibleDecimal("1,234.56"),
+    null,
+  );
+  assert.equal(
+    parseFlexibleDecimal("12,3,4"),
+    null,
+  );
+});
 
 test("interpreta importi italiani e valori decimali non formattati", () => {
   assert.equal(

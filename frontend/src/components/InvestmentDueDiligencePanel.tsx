@@ -38,6 +38,7 @@ import {
   type InvestmentDueDiligenceCheckCode,
   type InvestmentDueDiligenceReview,
 } from "../services/api";
+import { parseFlexibleDecimal } from "../utils/amounts";
 
 type InvestmentDueDiligencePanelProps = {
   recommendationId: string;
@@ -125,13 +126,7 @@ function localDateTimeInput(value: string | null): string {
 }
 
 function optionalNumber(value: string): number | null {
-  if (value.trim() === "") {
-    return null;
-  }
-
-  const parsed = Number(value);
-
-  return Number.isFinite(parsed) ? parsed : null;
+  return parseFlexibleDecimal(value);
 }
 
 function executionMetrics(evidence: InvestmentBrokerExecutionEvidence): {
@@ -1281,11 +1276,11 @@ export default function InvestmentDueDiligencePanel({
                                             }
                                           />
                                           <TextField
+                                            key={`${instrument.isin}-${route.broker}-bid-${execution.bid ?? "empty"}`}
                                             size="small"
                                             label="Bid (€)"
-                                            type="number"
-                                            value={execution.bid ?? ""}
-                                            onChange={(event) =>
+                                            defaultValue={execution.bid ?? ""}
+                                            onBlur={(event) =>
                                               updateExecution({
                                                 bid: optionalNumber(
                                                   event.target.value,
@@ -1294,17 +1289,16 @@ export default function InvestmentDueDiligencePanel({
                                             }
                                             slotProps={{
                                               htmlInput: {
-                                                min: 0,
-                                                step: "0.0001",
+                                                inputMode: "decimal",
                                               },
                                             }}
                                           />
                                           <TextField
+                                            key={`${instrument.isin}-${route.broker}-ask-${execution.ask ?? "empty"}`}
                                             size="small"
                                             label="Ask (€)"
-                                            type="number"
-                                            value={execution.ask ?? ""}
-                                            onChange={(event) =>
+                                            defaultValue={execution.ask ?? ""}
+                                            onBlur={(event) =>
                                               updateExecution({
                                                 ask: optionalNumber(
                                                   event.target.value,
@@ -1313,20 +1307,19 @@ export default function InvestmentDueDiligencePanel({
                                             }
                                             slotProps={{
                                               htmlInput: {
-                                                min: 0,
-                                                step: "0.0001",
+                                                inputMode: "decimal",
                                               },
                                             }}
                                           />
                                           <TextField
+                                            key={`${instrument.isin}-${route.broker}-order-${execution.referenceOrderAmount ?? "empty"}`}
                                             size="small"
                                             label="Ordine simulato (€)"
-                                            type="number"
-                                            value={
+                                            defaultValue={
                                               execution.referenceOrderAmount ??
                                               ""
                                             }
-                                            onChange={(event) =>
+                                            onBlur={(event) =>
                                               updateExecution({
                                                 referenceOrderAmount:
                                                   optionalNumber(
@@ -1336,19 +1329,18 @@ export default function InvestmentDueDiligencePanel({
                                             }
                                             slotProps={{
                                               htmlInput: {
-                                                min: 0,
-                                                step: "0.01",
+                                                inputMode: "decimal",
                                               },
                                             }}
                                           />
                                           <TextField
+                                            key={`${instrument.isin}-${route.broker}-commission-${execution.commissionAmount ?? "empty"}`}
                                             size="small"
                                             label="Commissione (€)"
-                                            type="number"
-                                            value={
+                                            defaultValue={
                                               execution.commissionAmount ?? ""
                                             }
-                                            onChange={(event) =>
+                                            onBlur={(event) =>
                                               updateExecution({
                                                 commissionAmount:
                                                   optionalNumber(
@@ -1358,8 +1350,7 @@ export default function InvestmentDueDiligencePanel({
                                             }
                                             slotProps={{
                                               htmlInput: {
-                                                min: 0,
-                                                step: "0.01",
+                                                inputMode: "decimal",
                                               },
                                             }}
                                           />

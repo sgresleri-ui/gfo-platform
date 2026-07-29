@@ -46,6 +46,7 @@ import {
   type DecisionsOverviewResponse,
   type DecisionStatus,
 } from "../services/api";
+import { parseFlexibleDecimal } from "../utils/amounts";
 
 type DecisionForm = {
   date: string;
@@ -312,20 +313,16 @@ export default function Decisions() {
     setError("");
     setSuccess("");
 
-    const amountText =
-      form.amountText
-        .trim()
-        .replace(/\./g, "")
-        .replace(",", ".");
-
     const amount =
-      amountText.length > 0
-        ? Number(amountText)
+      form.amountText.trim().length > 0
+        ? parseFlexibleDecimal(
+            form.amountText,
+          )
         : null;
 
     if (
-      amount !== null &&
-      !Number.isFinite(amount)
+      form.amountText.trim().length > 0 &&
+      amount === null
     ) {
       setError(
         "L’importo inserito non è valido.",
@@ -1112,6 +1109,11 @@ export default function Decisions() {
                 )
               }
               placeholder="Es. 250000 oppure -50000"
+              slotProps={{
+                htmlInput: {
+                  inputMode: "decimal",
+                },
+              }}
             />
 
             <TextField

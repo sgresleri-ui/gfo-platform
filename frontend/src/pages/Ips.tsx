@@ -42,6 +42,7 @@ import {
   type IpsComplianceStatus,
   type IpsUnit,
 } from "../services/api";
+import { parseFlexibleDecimal } from "../utils/amounts";
 
 type LimitForm = {
   minimum: string;
@@ -111,14 +112,14 @@ function optionalValue(
 function parseOptionalNumber(
   value: string,
 ): number | null {
-  const normalized =
-    value.trim().replace(",", ".");
-
-  if (!normalized) {
+  if (!value.trim()) {
     return null;
   }
 
-  return Number(normalized);
+  return (
+    parseFlexibleDecimal(value) ??
+    Number.NaN
+  );
 }
 
 function isInvalidNumber(
@@ -917,6 +918,11 @@ export default function Ips() {
                       }),
                     )
                   }
+                  slotProps={{
+                    htmlInput: {
+                      inputMode: "decimal",
+                    },
+                  }}
                 />
 
                 <TextField
@@ -931,6 +937,11 @@ export default function Ips() {
                       }),
                     )
                   }
+                  slotProps={{
+                    htmlInput: {
+                      inputMode: "decimal",
+                    },
+                  }}
                 />
 
                 <TextField
@@ -945,6 +956,11 @@ export default function Ips() {
                       }),
                     )
                   }
+                  slotProps={{
+                    htmlInput: {
+                      inputMode: "decimal",
+                    },
+                  }}
                 />
               </Box>
 
