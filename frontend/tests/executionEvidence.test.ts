@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { isExecutionEvidenceComplete } from "../src/utils/executionEvidence.ts";
+import {
+  executionEvidenceMissingFields,
+  isExecutionEvidenceComplete,
+} from "../src/utils/executionEvidence.ts";
 
 const completeEvidence = {
   observedAt: "2026-07-29T10:00:00.000Z",
@@ -34,5 +37,13 @@ test("richiede una sessione regolare e un mercato non vuoto", () => {
       venue: "   ",
     }),
     false,
+  );
+  assert.deepEqual(
+    executionEvidenceMissingFields({
+      ...completeEvidence,
+      venue: " ",
+      regularSession: false,
+    }),
+    ["mercato", "sessione regolare"],
   );
 });

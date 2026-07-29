@@ -48,7 +48,10 @@ import {
   parseFlexibleDecimal,
   parseLocaleAmountOrNull,
 } from "../utils/amounts";
-import { isExecutionEvidenceComplete } from "../utils/executionEvidence";
+import {
+  executionEvidenceMissingFields,
+  isExecutionEvidenceComplete,
+} from "../utils/executionEvidence";
 
 type InvestmentDueDiligencePanelProps = {
   recommendationId: string;
@@ -217,10 +220,12 @@ function ValidatedNumericField({
 
 function executionMetrics(evidence: InvestmentBrokerExecutionEvidence): {
   complete: boolean;
+  missingFields: string[];
   spreadPct: number | null;
   estimatedCost: number | null;
   estimatedCostPct: number | null;
 } {
+  const missingFields = executionEvidenceMissingFields(evidence);
   const validQuote =
     evidence.bid !== null &&
     evidence.bid > 0 &&
@@ -235,6 +240,7 @@ function executionMetrics(evidence: InvestmentBrokerExecutionEvidence): {
   if (!validQuote) {
     return {
       complete: false,
+      missingFields,
       spreadPct: null,
       estimatedCost: null,
       estimatedCostPct: null,
@@ -247,6 +253,7 @@ function executionMetrics(evidence: InvestmentBrokerExecutionEvidence): {
   if (!validOrder || !validCommission) {
     return {
       complete: false,
+      missingFields,
       spreadPct,
       estimatedCost: null,
       estimatedCostPct: null,
@@ -258,6 +265,7 @@ function executionMetrics(evidence: InvestmentBrokerExecutionEvidence): {
 
   return {
     complete: isExecutionEvidenceComplete(evidence),
+    missingFields,
     spreadPct,
     estimatedCost,
     estimatedCostPct:
@@ -1353,7 +1361,12 @@ export default function InvestmentDueDiligencePanel({
                                             label={
                                               metrics.complete
                                                 ? "Confronto completo"
-                                                : "Dati da completare"
+                                                : metrics.missingFields.length >
+                                                    0
+                                                  ? `Manca: ${metrics.missingFields.join(
+                                                      ", ",
+                                                    )}`
+                                                  : "Dati da completare"
                                             }
                                           />
                                         </Box>
@@ -1371,6 +1384,7 @@ export default function InvestmentDueDiligencePanel({
                                             size="small"
                                             label="Data e ora"
                                             type="datetime-local"
+                                            fullWidth
                                             value={localDateTimeInput(
                                               execution.observedAt,
                                             )}
@@ -1388,17 +1402,29 @@ export default function InvestmentDueDiligencePanel({
                                                 shrink: true,
                                               },
                                             }}
+                                            sx={{
+                                              gridColumn: "1 / -1",
+                                              minWidth: 0,
+                                              "& input": {
+                                                minWidth: 0,
+                                              },
+                                            }}
                                           />
                                           <TextField
                                             size="small"
                                             label="Mercato"
                                             placeholder="XETRA / IBIS2"
+                                            fullWidth
                                             value={execution.venue ?? ""}
                                             onChange={(event) =>
                                               updateExecution({
                                                 venue: event.target.value,
                                               })
                                             }
+                                            sx={{
+                                              gridColumn: "1 / -1",
+                                              minWidth: 0,
+                                            }}
                                           />
                                           <ValidatedNumericField
                                             fieldId={`${instrument.isin}-${route.broker}-bid`}
