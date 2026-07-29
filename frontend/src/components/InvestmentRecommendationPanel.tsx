@@ -18,6 +18,7 @@ import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineR
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 
 import InvestmentDueDiligencePanel from "./InvestmentDueDiligencePanel";
+import InvestmentDecisionGate from "./InvestmentDecisionGate";
 import InvestmentEntryPlanLab from "./InvestmentEntryPlanLab";
 
 import {
@@ -594,6 +595,14 @@ export default function InvestmentRecommendationPanel({
           <Divider sx={{ my: 3 }} />
 
           <InvestmentDueDiligencePanel
+            recommendationId={recommendation.id}
+            refreshToken={refreshToken}
+            recommendationIsCurrent={recommendation.isCurrent}
+          />
+
+          <Divider sx={{ my: 3 }} />
+
+          <InvestmentDecisionGate
             recommendationId={recommendation.id}
             refreshToken={refreshToken}
             recommendationIsCurrent={recommendation.isCurrent}

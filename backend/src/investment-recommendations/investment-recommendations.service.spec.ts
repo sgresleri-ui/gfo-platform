@@ -91,7 +91,10 @@ describe('InvestmentRecommendationsService', () => {
     ],
   };
 
-  function createService(complianceAvailable: boolean) {
+  function createService(
+    complianceAvailable: boolean,
+    equityAllocationValue = 700_000,
+  ) {
     const ipsOverview = {
       summary: {
         positions: 4,
@@ -103,7 +106,11 @@ describe('InvestmentRecommendationsService', () => {
       },
       allocation: allocation.map((item) => ({
         ...item,
-        value: complianceAvailable ? item.value : 0,
+        value: complianceAvailable
+          ? item.code === 'EQUITY_GLOBAL'
+            ? equityAllocationValue
+            : item.value
+          : 0,
       })),
       items: [
         {
@@ -153,7 +160,8 @@ describe('InvestmentRecommendationsService', () => {
     let lastSnapshot: Record<string, unknown> | null = null;
     let storedPlan: Record<string, unknown> | null = null;
     let storedDueDiligence: Record<string, unknown> | null = null;
-    const prisma = {
+    const storedDecisionPackages: Array<Record<string, unknown>> = [];
+    const prisma: Record<string, unknown> = {
       investmentRecommendationSnapshot: {
         findFirst: jest.fn().mockImplementation(() => lastSnapshot),
         create: jest
@@ -214,7 +222,58 @@ describe('InvestmentRecommendationsService', () => {
             },
           ),
       },
-    } as unknown as PrismaService;
+      investmentDecisionPackage: {
+        findFirst: jest.fn().mockImplementation(() => {
+          return (
+            [...storedDecisionPackages].sort(
+              (first, second) =>
+                Number(second.version ?? 0) - Number(first.version ?? 0),
+            )[0] ?? null
+          );
+        }),
+        findUnique: jest.fn().mockImplementation(
+          ({
+            where,
+          }: {
+            where: {
+              checksum: string;
+            };
+          }) =>
+            storedDecisionPackages.find(
+              (item) => item.checksum === where.checksum,
+            ) ?? null,
+        ),
+        create: jest
+          .fn()
+          .mockImplementation(({ data }: { data: Record<string, unknown> }) => {
+            const created = {
+              createdAt: new Date('2026-07-29T17:00:00.000Z'),
+              ...data,
+            };
+
+            storedDecisionPackages.push(created);
+
+            return created;
+          }),
+      },
+      decisionLogEntry: {
+        create: jest
+          .fn()
+          .mockImplementation(
+            ({ data }: { data: Record<string, unknown> }) => ({
+              createdAt: new Date('2026-07-29T17:00:00.000Z'),
+              updatedAt: new Date('2026-07-29T17:00:00.000Z'),
+              ...data,
+            }),
+          ),
+      },
+    };
+    prisma.$transaction = jest
+      .fn()
+      .mockImplementation(
+        (operation: (transaction: typeof prisma) => unknown) =>
+          operation(prisma),
+      );
 
     const capitalAllocationService = {
       getElToroPlan: jest.fn().mockResolvedValue(capitalPlan),
@@ -229,11 +288,85 @@ describe('InvestmentRecommendationsService', () => {
     } as unknown as InvestmentsService;
 
     return new InvestmentRecommendationsService(
-      prisma,
+      prisma as unknown as PrismaService,
       capitalAllocationService,
       ipsClassificationService,
       investmentsService,
     );
+  }
+
+  async function completeDecisionPackagePrerequisites(
+    service: InvestmentRecommendationsService,
+  ) {
+    const generated = await service.generateElToroRecommendation();
+
+    await service.updateElToroEntryPlan({
+      recommendationId: generated.recommendation.id,
+      selectedScenario: 'BASE',
+      tranchePercentages: [40, 20, 20, 20],
+      fundingAccount: 'RakBank EUR',
+      notes: 'Piano preliminare da validare professionalmente.',
+    });
+
+    const initial = await service.getElToroDueDiligence();
+    const reviews = initial.dueDiligence.instruments.map(
+      (instrument: {
+        role: string;
+        documentPack?: {
+          version: string;
+        };
+        review: {
+          preferredBroker: string | null;
+          checks: Record<string, boolean>;
+          documentReview: {
+            acknowledged: boolean;
+            packVersion: string | null;
+            reviewedAt: string | null;
+          };
+          brokerAvailability: Record<string, string>;
+          brokerExecution: Record<string, Record<string, unknown>>;
+        };
+      }) => ({
+        ...instrument.review,
+        selected: instrument.role === 'PRIMARY',
+        preferredBroker: 'FINECO',
+        checks: Object.fromEntries(
+          Object.keys(instrument.review.checks).map((code) => [code, true]),
+        ),
+        documentReview: instrument.documentPack
+          ? {
+              acknowledged: true,
+              packVersion: instrument.documentPack.version,
+              reviewedAt: '2026-07-29T12:00:00.000Z',
+            }
+          : instrument.review.documentReview,
+        brokerAvailability: {
+          ...instrument.review.brokerAvailability,
+          FINECO: 'USER_CONFIRMED',
+        },
+        brokerExecution: {
+          ...instrument.review.brokerExecution,
+          FINECO: {
+            observedAt: '2026-07-29T10:00:00.000Z',
+            venue: 'XETRA',
+            bid: 23.58,
+            ask: 23.6,
+            referenceOrderAmount: 100_000,
+            commissionAmount: 2.95,
+            regularSession: true,
+            notes: null,
+          },
+        },
+      }),
+    );
+
+    await service.updateElToroDueDiligence({
+      recommendationId: generated.recommendation.id,
+      reviews,
+      notes: 'Controlli completati; fiscalità ancora da validare.',
+    });
+
+    return generated.recommendation;
   }
 
   it('creates a target reference but blocks approval when IPS data is incomplete', async () => {
@@ -687,5 +820,57 @@ describe('InvestmentRecommendationsService', () => {
         reviews,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('keeps the decision gate blocked until plan and due diligence are complete', async () => {
+    const service = createService(true);
+
+    await service.generateElToroRecommendation();
+
+    const result = await service.getElToroDecisionPackage();
+
+    expect(result.canFreeze).toBe(false);
+    expect(result.decisionPackage).toBeNull();
+    expect(
+      result.readiness.find((check) => check.code === 'ENTRY_PLAN_SAVED')
+        ?.status,
+    ).toBe('BLOCKED');
+    expect(result.execution.status).toBe('BLOCKED');
+  });
+
+  it('freezes one idempotent decision package and keeps execution blocked', async () => {
+    const service = createService(true, 1_000_000);
+    const recommendation = await completeDecisionPackagePrerequisites(service);
+    const ready = await service.getElToroDecisionPackage();
+
+    expect(ready.blockingReasons).toEqual([]);
+    expect(ready.canFreeze).toBe(true);
+    expect(
+      ready.readiness.find((check) => check.code === 'DUE_DILIGENCE_COMPLETE')
+        ?.status,
+    ).toBe('READY');
+    expect(
+      ready.readiness.find((check) => check.code === 'PROFESSIONAL_VALIDATION')
+        ?.status,
+    ).toBe('PENDING');
+
+    const created = await service.createElToroDecisionPackage({
+      recommendationId: recommendation.id,
+    });
+    const duplicate = await service.createElToroDecisionPackage({
+      recommendationId: recommendation.id,
+    });
+
+    expect(created.created).toBe(true);
+    expect(created.decisionPackage?.version).toBe(1);
+    expect(created.decisionPackage?.isCurrent).toBe(true);
+    expect(
+      created.decisionPackage?.payload.dueDiligence.selectedInstruments,
+    ).toHaveLength(3);
+    expect(created.decisionPackage?.payload.routing.tranches).toHaveLength(4);
+    expect(created.decisionPackage?.fiscalStatus).toBe('NEEDS_VALIDATION');
+    expect(created.decisionPackage?.executionStatus).toBe('BLOCKED');
+    expect(duplicate.created).toBe(false);
+    expect(duplicate.decisionPackage?.version).toBe(1);
   });
 });

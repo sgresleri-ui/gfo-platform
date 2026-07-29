@@ -4775,3 +4775,130 @@ export async function updateElToroInvestmentDueDiligence(
     "Unable to update El Toro instrument due diligence",
   );
 }
+
+export type InvestmentDecisionGateStatus =
+  | "READY"
+  | "PENDING"
+  | "BLOCKED";
+
+export type InvestmentDecisionPackagePayload = {
+  schemaVersion: "1.0.0";
+  sourcePropertyCode: "PROPERTY_EL_TORO";
+  recommendationId: string;
+  investibleCapital: number;
+  entryPlan: {
+    selectedScenario: string;
+    fundingAccount: string | null;
+    status: string;
+    updatedAt: string;
+  };
+  dueDiligence: {
+    version: string;
+    status: "READY_FOR_PROFESSIONAL_REVIEW";
+    updatedAt: string;
+    selectedInstruments: Array<{
+      assetClass: string;
+      assetClassLabel: string;
+      ticker: string;
+      name: string;
+      isin: string;
+      proposedAmount: number;
+      preferredBroker: InvestmentBrokerCode;
+      documentPackVersion: string | null;
+      documentReviewedAt: string | null;
+    }>;
+  };
+  routing: {
+    scenario: {
+      code: string;
+      label: string;
+      fundingAccount: string | null;
+    };
+    tranches: Array<{
+      number: number;
+      timing: string;
+      amount: number;
+      orders: Array<{
+        assetClass: string;
+        label: string;
+        amount: number;
+        ticker: string | null;
+        isin: string | null;
+        broker: InvestmentBrokerCode | null;
+        routeStatus: "READY_FOR_REVIEW" | "BLOCKED";
+      }>;
+    }>;
+  };
+  controls: {
+    fiscalStatus: "NEEDS_VALIDATION";
+    professionalValidation: "PENDING";
+    executionStatus: "BLOCKED";
+    automatedExecution: false;
+  };
+};
+
+export type InvestmentDecisionPackage = {
+  id: string;
+  version: number;
+  recommendationId: string;
+  status: "READY_FOR_PROFESSIONAL_REVIEW";
+  fiscalStatus: "NEEDS_VALIDATION";
+  executionStatus: "BLOCKED";
+  createdAt: string;
+  checksum: string;
+  decisionLogId: string;
+  isCurrent: boolean;
+  payload: InvestmentDecisionPackagePayload;
+};
+
+export type InvestmentDecisionGateResponse = {
+  gateVersion: string;
+  recommendationId: string | null;
+  canFreeze: boolean;
+  readiness: Array<{
+    code: string;
+    label: string;
+    status: InvestmentDecisionGateStatus;
+  }>;
+  blockingReasons: string[];
+  decisionPackage: InvestmentDecisionPackage | null;
+  execution: {
+    automatedExecution: false;
+    status: "BLOCKED";
+    blockingReasons: string[];
+  };
+  created?: boolean;
+};
+
+export async function getElToroInvestmentDecisionPackage(): Promise<InvestmentDecisionGateResponse> {
+  const response = await fetch(
+    `${API_URL}/investment-recommendations/el-toro/decision-package`,
+  );
+
+  return readJson<InvestmentDecisionGateResponse>(
+    response,
+    "Unable to load El Toro investment decision package",
+  );
+}
+
+export async function createElToroInvestmentDecisionPackage(
+  recommendationId: string,
+): Promise<InvestmentDecisionGateResponse> {
+  const response = await fetch(
+    `${API_URL}/investment-recommendations/el-toro/decision-package`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        recommendationId,
+      }),
+    },
+  );
+
+  return readJson<InvestmentDecisionGateResponse>(
+    response,
+    "Unable to create El Toro investment decision package",
+  );
+}

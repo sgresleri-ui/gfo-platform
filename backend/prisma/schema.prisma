@@ -160,6 +160,27 @@ model InvestmentDueDiligencePlan {
   @@index([status])
 }
 
+model InvestmentDecisionPackage {
+  id                       String   @id @default(cuid())
+  sourcePropertyCode       String
+  version                  Int
+  recommendationSnapshotId String
+  entryPlanUpdatedAt       DateTime
+  dueDiligenceUpdatedAt    DateTime
+  status                   String   @default("READY_FOR_PROFESSIONAL_REVIEW")
+  fiscalStatus             String   @default("NEEDS_VALIDATION")
+  executionStatus          String   @default("BLOCKED")
+  payloadJson              String
+  checksum                 String   @unique
+  decisionLogId            String   @unique
+  createdAt                DateTime @default(now())
+
+  @@unique([sourcePropertyCode, version])
+  @@index([sourcePropertyCode, createdAt])
+  @@index([recommendationSnapshotId])
+  @@index([status])
+}
+
 model DecisionLogEntry {
   id               String   @id
   decisionDate     DateTime

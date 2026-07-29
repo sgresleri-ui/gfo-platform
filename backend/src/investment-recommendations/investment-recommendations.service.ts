@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import { BadRequestException, Injectable } from '@nestjs/common';
 
@@ -344,6 +344,66 @@ export type UpdateElToroDueDiligenceInput = {
     notes?: string | null;
   }>;
   notes?: string | null;
+};
+
+export type CreateElToroDecisionPackageInput = {
+  recommendationId: string;
+};
+
+type DecisionPackagePayload = {
+  schemaVersion: '1.0.0';
+  sourcePropertyCode: typeof EL_TORO_PROPERTY_CODE;
+  recommendationId: string;
+  investibleCapital: number;
+  entryPlan: {
+    selectedScenario: string;
+    fundingAccount: string | null;
+    status: string;
+    updatedAt: string;
+  };
+  dueDiligence: {
+    version: string;
+    status: 'READY_FOR_PROFESSIONAL_REVIEW';
+    updatedAt: string;
+    selectedInstruments: Array<{
+      assetClass: string;
+      assetClassLabel: string;
+      ticker: string;
+      name: string;
+      isin: string;
+      proposedAmount: number;
+      preferredBroker: BrokerCode;
+      documentPackVersion: string | null;
+      documentReviewedAt: string | null;
+    }>;
+  };
+  routing: {
+    scenario: {
+      code: string;
+      label: string;
+      fundingAccount: string | null;
+    };
+    tranches: Array<{
+      number: number;
+      timing: string;
+      amount: number;
+      orders: Array<{
+        assetClass: string;
+        label: string;
+        amount: number;
+        ticker: string | null;
+        isin: string | null;
+        broker: BrokerCode | null;
+        routeStatus: 'READY_FOR_REVIEW' | 'BLOCKED';
+      }>;
+    }>;
+  };
+  controls: {
+    fiscalStatus: 'NEEDS_VALIDATION';
+    professionalValidation: 'PENDING';
+    executionStatus: 'BLOCKED';
+    automatedExecution: false;
+  };
 };
 
 type CurrentSnapshotData = {
@@ -2387,6 +2447,285 @@ export class InvestmentRecommendationsService {
     };
   }
 
+  private decisionPackageReadiness(
+    recommendation: EntryPlanRecommendation,
+    entryPlan: StoredEntryPlan | null,
+    dueDiligencePlan: StoredDueDiligencePlan | null,
+    dueDiligence: ReturnType<
+      InvestmentRecommendationsService['buildDueDiligenceResponse']
+    >,
+  ) {
+    const recommendationReady =
+      recommendation.isCurrent && recommendation.status === 'NEEDS_VALIDATION';
+    const entryPlanReady =
+      entryPlan !== null &&
+      entryPlan.recommendationSnapshotId === recommendation.id;
+    const dueDiligenceReady =
+      dueDiligencePlan !== null &&
+      dueDiligencePlan.recommendationSnapshotId === recommendation.id &&
+      dueDiligence.status === 'READY_FOR_PROFESSIONAL_REVIEW';
+    const routingReady =
+      dueDiligence.routingPreview !== null &&
+      dueDiligence.routingPreview.tranches.every((tranche) =>
+        tranche.orders.every(
+          (order) => order.routeStatus === 'READY_FOR_REVIEW',
+        ),
+      );
+    const blockingReasons = [
+      !recommendationReady
+        ? 'La proposta non è corrente o non ha completato i prerequisiti IPS.'
+        : null,
+      !entryPlanReady
+        ? 'Salva uno scenario e un piano tranche allineati alla proposta corrente.'
+        : null,
+      !dueDiligenceReady
+        ? 'Completa e salva selezione, fascicoli documentali e verifiche broker.'
+        : null,
+      !routingReady
+        ? 'Tutte le route delle tranche devono essere pronte per la revisione.'
+        : null,
+    ].filter((reason): reason is string => reason !== null);
+
+    return {
+      canFreeze: blockingReasons.length === 0,
+      blockingReasons,
+      checks: [
+        {
+          code: 'RECOMMENDATION_CURRENT',
+          label: 'Proposta e IPS',
+          status: recommendationReady ? 'READY' : 'BLOCKED',
+        },
+        {
+          code: 'ENTRY_PLAN_SAVED',
+          label: 'Scenario e tranche',
+          status: entryPlanReady ? 'READY' : 'BLOCKED',
+        },
+        {
+          code: 'DUE_DILIGENCE_COMPLETE',
+          label: 'Due diligence',
+          status: dueDiligenceReady ? 'READY' : 'BLOCKED',
+        },
+        {
+          code: 'PROFESSIONAL_VALIDATION',
+          label: 'Validazione professionale',
+          status: 'PENDING',
+        },
+        {
+          code: 'EXECUTION_AUTHORIZATION',
+          label: 'Autorizzazione esecutiva',
+          status: 'BLOCKED',
+        },
+      ] as const,
+    };
+  }
+
+  private buildDecisionPackagePayload(
+    recommendation: EntryPlanRecommendation,
+    entryPlan: StoredEntryPlan,
+    dueDiligence: ReturnType<
+      InvestmentRecommendationsService['buildDueDiligenceResponse']
+    >,
+  ): DecisionPackagePayload {
+    if (
+      dueDiligence.status !== 'READY_FOR_PROFESSIONAL_REVIEW' ||
+      !dueDiligence.updatedAt ||
+      !dueDiligence.routingPreview
+    ) {
+      throw new BadRequestException(
+        'La due diligence non è pronta per creare il pacchetto decisionale.',
+      );
+    }
+
+    const selectedInstruments = dueDiligence.instruments
+      .filter((instrument) => instrument.review.selected)
+      .map((instrument) => {
+        if (!instrument.review.preferredBroker) {
+          throw new BadRequestException(
+            `Broker preferito mancante per ${instrument.ticker}.`,
+          );
+        }
+
+        return {
+          assetClass: instrument.assetClass,
+          assetClassLabel: instrument.assetClassLabel,
+          ticker: instrument.ticker,
+          name: instrument.name,
+          isin: instrument.isin,
+          proposedAmount: instrument.proposedAmount,
+          preferredBroker: instrument.review.preferredBroker,
+          documentPackVersion: instrument.documentPack?.version ?? null,
+          documentReviewedAt:
+            instrument.review.documentReview.reviewedAt ?? null,
+        };
+      });
+
+    return {
+      schemaVersion: '1.0.0',
+      sourcePropertyCode: EL_TORO_PROPERTY_CODE,
+      recommendationId: recommendation.id,
+      investibleCapital: recommendation.capitalPlan.investibleCapital,
+      entryPlan: {
+        selectedScenario: entryPlan.selectedScenario,
+        fundingAccount: entryPlan.fundingAccount,
+        status: entryPlan.status,
+        updatedAt: entryPlan.updatedAt.toISOString(),
+      },
+      dueDiligence: {
+        version: dueDiligence.dueDiligenceVersion,
+        status: 'READY_FOR_PROFESSIONAL_REVIEW',
+        updatedAt: dueDiligence.updatedAt,
+        selectedInstruments,
+      },
+      routing: {
+        scenario: dueDiligence.routingPreview.scenario,
+        tranches: dueDiligence.routingPreview.tranches.map((tranche) => ({
+          number: tranche.number,
+          timing: tranche.timing,
+          amount: tranche.amount,
+          orders: tranche.orders.map((order) => ({
+            assetClass: order.assetClass,
+            label: order.label,
+            amount: order.amount,
+            ticker: order.ticker,
+            isin: order.isin,
+            broker: order.broker,
+            routeStatus:
+              order.routeStatus === 'READY_FOR_REVIEW'
+                ? ('READY_FOR_REVIEW' as const)
+                : ('BLOCKED' as const),
+          })),
+        })),
+      },
+      controls: {
+        fiscalStatus: 'NEEDS_VALIDATION',
+        professionalValidation: 'PENDING',
+        executionStatus: 'BLOCKED',
+        automatedExecution: false,
+      },
+    };
+  }
+
+  private decisionPackageChecksum(payload: DecisionPackagePayload): string {
+    return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+  }
+
+  private serializeDecisionPackage(
+    decisionPackage: {
+      id: string;
+      version: number;
+      recommendationSnapshotId: string;
+      status: string;
+      fiscalStatus: string;
+      executionStatus: string;
+      payloadJson: string;
+      checksum: string;
+      decisionLogId: string;
+      createdAt: Date;
+    },
+    currentChecksum: string | null,
+  ) {
+    return {
+      id: decisionPackage.id,
+      version: decisionPackage.version,
+      recommendationId: decisionPackage.recommendationSnapshotId,
+      status: decisionPackage.status,
+      fiscalStatus: decisionPackage.fiscalStatus,
+      executionStatus: decisionPackage.executionStatus,
+      createdAt: decisionPackage.createdAt.toISOString(),
+      checksum: decisionPackage.checksum,
+      decisionLogId: decisionPackage.decisionLogId,
+      isCurrent:
+        currentChecksum !== null &&
+        decisionPackage.checksum === currentChecksum,
+      payload: this.parseJson<DecisionPackagePayload>(
+        decisionPackage.payloadJson,
+      ),
+    };
+  }
+
+  private async loadDecisionPackageContext() {
+    const [recommendationResponse, latestPackage] = await Promise.all([
+      this.getLatestElToroRecommendation(),
+      this.prisma.investmentDecisionPackage.findFirst({
+        where: {
+          sourcePropertyCode: EL_TORO_PROPERTY_CODE,
+        },
+        orderBy: {
+          version: 'desc',
+        },
+      }),
+    ]);
+    const recommendation = recommendationResponse.recommendation;
+
+    if (!recommendation) {
+      return {
+        recommendation: null,
+        entryPlan: null,
+        dueDiligencePlan: null,
+        dueDiligence: null,
+        readiness: {
+          canFreeze: false,
+          blockingReasons: [
+            'Genera prima una proposta di investimento El Toro.',
+          ],
+          checks: [],
+        },
+        payload: null,
+        currentChecksum: null,
+        latestPackage,
+      };
+    }
+
+    const [entryPlan, dueDiligencePlan, portfolioOverlap] = await Promise.all([
+      this.prisma.investmentRecommendationPlan.findUnique({
+        where: {
+          sourcePropertyCode: EL_TORO_PROPERTY_CODE,
+        },
+      }),
+      this.prisma.investmentDueDiligencePlan.findUnique({
+        where: {
+          sourcePropertyCode: EL_TORO_PROPERTY_CODE,
+        },
+      }),
+      this.getDueDiligencePortfolioOverlap(),
+    ]);
+    const staleDueDiligence =
+      dueDiligencePlan !== null &&
+      dueDiligencePlan.recommendationSnapshotId !== recommendation.id;
+    const dueDiligence = this.buildDueDiligenceResponse(
+      recommendation,
+      dueDiligencePlan,
+      entryPlan,
+      staleDueDiligence,
+      portfolioOverlap,
+    );
+    const readiness = this.decisionPackageReadiness(
+      recommendation,
+      entryPlan,
+      dueDiligencePlan,
+      dueDiligence,
+    );
+    const payload =
+      readiness.canFreeze && entryPlan
+        ? this.buildDecisionPackagePayload(
+            recommendation,
+            entryPlan,
+            dueDiligence,
+          )
+        : null;
+
+    return {
+      recommendation,
+      entryPlan,
+      dueDiligencePlan,
+      dueDiligence,
+      readiness,
+      payload,
+      currentChecksum: payload ? this.decisionPackageChecksum(payload) : null,
+      latestPackage,
+    };
+  }
+
   private determineStatus(inputs: RecommendationInputs): RecommendationStatus {
     if (
       inputs.capitalPlan.reconciliation.fundingGap > 0 ||
@@ -2499,6 +2838,153 @@ export class InvestmentRecommendationsService {
       ),
       tranches: this.parseJson<RecommendationTranche[]>(snapshot.tranchesJson),
       warnings: this.parseJson<string[]>(snapshot.warningsJson),
+    };
+  }
+
+  async getElToroDecisionPackage() {
+    const context = await this.loadDecisionPackageContext();
+
+    return {
+      gateVersion: '1.0.0',
+      recommendationId: context.recommendation?.id ?? null,
+      canFreeze: context.readiness.canFreeze,
+      readiness: context.readiness.checks,
+      blockingReasons: context.readiness.blockingReasons,
+      decisionPackage: context.latestPackage
+        ? this.serializeDecisionPackage(
+            context.latestPackage,
+            context.currentChecksum,
+          )
+        : null,
+      execution: {
+        automatedExecution: false,
+        status: 'BLOCKED' as const,
+        blockingReasons: [
+          'Fiscalità El Toro: NEEDS_VALIDATION.',
+          'Validazione professionale di fiscalità, adeguatezza e documentazione ancora pendente.',
+          'Il pacchetto congela una decisione preliminare e non autorizza né trasmette ordini.',
+        ],
+      },
+    };
+  }
+
+  async createElToroDecisionPackage(input: CreateElToroDecisionPackageInput) {
+    const context = await this.loadDecisionPackageContext();
+    const recommendation = context.recommendation;
+
+    if (!recommendation) {
+      throw new BadRequestException(
+        'Genera prima una proposta di investimento El Toro.',
+      );
+    }
+
+    if (
+      !input ||
+      typeof input.recommendationId !== 'string' ||
+      input.recommendationId !== recommendation.id
+    ) {
+      throw new BadRequestException(
+        'Il pacchetto non corrisponde alla proposta corrente. Ricarica il Recommendation Engine.',
+      );
+    }
+
+    if (
+      !context.readiness.canFreeze ||
+      !context.payload ||
+      !context.currentChecksum ||
+      !context.entryPlan ||
+      !context.dueDiligencePlan
+    ) {
+      throw new BadRequestException(
+        context.readiness.blockingReasons.join(' ') ||
+          'Il pacchetto decisionale non è ancora pronto.',
+      );
+    }
+
+    const payload = context.payload;
+    const currentChecksum = context.currentChecksum;
+    const entryPlan = context.entryPlan;
+    const dueDiligencePlan = context.dueDiligencePlan;
+    const existing = await this.prisma.investmentDecisionPackage.findUnique({
+      where: {
+        checksum: currentChecksum,
+      },
+    });
+
+    if (existing) {
+      return {
+        ...(await this.getElToroDecisionPackage()),
+        created: false,
+      };
+    }
+
+    const id = randomUUID();
+    const decisionLogId = `investment-decision-package-${id}`;
+    const version = (context.latestPackage?.version ?? 0) + 1;
+    const selectedTickers = payload.dueDiligence.selectedInstruments
+      .map((instrument) => instrument.ticker)
+      .join(', ');
+    const trancheCount = payload.routing.tranches.length;
+    const created = await this.prisma.$transaction(async (transaction) => {
+      const decisionPackage =
+        await transaction.investmentDecisionPackage.create({
+          data: {
+            id,
+            sourcePropertyCode: EL_TORO_PROPERTY_CODE,
+            version,
+            recommendationSnapshotId: recommendation.id,
+            entryPlanUpdatedAt: entryPlan.updatedAt,
+            dueDiligenceUpdatedAt: dueDiligencePlan.updatedAt,
+            status: 'READY_FOR_PROFESSIONAL_REVIEW',
+            fiscalStatus: 'NEEDS_VALIDATION',
+            executionStatus: 'BLOCKED',
+            payloadJson: JSON.stringify(payload),
+            checksum: currentChecksum,
+            decisionLogId,
+          },
+        });
+
+      await transaction.decisionLogEntry.create({
+        data: {
+          id: decisionLogId,
+          decisionDate: new Date(),
+          title: `Pacchetto preliminare investimento El Toro v${version}`,
+          category: 'INVESTMENT',
+          status: 'IN_PROGRESS',
+          priority: 'HIGH',
+          motivation:
+            'Congelare in modo verificabile la proposta corrente, il piano per tranche e le evidenze di due diligence prima delle validazioni professionali.',
+          analysisText: `Capitale core ${recommendation.capitalPlan.investibleCapital.toLocaleString(
+            'it-IT',
+            {
+              style: 'currency',
+              currency: 'EUR',
+            },
+          )}; strumenti selezionati ${selectedTickers}; scenario ${payload.routing.scenario.label} in ${trancheCount} tranche.`,
+          alternativesJson: JSON.stringify([
+            'Rinviare il congelamento fino a nuovi dati di mercato',
+            'Modificare strumenti, broker o ripartizione delle tranche',
+            'Procedere senza un pacchetto decisionale versionato',
+          ]),
+          finalDecision:
+            'Sottoporre il pacchetto preliminare alla validazione professionale senza autorizzare né trasmettere ordini.',
+          impact:
+            'Crea una baseline immutabile per il confronto con fiscalista e consulenti; ogni modifica successiva richiederà una nuova versione.',
+          amount: recommendation.capitalPlan.investibleCapital,
+          resultText: `Pacchetto v${version} congelato con esecuzione BLOCCATA e fiscalità NEEDS_VALIDATION.`,
+          lessons:
+            'La presa visione documentale e la scelta del broker sono prerequisiti, ma non sostituiscono validazione fiscale, adeguatezza e autorizzazione esecutiva.',
+          source: 'CAPITAL_ALLOCATION_ENGINE',
+        },
+      });
+
+      return decisionPackage;
+    });
+
+    return {
+      ...(await this.getElToroDecisionPackage()),
+      decisionPackage: this.serializeDecisionPackage(created, currentChecksum),
+      created: true,
     };
   }
 
