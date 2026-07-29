@@ -93,6 +93,19 @@ const theme = createTheme({
       },
     },
 
+    MuiInputLabel: {
+      styleOverrides: {
+        outlined: {
+          "&.MuiInputLabel-shrink": {
+            zIndex: 1,
+            paddingInline: 4,
+            backgroundColor: "#FFFFFF",
+            borderRadius: 4,
+          },
+        },
+      },
+    },
+
     MuiTableHead: {
       styleOverrides: {
         root: {
