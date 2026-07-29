@@ -374,6 +374,35 @@ function brokerStatusPresentation(
   };
 }
 
+function documentaryEvidencePresentation(
+  status:
+    | "SOURCE_SUPPORTED"
+    | "USER_REVIEW_REQUIRED"
+    | "PROFESSIONAL_VALIDATION_REQUIRED",
+): {
+  label: string;
+  color: ChipProps["color"];
+} {
+  if (status === "SOURCE_SUPPORTED") {
+    return {
+      label: "Supportato da fonti",
+      color: "success",
+    };
+  }
+
+  if (status === "PROFESSIONAL_VALIDATION_REQUIRED") {
+    return {
+      label: "Validazione professionale",
+      color: "info",
+    };
+  }
+
+  return {
+    label: "Presa visione richiesta",
+    color: "warning",
+  };
+}
+
 function cloneReviews(
   reviews: InvestmentDueDiligenceReview[],
 ): InvestmentDueDiligenceReview[] {
@@ -381,6 +410,9 @@ function cloneReviews(
     ...review,
     checks: {
       ...review.checks,
+    },
+    documentReview: {
+      ...review.documentReview,
     },
     brokerAvailability: {
       ...review.brokerAvailability,
@@ -564,6 +596,22 @@ export default function InvestmentDueDiligencePanel({
       checks: {
         ...review.checks,
         [check]: checked,
+      },
+      documentReview: {
+        acknowledged: false,
+        packVersion: null,
+        reviewedAt: null,
+      },
+    }));
+  };
+
+  const acknowledgeDocumentReview = (isin: string, packVersion: string) => {
+    updateReview(isin, (review) => ({
+      ...review,
+      documentReview: {
+        acknowledged: true,
+        packVersion,
+        reviewedAt: new Date().toISOString(),
       },
     }));
   };
@@ -1140,13 +1188,274 @@ export default function InvestmentDueDiligencePanel({
 
                         {review.selected && (
                           <>
+                            {instrument.documentPack && (
+                              <>
+                                <Divider sx={{ my: 2 }} />
+
+                                <Box
+                                  sx={{
+                                    p: 1.5,
+                                    borderRadius: 2,
+                                    border: "1px solid",
+                                    borderColor: "primary.light",
+                                    bgcolor: "primary.50",
+                                  }}
+                                >
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "flex-start",
+                                      gap: 1,
+                                      flexWrap: "wrap",
+                                    }}
+                                  >
+                                    <Box>
+                                      <Typography
+                                        variant="subtitle2"
+                                        sx={{ fontWeight: 900 }}
+                                      >
+                                        Fascicolo documentale{" "}
+                                        {instrument.ticker}
+                                      </Typography>
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                      >
+                                        Versione{" "}
+                                        {instrument.documentPack.version} ·
+                                        fonti al{" "}
+                                        {sourceDateLabel(
+                                          instrument.documentPack.asOfDate,
+                                        )}
+                                      </Typography>
+                                    </Box>
+                                    <Chip
+                                      size="small"
+                                      color={
+                                        instrument.documentPack.status ===
+                                        "READY_FOR_REVIEW"
+                                          ? "success"
+                                          : "warning"
+                                      }
+                                      label={
+                                        instrument.documentPack.status ===
+                                        "READY_FOR_REVIEW"
+                                          ? "Pronto per presa visione"
+                                          : "Fonti da completare"
+                                      }
+                                    />
+                                  </Box>
+
+                                  <Alert severity="info" sx={{ mt: 1.25 }}>
+                                    Le fonti sostengono la sintesi, ma non
+                                    certificano automaticamente comprensione,
+                                    adeguatezza o fiscalità. Apri i documenti e
+                                    conferma manualmente i controlli sottostanti.
+                                  </Alert>
+
+                                  <Box
+                                    sx={{
+                                      display: "grid",
+                                      gridTemplateColumns: {
+                                        xs: "1fr",
+                                        md: "repeat(2, minmax(0, 1fr))",
+                                      },
+                                      gap: 1,
+                                      mt: 1.25,
+                                    }}
+                                  >
+                                    {instrument.documentPack.documents.map(
+                                      (document) => (
+                                        <Box
+                                          key={document.id}
+                                          sx={{
+                                            p: 1.1,
+                                            borderRadius: 1.5,
+                                            bgcolor: "background.paper",
+                                            border: "1px solid",
+                                            borderColor: "divider",
+                                          }}
+                                        >
+                                          <Typography
+                                            variant="overline"
+                                            color="primary.main"
+                                          >
+                                            {document.kind.replaceAll("_", " ")}
+                                          </Typography>
+                                          <Link
+                                            href={document.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            variant="body2"
+                                            sx={{
+                                              display: "block",
+                                              fontWeight: 800,
+                                            }}
+                                          >
+                                            {document.title}
+                                            <OpenInNewRoundedIcon
+                                              sx={{
+                                                ml: 0.35,
+                                                fontSize: "0.9rem",
+                                                verticalAlign: "text-bottom",
+                                              }}
+                                            />
+                                          </Link>
+                                          <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                            sx={{ display: "block", mt: 0.4 }}
+                                          >
+                                            {document.publisher} ·{" "}
+                                            {sourceDateLabel(
+                                              document.sourceDate,
+                                            )}
+                                          </Typography>
+                                          <Typography
+                                            variant="caption"
+                                            sx={{ display: "block", mt: 0.5 }}
+                                          >
+                                            {document.purpose}
+                                          </Typography>
+                                        </Box>
+                                      ),
+                                    )}
+                                  </Box>
+
+                                  <Typography
+                                    variant="subtitle2"
+                                    sx={{ fontWeight: 850, mt: 1.5 }}
+                                  >
+                                    Evidenze per controllo
+                                  </Typography>
+
+                                  <Box sx={{ mt: 0.75 }}>
+                                    {instrument.documentPack.evidence.map(
+                                      (evidence) => {
+                                        const evidenceStatus =
+                                          documentaryEvidencePresentation(
+                                            evidence.status,
+                                          );
+                                        const check =
+                                          dueDiligence.checks.find(
+                                            (item) =>
+                                              item.code === evidence.checkCode,
+                                          );
+
+                                        return (
+                                          <Box
+                                            key={evidence.checkCode}
+                                            sx={{
+                                              py: 1,
+                                              borderTop: "1px solid",
+                                              borderColor: "divider",
+                                            }}
+                                          >
+                                            <Box
+                                              sx={{
+                                                display: "flex",
+                                                justifyContent:
+                                                  "space-between",
+                                                alignItems: "center",
+                                                gap: 1,
+                                                flexWrap: "wrap",
+                                              }}
+                                            >
+                                              <Typography
+                                                variant="body2"
+                                                sx={{ fontWeight: 800 }}
+                                              >
+                                                {check?.label ??
+                                                  evidence.checkCode}
+                                              </Typography>
+                                              <Chip
+                                                size="small"
+                                                color={evidenceStatus.color}
+                                                label={evidenceStatus.label}
+                                              />
+                                            </Box>
+                                            <Typography
+                                              variant="caption"
+                                              color="text.secondary"
+                                              sx={{
+                                                display: "block",
+                                                mt: 0.4,
+                                              }}
+                                            >
+                                              {evidence.summary}
+                                            </Typography>
+                                            <Box
+                                              sx={{
+                                                display: "flex",
+                                                gap: 1,
+                                                flexWrap: "wrap",
+                                                mt: 0.45,
+                                              }}
+                                            >
+                                              {evidence.sourceIds.map(
+                                                (sourceId) => {
+                                                  const source =
+                                                    instrument.documentPack?.documents.find(
+                                                      (document) =>
+                                                        document.id === sourceId,
+                                                    );
+
+                                                  return source ? (
+                                                    <Link
+                                                      key={sourceId}
+                                                      href={source.url}
+                                                      target="_blank"
+                                                      rel="noreferrer"
+                                                      variant="caption"
+                                                    >
+                                                      {source.publisher}
+                                                    </Link>
+                                                  ) : null;
+                                                },
+                                              )}
+                                            </Box>
+                                            {evidence.limitations.map(
+                                              (limitation) => (
+                                                <Typography
+                                                  key={limitation}
+                                                  variant="caption"
+                                                  color="warning.dark"
+                                                  sx={{
+                                                    display: "block",
+                                                    mt: 0.25,
+                                                  }}
+                                                >
+                                                  • {limitation}
+                                                </Typography>
+                                              ),
+                                            )}
+                                          </Box>
+                                        );
+                                      },
+                                    )}
+                                  </Box>
+
+                                  <Alert severity="warning" sx={{ mt: 1 }}>
+                                    <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+                                      {instrument.documentPack.limitations.map(
+                                        (limitation) => (
+                                          <li key={limitation}>{limitation}</li>
+                                        ),
+                                      )}
+                                    </Box>
+                                  </Alert>
+                                </Box>
+                              </>
+                            )}
+
                             <Divider sx={{ my: 2 }} />
 
                             <Typography
                               variant="subtitle2"
                               sx={{ fontWeight: 850 }}
                             >
-                              Checklist documentale
+                              Conferme manuali di presa visione
                             </Typography>
 
                             <Box sx={{ mt: 0.5 }}>
@@ -1191,6 +1500,79 @@ export default function InvestmentDueDiligencePanel({
                                 />
                               ))}
                             </Box>
+
+                            {instrument.documentPack && (
+                              <Box
+                                sx={{
+                                  mt: 1.25,
+                                  p: 1.25,
+                                  borderRadius: 2,
+                                  border: "1px solid",
+                                  borderColor:
+                                    review.documentReview.acknowledged &&
+                                    review.documentReview.packVersion ===
+                                      instrument.documentPack.version
+                                      ? "success.light"
+                                      : "divider",
+                                  bgcolor:
+                                    review.documentReview.acknowledged &&
+                                    review.documentReview.packVersion ===
+                                      instrument.documentPack.version
+                                      ? "success.50"
+                                      : "action.hover",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  gap: 1,
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                <Box>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{ fontWeight: 850 }}
+                                  >
+                                    {review.documentReview.acknowledged &&
+                                    review.documentReview.packVersion ===
+                                      instrument.documentPack.version
+                                      ? "Presa visione registrata"
+                                      : "Presa visione non registrata"}
+                                  </Typography>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
+                                    {review.documentReview.reviewedAt &&
+                                    review.documentReview.packVersion ===
+                                      instrument.documentPack.version
+                                      ? `${dateLabel(
+                                          review.documentReview.reviewedAt,
+                                        )} · ${review.documentReview.packVersion}`
+                                      : "Completa le cinque conferme prima di registrare data e versione del fascicolo."}
+                                  </Typography>
+                                </Box>
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  disabled={
+                                    !dueDiligence.checks.every(
+                                      (check) => review.checks[check.code],
+                                    ) ||
+                                    (review.documentReview.acknowledged &&
+                                      review.documentReview.packVersion ===
+                                        instrument.documentPack.version)
+                                  }
+                                  onClick={() =>
+                                    acknowledgeDocumentReview(
+                                      instrument.isin,
+                                      instrument.documentPack!.version,
+                                    )
+                                  }
+                                >
+                                  Registra presa visione
+                                </Button>
+                              </Box>
+                            )}
 
                             <Typography
                               variant="subtitle2"

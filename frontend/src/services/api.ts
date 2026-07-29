@@ -4572,6 +4572,11 @@ export type InvestmentDueDiligenceReview = {
   selected: boolean;
   preferredBroker: InvestmentBrokerCode | null;
   checks: Record<InvestmentDueDiligenceCheckCode, boolean>;
+  documentReview: {
+    acknowledged: boolean;
+    packVersion: string | null;
+    reviewedAt: string | null;
+  };
   brokerAvailability: Record<
     InvestmentBrokerCode,
     InvestmentBrokerUserStatus
@@ -4610,6 +4615,38 @@ export type InvestmentDueDiligenceInstrument = {
     sourceDate: string;
     url: string;
   }>;
+  documentPack?: {
+    version: string;
+    asOfDate: string;
+    status: "READY_FOR_REVIEW" | "SOURCE_GAPS";
+    documents: Array<{
+      id: string;
+      kind:
+        | "PRODUCT_PAGE"
+        | "PRIIPS_KID"
+        | "RISK_EXPLAINER"
+        | "INDEX_PAGE"
+        | "BROKER_TERMS";
+      publisher: string;
+      title: string;
+      sourceDate: string;
+      url: string;
+      official: true;
+      purpose: string;
+    }>;
+    evidence: Array<{
+      checkCode: InvestmentDueDiligenceCheckCode;
+      status:
+        | "SOURCE_SUPPORTED"
+        | "USER_REVIEW_REQUIRED"
+        | "PROFESSIONAL_VALIDATION_REQUIRED";
+      summary: string;
+      sourceIds: string[];
+      limitations: string[];
+    }>;
+    preliminaryOutcome: "DOCUMENTED_WITH_LIMITATIONS";
+    limitations: string[];
+  };
   proposedAmount: number;
   portfolioOverlap: {
     existingExposure: number;

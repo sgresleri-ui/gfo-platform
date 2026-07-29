@@ -9,7 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 const ENGINE_VERSION = '1.0.0';
 const ENTRY_PLAN_VERSION = '1.0.0';
-const DUE_DILIGENCE_VERSION = '1.0.0';
+const DUE_DILIGENCE_VERSION = '1.1.0';
 const EL_TORO_PROPERTY_CODE = 'PROPERTY_EL_TORO';
 const MARKET_CONTEXT_MAX_AGE_DAYS = 45;
 
@@ -214,11 +214,18 @@ type BrokerExecutionEvidence = {
   notes: string | null;
 };
 
+type DocumentaryReview = {
+  acknowledged: boolean;
+  packVersion: string | null;
+  reviewedAt: string | null;
+};
+
 type DueDiligenceReview = {
   isin: string;
   selected: boolean;
   preferredBroker: BrokerCode | null;
   checks: Record<DueDiligenceCheckCode, boolean>;
+  documentReview: DocumentaryReview;
   brokerAvailability: Record<BrokerCode, UserBrokerAvailability>;
   brokerExecution: Record<BrokerCode, BrokerExecutionEvidence>;
   notes: string | null;
@@ -238,6 +245,39 @@ type DueDiligenceSource = {
   title: string;
   sourceDate: string;
   url: string;
+};
+
+type DueDiligenceDocumentPack = {
+  version: string;
+  asOfDate: string;
+  status: 'READY_FOR_REVIEW' | 'SOURCE_GAPS';
+  documents: Array<{
+    id: string;
+    kind:
+      | 'PRODUCT_PAGE'
+      | 'PRIIPS_KID'
+      | 'RISK_EXPLAINER'
+      | 'INDEX_PAGE'
+      | 'BROKER_TERMS';
+    publisher: string;
+    title: string;
+    sourceDate: string;
+    url: string;
+    official: true;
+    purpose: string;
+  }>;
+  evidence: Array<{
+    checkCode: DueDiligenceCheckCode;
+    status:
+      | 'SOURCE_SUPPORTED'
+      | 'USER_REVIEW_REQUIRED'
+      | 'PROFESSIONAL_VALIDATION_REQUIRED';
+    summary: string;
+    sourceIds: string[];
+    limitations: string[];
+  }>;
+  preliminaryOutcome: 'DOCUMENTED_WITH_LIMITATIONS';
+  limitations: string[];
 };
 
 type DueDiligenceBrokerRoute = {
@@ -269,6 +309,7 @@ type DueDiligenceInstrument = {
   keyFacts: string[];
   risks: string[];
   sources: DueDiligenceSource[];
+  documentPack?: DueDiligenceDocumentPack;
   brokerRoutes: DueDiligenceBrokerRoute[];
 };
 
@@ -296,6 +337,7 @@ export type UpdateElToroDueDiligenceInput = {
     brokerExecution?: Partial<
       Record<BrokerCode, Partial<BrokerExecutionEvidence>>
     >;
+    documentReview?: Partial<DocumentaryReview>;
     notes?: string | null;
   }>;
   notes?: string | null;
@@ -439,6 +481,132 @@ const FINECO_SOURCE =
   'https://it.finecobank.com/trading/etf/etf-zero-commissioni/';
 const IBKR_MARKETS_SOURCE =
   'https://www.interactivebrokers.com/en/trading/global-market-access.php';
+const XEON_PRODUCT_SOURCE =
+  'https://etf.dws.com/en-gb/LU0290358497-eur-overnight-rate-swap-ucits-etf-1c/';
+const XEON_RISK_SOURCE =
+  'https://etf.dws.com/en-gb/knowledge/focus-topics/overnight-etfs-an-alternative-to-easy-access-savings-accounts/';
+const XEON_INDEX_SOURCE = 'https://www.solactive.com/index/DE000SL0H431/';
+
+const XEON_DOCUMENT_PACK: DueDiligenceDocumentPack = {
+  version: 'XEON-2026-07-29-01',
+  asOfDate: '2026-07-29',
+  status: 'READY_FOR_REVIEW',
+  documents: [
+    {
+      id: 'XEON_DWS_PRODUCT',
+      kind: 'PRODUCT_PAGE',
+      publisher: 'DWS Xtrackers',
+      title: 'Scheda ufficiale XEON e area documenti',
+      sourceDate: '2026-07-29',
+      url: XEON_PRODUCT_SOURCE,
+      official: true,
+      purpose:
+        'Identità della classe, caratteristiche correnti e accesso a KID, factsheet e prospetto.',
+    },
+    {
+      id: 'XEON_DWS_KID',
+      kind: 'PRIIPS_KID',
+      publisher: 'DWS Xtrackers',
+      title: 'PRIIPs KID della classe LU0290358497',
+      sourceDate: '2026-02-16',
+      url: XEON_PRODUCT_SOURCE,
+      official: true,
+      purpose:
+        'Rischio sintetico, scenari, costi e periodo di detenzione raccomandato da leggere nella sezione Documents.',
+    },
+    {
+      id: 'XEON_DWS_RISKS',
+      kind: 'RISK_EXPLAINER',
+      publisher: 'DWS Xtrackers',
+      title: 'Overnight ETFs: struttura swap, collateral e rischi',
+      sourceDate: '2026-07-29',
+      url: XEON_RISK_SOURCE,
+      official: true,
+      purpose:
+        'Spiegazione ufficiale di replica sintetica, controparte, collateral, costi e differenze rispetto a un deposito.',
+    },
+    {
+      id: 'XEON_SOLACTIVE_INDEX',
+      kind: 'INDEX_PAGE',
+      publisher: 'Solactive',
+      title: 'Solactive €STR +8.5 Daily Total Return Index',
+      sourceDate: '2026-07-29',
+      url: XEON_INDEX_SOURCE,
+      official: true,
+      purpose:
+        'Identità e caratteristiche del benchmark replicato, ISIN DE000SL0H431.',
+    },
+    {
+      id: 'XEON_FINECO_TERMS',
+      kind: 'BROKER_TERMS',
+      publisher: 'Fineco',
+      title: 'Condizioni ETF a zero commissioni',
+      sourceDate: '2026-07-29',
+      url: FINECO_SOURCE,
+      official: true,
+      purpose:
+        'Verifica separata delle condizioni promozionali del broker sullo specifico ISIN.',
+    },
+  ],
+  evidence: [
+    {
+      checkCode: 'KID_AND_DOCUMENTS',
+      status: 'USER_REVIEW_REQUIRED',
+      summary:
+        'La scheda ufficiale rende disponibili i documenti della specifica classe. La presa visione del KID e del factsheet deve essere confermata manualmente.',
+      sourceIds: ['XEON_DWS_PRODUCT', 'XEON_DWS_KID'],
+      limitations: [
+        'La presenza del documento non dimostra che sia stato letto o compreso.',
+      ],
+    },
+    {
+      checkCode: 'STRUCTURE',
+      status: 'SOURCE_SUPPORTED',
+      summary:
+        'DWS descrive una replica sintetica tramite swap con collateral e una o più banche controparti; il fondo resta un ETF UCITS e non un deposito bancario.',
+      sourceIds: ['XEON_DWS_PRODUCT', 'XEON_DWS_RISKS'],
+      limitations: [
+        'Controparti, collateral ed esposizione swap effettiva possono cambiare e vanno ricontrollati nei documenti correnti.',
+      ],
+    },
+    {
+      checkCode: 'COSTS',
+      status: 'SOURCE_SUPPORTED',
+      summary:
+        'Il TER pubblicato è 0,10% annuo; spread, costi di negoziazione e commissioni del broker restano separati e sono confrontati nelle evidenze di esecuzione.',
+      sourceIds: ['XEON_DWS_PRODUCT', 'XEON_DWS_RISKS', 'XEON_FINECO_TERMS'],
+      limitations: [
+        'Le condizioni promozionali Fineco devono essere riconfermate nella schermata finale dell’ordine.',
+      ],
+    },
+    {
+      checkCode: 'SIZE_AND_LIQUIDITY',
+      status: 'USER_REVIEW_REQUIRED',
+      summary:
+        'La negoziabilità giornaliera è documentata; mercato, spread, lotto e importo reale devono essere verificati sulle evidenze Fineco e IBKR già registrate.',
+      sourceIds: ['XEON_DWS_PRODUCT', 'XEON_DWS_RISKS'],
+      limitations: [
+        'La liquidità di borsa e lo spread non sono garantiti e cambiano durante la seduta.',
+      ],
+    },
+    {
+      checkCode: 'OVERLAP',
+      status: 'PROFESSIONAL_VALIDATION_REQUIRED',
+      summary:
+        'Il ruolo è liquidità strategica e parcheggio temporaneo. La coerenza finale dipende dall’IPS, dal portafoglio corrente e dal fabbisogno di liquidità familiare.',
+      sourceIds: ['XEON_SOLACTIVE_INDEX'],
+      limitations: [
+        'La stessa classe IPS non prova né esclude una sovrapposizione economica con altri strumenti.',
+      ],
+    },
+  ],
+  preliminaryOutcome: 'DOCUMENTED_WITH_LIMITATIONS',
+  limitations: [
+    'La documentazione non sostituisce la verifica di adeguatezza e il giudizio professionale.',
+    'Il trattamento fiscale dello strumento e della vendita El Toro resta NEEDS_VALIDATION.',
+    'XEON non è un deposito bancario, non è coperto da garanzia sui depositi e il capitale non è garantito.',
+  ],
+};
 
 function brokerRoutes(
   finecoPubliclyConfirmed = false,
@@ -574,7 +742,7 @@ const DUE_DILIGENCE_INSTRUMENTS: DueDiligenceInstrument[] = [
         publisher: 'DWS',
         title: 'Scheda ufficiale XEON',
         sourceDate: '2026-07-28',
-        url: 'https://etf.dws.com/en-gb/LU0290358497-eur-overnight-rate-swap-ucits-etf-1c/',
+        url: XEON_PRODUCT_SOURCE,
       },
       {
         publisher: 'Fineco',
@@ -583,6 +751,7 @@ const DUE_DILIGENCE_INSTRUMENTS: DueDiligenceInstrument[] = [
         url: FINECO_SOURCE,
       },
     ],
+    documentPack: XEON_DOCUMENT_PACK,
     brokerRoutes: brokerRoutes(true),
   },
   {
@@ -1391,6 +1560,14 @@ export class InvestmentRecommendationsService {
     };
   }
 
+  private emptyDocumentaryReview(): DocumentaryReview {
+    return {
+      acknowledged: false,
+      packVersion: null,
+      reviewedAt: null,
+    };
+  }
+
   private defaultDueDiligenceReviews(
     recommendation: EntryPlanRecommendation,
   ): DueDiligenceReview[] {
@@ -1408,6 +1585,7 @@ export class InvestmentRecommendationsService {
         (amounts.get(instrument.assetClass) ?? 0) > 0,
       preferredBroker: null,
       checks: this.emptyDueDiligenceChecks(),
+      documentReview: this.emptyDocumentaryReview(),
       brokerAvailability: {
         FINECO: 'NOT_VERIFIED',
         INTERACTIVE_BROKERS: 'NOT_VERIFIED',
@@ -1452,6 +1630,31 @@ export class InvestmentRecommendationsService {
     );
   }
 
+  private documentaryReviewComplete(review: DueDiligenceReview): boolean {
+    const checksComplete = DUE_DILIGENCE_CHECKS.every(
+      (check) => review.checks[check.code],
+    );
+
+    if (!checksComplete) {
+      return false;
+    }
+
+    const instrument = DUE_DILIGENCE_INSTRUMENTS.find(
+      (candidate) => candidate.isin === review.isin,
+    );
+    const pack = instrument?.documentPack;
+
+    if (!pack) {
+      return true;
+    }
+
+    return Boolean(
+      review.documentReview.acknowledged &&
+      review.documentReview.reviewedAt &&
+      review.documentReview.packVersion === pack.version,
+    );
+  }
+
   private dueDiligenceStatus(
     recommendation: EntryPlanRecommendation,
     reviews: DueDiligenceReview[],
@@ -1486,9 +1689,7 @@ export class InvestmentRecommendationsService {
     const selectedReviews = Array.from(selectedByClass.values());
     const checklistComplete =
       selectionComplete &&
-      selectedReviews.every((review) =>
-        DUE_DILIGENCE_CHECKS.every((check) => review.checks[check.code]),
-      );
+      selectedReviews.every((review) => this.documentaryReviewComplete(review));
     const brokerRoutingComplete =
       selectionComplete &&
       selectedReviews.every((review) => {
@@ -1536,7 +1737,7 @@ export class InvestmentRecommendationsService {
         requiredAssetClasses: requiredAssetClasses.length,
         selectedAssetClasses: selectedByClass.size,
         completedChecklists: selectedReviews.filter((review) =>
-          DUE_DILIGENCE_CHECKS.every((check) => review.checks[check.code]),
+          this.documentaryReviewComplete(review),
         ).length,
         brokerRoutesConfirmed: selectedReviews.filter((review) => {
           if (!review.preferredBroker) {
@@ -1764,6 +1965,7 @@ export class InvestmentRecommendationsService {
     let reviews = this.defaultDueDiligenceReviews(recommendation);
     const warnings = [
       'La selezione è una shortlist di lavoro: non costituisce un ordine né un giudizio definitivo di adeguatezza.',
+      'Le evidenze documentali non completano automaticamente la checklist: la presa visione deve essere registrata sulla versione corrente del fascicolo.',
       'La disponibilità presso il broker è considerata confermata solo da una fonte pubblica sullo specifico ISIN o da una verifica effettuata nel conto.',
       'Fiscalità El Toro e trattamento fiscale degli strumenti restano soggetti a validazione professionale.',
     ];
@@ -1790,6 +1992,10 @@ export class InvestmentRecommendationsService {
             checks: {
               ...review.checks,
               ...stored.checks,
+            },
+            documentReview: {
+              ...review.documentReview,
+              ...stored.documentReview,
             },
             brokerAvailability: {
               ...review.brokerAvailability,
@@ -2469,12 +2675,59 @@ export class InvestmentRecommendationsService {
         },
         {} as Record<DueDiligenceCheckCode, boolean>,
       );
+      const instrument = DUE_DILIGENCE_INSTRUMENTS.find(
+        (item) => item.isin === candidate.isin,
+      );
+      let documentReview = this.emptyDocumentaryReview();
+
+      if (candidate.documentReview?.acknowledged === true) {
+        if (!instrument?.documentPack) {
+          throw new BadRequestException(
+            `Nessun fascicolo documentale versionato disponibile per ${candidate.isin}.`,
+          );
+        }
+
+        if (
+          candidate.documentReview.packVersion !==
+          instrument.documentPack.version
+        ) {
+          throw new BadRequestException(
+            `Il fascicolo documentale di ${instrument.ticker} è stato aggiornato. Ripeti la presa visione.`,
+          );
+        }
+
+        if (!DUE_DILIGENCE_CHECKS.every((check) => checks[check.code])) {
+          throw new BadRequestException(
+            `Completa tutte le verifiche documentali di ${instrument.ticker} prima di registrare la presa visione.`,
+          );
+        }
+
+        const reviewedAt = candidate.documentReview.reviewedAt
+          ? new Date(candidate.documentReview.reviewedAt)
+          : new Date();
+
+        if (
+          Number.isNaN(reviewedAt.getTime()) ||
+          reviewedAt.getTime() > Date.now() + 5 * 60 * 1_000
+        ) {
+          throw new BadRequestException(
+            `Data di revisione documentale non valida per ${instrument.ticker}.`,
+          );
+        }
+
+        documentReview = {
+          acknowledged: true,
+          packVersion: instrument.documentPack.version,
+          reviewedAt: reviewedAt.toISOString(),
+        };
+      }
 
       reviewsByIsin.set(candidate.isin, {
         isin: candidate.isin,
         selected: candidate.selected === true,
         preferredBroker,
         checks,
+        documentReview,
         brokerAvailability,
         brokerExecution,
         notes: this.normalizeOptionalText(candidate.notes, 1_000),

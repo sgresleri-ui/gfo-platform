@@ -394,6 +394,14 @@ describe('InvestmentRecommendationsService', () => {
     expect(vagf?.portfolioOverlap.positionCount).toBe(2);
     expect(vagf?.portfolioOverlap.positions[0].name).toBe('Existing Bond Fund');
     expect(wgld?.ucitsClassification).toBe('UCITS_ELIGIBLE_ETC_NOT_FUND');
+    expect(xeon?.documentPack?.status).toBe('READY_FOR_REVIEW');
+    expect(xeon?.documentPack?.documents).toHaveLength(5);
+    expect(xeon?.documentPack?.evidence).toHaveLength(5);
+    expect(
+      xeon?.documentPack?.documents.every(
+        (document) => document.official === true,
+      ),
+    ).toBe(true);
     expect(dueDiligence?.execution.status).toBe('BLOCKED');
   });
 
@@ -405,11 +413,19 @@ describe('InvestmentRecommendationsService', () => {
       (instrument: {
         role: string;
         assetClass: string;
+        documentPack?: {
+          version: string;
+        };
         review: {
           isin: string;
           selected: boolean;
           preferredBroker: string | null;
           checks: Record<string, boolean>;
+          documentReview: {
+            acknowledged: boolean;
+            packVersion: string | null;
+            reviewedAt: string | null;
+          };
           brokerAvailability: Record<string, string>;
           brokerExecution: Record<string, Record<string, unknown>>;
           notes: string | null;
@@ -420,6 +436,13 @@ describe('InvestmentRecommendationsService', () => {
         checks: Object.fromEntries(
           Object.keys(instrument.review.checks).map((code) => [code, true]),
         ),
+        documentReview: instrument.documentPack
+          ? {
+              acknowledged: true,
+              packVersion: instrument.documentPack.version,
+              reviewedAt: '2026-07-29T12:00:00.000Z',
+            }
+          : instrument.review.documentReview,
         preferredBroker:
           instrument.assetClass === 'GOLD' ? 'INTERACTIVE_BROKERS' : 'FINECO',
         brokerAvailability: {
@@ -479,11 +502,19 @@ describe('InvestmentRecommendationsService', () => {
     const reviews = initial.dueDiligence.instruments.map(
       (instrument: {
         role: string;
+        documentPack?: {
+          version: string;
+        };
         review: {
           isin: string;
           selected: boolean;
           preferredBroker: string | null;
           checks: Record<string, boolean>;
+          documentReview: {
+            acknowledged: boolean;
+            packVersion: string | null;
+            reviewedAt: string | null;
+          };
           brokerAvailability: Record<string, string>;
           brokerExecution: Record<string, Record<string, unknown>>;
           notes: string | null;
@@ -494,6 +525,13 @@ describe('InvestmentRecommendationsService', () => {
         checks: Object.fromEntries(
           Object.keys(instrument.review.checks).map((code) => [code, true]),
         ),
+        documentReview: instrument.documentPack
+          ? {
+              acknowledged: true,
+              packVersion: instrument.documentPack.version,
+              reviewedAt: '2026-07-29T12:00:00.000Z',
+            }
+          : instrument.review.documentReview,
         preferredBroker: 'FINECO',
         brokerAvailability: {
           ...instrument.review.brokerAvailability,
@@ -510,6 +548,43 @@ describe('InvestmentRecommendationsService', () => {
     expect(result.dueDiligence.validation.checklistComplete).toBe(true);
     expect(result.dueDiligence.validation.brokerRoutingComplete).toBe(false);
     expect(result.dueDiligence.status).toBe('DRAFT_BROKER_VERIFICATION');
+  });
+
+  it('rejects an acknowledgement for an outdated documentary pack', async () => {
+    const service = createService(true);
+    const generated = await service.generateElToroRecommendation();
+    const initial = await service.getElToroDueDiligence();
+    const reviews = initial.dueDiligence.instruments.map(
+      (instrument: {
+        ticker: string;
+        review: {
+          checks: Record<string, boolean>;
+        };
+      }) =>
+        instrument.ticker === 'XEON'
+          ? {
+              ...instrument.review,
+              checks: Object.fromEntries(
+                Object.keys(instrument.review.checks).map((code) => [
+                  code,
+                  true,
+                ]),
+              ),
+              documentReview: {
+                acknowledged: true,
+                packVersion: 'XEON-OUTDATED',
+                reviewedAt: '2026-07-29T12:00:00.000Z',
+              },
+            }
+          : instrument.review,
+    );
+
+    await expect(
+      service.updateElToroDueDiligence({
+        recommendationId: generated.recommendation.id,
+        reviews,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('normalizes comma decimals and preserves zero broker commissions', async () => {
