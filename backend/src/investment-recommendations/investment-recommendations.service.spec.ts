@@ -336,6 +336,9 @@ describe('InvestmentRecommendationsService', () => {
     const aggh = dueDiligence?.instruments.find(
       (instrument) => instrument.isin === 'IE00BDBRDM35',
     );
+    const vagf = dueDiligence?.instruments.find(
+      (instrument) => instrument.isin === 'IE00BG47KH54',
+    );
     const wgld = dueDiligence?.instruments.find(
       (instrument) => instrument.isin === 'JE00BN2CJ301',
     );
@@ -351,6 +354,7 @@ describe('InvestmentRecommendationsService', () => {
       aggh?.brokerRoutes.find((route) => route.broker === 'FINECO')
         ?.effectiveStatus,
     ).toBe('NOT_VERIFIED');
+    expect(vagf?.ongoingChargePct).toBe(0.08);
     expect(wgld?.ucitsClassification).toBe('UCITS_ELIGIBLE_ETC_NOT_FUND');
     expect(dueDiligence?.execution.status).toBe('BLOCKED');
   });
@@ -369,6 +373,7 @@ describe('InvestmentRecommendationsService', () => {
           preferredBroker: string | null;
           checks: Record<string, boolean>;
           brokerAvailability: Record<string, string>;
+          brokerExecution: Record<string, Record<string, unknown>>;
           notes: string | null;
         };
       }) => ({
@@ -390,6 +395,29 @@ describe('InvestmentRecommendationsService', () => {
               ? 'USER_CONFIRMED'
               : 'NOT_VERIFIED',
         },
+        brokerExecution: {
+          ...instrument.review.brokerExecution,
+          FINECO: {
+            observedAt: '2026-07-29T10:00:00.000Z',
+            venue: 'XETRA',
+            bid: 23.58,
+            ask: 23.6,
+            referenceOrderAmount: 100_000,
+            commissionAmount: 19,
+            regularSession: true,
+            notes: null,
+          },
+          INTERACTIVE_BROKERS: {
+            observedAt: '2026-07-29T10:00:00.000Z',
+            venue: 'IBIS2',
+            bid: 23.58,
+            ask: 23.6,
+            referenceOrderAmount: 100_000,
+            commissionAmount: 7.5,
+            regularSession: true,
+            notes: null,
+          },
+        },
       }),
     );
 
@@ -404,6 +432,46 @@ describe('InvestmentRecommendationsService', () => {
     expect(result.dueDiligence.validation.checklistComplete).toBe(true);
     expect(result.dueDiligence.validation.brokerRoutingComplete).toBe(true);
     expect(result.dueDiligence.execution.status).toBe('BLOCKED');
+  });
+
+  it('keeps broker routing incomplete without regular-session execution evidence', async () => {
+    const service = createService(true);
+    const generated = await service.generateElToroRecommendation();
+    const initial = await service.getElToroDueDiligence();
+    const reviews = initial.dueDiligence.instruments.map(
+      (instrument: {
+        role: string;
+        review: {
+          isin: string;
+          selected: boolean;
+          preferredBroker: string | null;
+          checks: Record<string, boolean>;
+          brokerAvailability: Record<string, string>;
+          brokerExecution: Record<string, Record<string, unknown>>;
+          notes: string | null;
+        };
+      }) => ({
+        ...instrument.review,
+        selected: instrument.role === 'PRIMARY',
+        checks: Object.fromEntries(
+          Object.keys(instrument.review.checks).map((code) => [code, true]),
+        ),
+        preferredBroker: 'FINECO',
+        brokerAvailability: {
+          ...instrument.review.brokerAvailability,
+          FINECO: 'USER_CONFIRMED',
+        },
+      }),
+    );
+
+    const result = await service.updateElToroDueDiligence({
+      recommendationId: generated.recommendation.id,
+      reviews,
+    });
+
+    expect(result.dueDiligence.validation.checklistComplete).toBe(true);
+    expect(result.dueDiligence.validation.brokerRoutingComplete).toBe(false);
+    expect(result.dueDiligence.status).toBe('DRAFT_BROKER_VERIFICATION');
   });
 
   it('rejects two selected instruments in the same IPS class', async () => {

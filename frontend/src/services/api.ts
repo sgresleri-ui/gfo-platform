@@ -4556,6 +4556,17 @@ export type InvestmentBrokerEffectiveStatus =
   | InvestmentBrokerUserStatus
   | "PUBLICLY_CONFIRMED";
 
+export type InvestmentBrokerExecutionEvidence = {
+  observedAt: string | null;
+  venue: string | null;
+  bid: number | null;
+  ask: number | null;
+  referenceOrderAmount: number | null;
+  commissionAmount: number | null;
+  regularSession: boolean;
+  notes: string | null;
+};
+
 export type InvestmentDueDiligenceReview = {
   isin: string;
   selected: boolean;
@@ -4564,6 +4575,10 @@ export type InvestmentDueDiligenceReview = {
   brokerAvailability: Record<
     InvestmentBrokerCode,
     InvestmentBrokerUserStatus
+  >;
+  brokerExecution: Record<
+    InvestmentBrokerCode,
+    InvestmentBrokerExecutionEvidence
   >;
   notes: string | null;
 };

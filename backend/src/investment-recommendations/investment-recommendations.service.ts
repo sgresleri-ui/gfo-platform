@@ -203,12 +203,24 @@ type UserBrokerAvailability =
 type EffectiveBrokerAvailability =
   UserBrokerAvailability | 'PUBLICLY_CONFIRMED';
 
+type BrokerExecutionEvidence = {
+  observedAt: string | null;
+  venue: string | null;
+  bid: number | null;
+  ask: number | null;
+  referenceOrderAmount: number | null;
+  commissionAmount: number | null;
+  regularSession: boolean;
+  notes: string | null;
+};
+
 type DueDiligenceReview = {
   isin: string;
   selected: boolean;
   preferredBroker: BrokerCode | null;
   checks: Record<DueDiligenceCheckCode, boolean>;
   brokerAvailability: Record<BrokerCode, UserBrokerAvailability>;
+  brokerExecution: Record<BrokerCode, BrokerExecutionEvidence>;
   notes: string | null;
 };
 
@@ -268,6 +280,9 @@ export type UpdateElToroDueDiligenceInput = {
     preferredBroker?: BrokerCode | null;
     checks: Partial<Record<DueDiligenceCheckCode, boolean>>;
     brokerAvailability: Partial<Record<BrokerCode, UserBrokerAvailability>>;
+    brokerExecution?: Partial<
+      Record<BrokerCode, Partial<BrokerExecutionEvidence>>
+    >;
     notes?: string | null;
   }>;
   notes?: string | null;
@@ -489,7 +504,7 @@ const DUE_DILIGENCE_INSTRUMENTS: DueDiligenceInstrument[] = [
     incomeTreatment: 'Accumulazione',
     replication: 'Fisica campionata',
     tradingCurrency: 'EUR',
-    ongoingChargePct: null,
+    ongoingChargePct: 0.08,
     factsAsOf: '2026-06-30',
     size: 'Classe circa EUR 2,15 mld; fondo circa EUR 5,43 mld',
     keyFacts: [
@@ -497,7 +512,7 @@ const DUE_DILIGENCE_INSTRUMENTS: DueDiligenceInstrument[] = [
       '12.266 obbligazioni; duration 6,2 anni, YTM 4,1% e qualità media AA-.',
     ],
     risks: [
-      'Costo corrente da confermare sul KID più recente prima del confronto finale.',
+      'Il costo corrente non include spread, commissioni del broker o altri costi di negoziazione.',
       'Rischio tasso e credito; possibili differenze di indice rispetto ad AGGH.',
     ],
     sources: [
@@ -506,6 +521,12 @@ const DUE_DILIGENCE_INSTRUMENTS: DueDiligenceInstrument[] = [
         title: 'Scheda ufficiale VAGF',
         sourceDate: '2026-06-30',
         url: 'https://www.vanguard.co.uk/professional/product/etf/bond/9443/global-aggregate-bond-ucits-etf-eur-hedged-accumulating',
+      },
+      {
+        publisher: 'Vanguard',
+        title: 'KIID ufficiale VAGF',
+        sourceDate: '2026-06-30',
+        url: 'https://fund-docs.vanguard.com/ie00bg47kh54-en.pdf',
       },
     ],
     brokerRoutes: brokerRoutes(),
@@ -1337,6 +1358,26 @@ export class InvestmentRecommendationsService {
     };
   }
 
+  private emptyBrokerExecutionEvidence(): BrokerExecutionEvidence {
+    return {
+      observedAt: null,
+      venue: null,
+      bid: null,
+      ask: null,
+      referenceOrderAmount: null,
+      commissionAmount: null,
+      regularSession: false,
+      notes: null,
+    };
+  }
+
+  private emptyBrokerExecution(): Record<BrokerCode, BrokerExecutionEvidence> {
+    return {
+      FINECO: this.emptyBrokerExecutionEvidence(),
+      INTERACTIVE_BROKERS: this.emptyBrokerExecutionEvidence(),
+    };
+  }
+
   private defaultDueDiligenceReviews(
     recommendation: EntryPlanRecommendation,
   ): DueDiligenceReview[] {
@@ -1358,8 +1399,27 @@ export class InvestmentRecommendationsService {
         FINECO: 'NOT_VERIFIED',
         INTERACTIVE_BROKERS: 'NOT_VERIFIED',
       },
+      brokerExecution: this.emptyBrokerExecution(),
       notes: null,
     }));
+  }
+
+  private brokerExecutionEvidenceComplete(
+    evidence: BrokerExecutionEvidence | undefined,
+  ): boolean {
+    return Boolean(
+      evidence?.regularSession &&
+      evidence.observedAt &&
+      evidence.venue &&
+      evidence.bid !== null &&
+      evidence.bid > 0 &&
+      evidence.ask !== null &&
+      evidence.ask >= evidence.bid &&
+      evidence.referenceOrderAmount !== null &&
+      evidence.referenceOrderAmount > 0 &&
+      evidence.commissionAmount !== null &&
+      evidence.commissionAmount >= 0,
+    );
   }
 
   private effectiveBrokerAvailability(
@@ -1437,7 +1497,12 @@ export class InvestmentRecommendationsService {
           review.preferredBroker,
         );
 
-        return status === 'PUBLICLY_CONFIRMED' || status === 'USER_CONFIRMED';
+        return (
+          (status === 'PUBLICLY_CONFIRMED' || status === 'USER_CONFIRMED') &&
+          this.brokerExecutionEvidenceComplete(
+            review.brokerExecution?.[review.preferredBroker],
+          )
+        );
       });
     const status = !selectionComplete
       ? 'DRAFT_SELECTION'
@@ -1480,8 +1545,11 @@ export class InvestmentRecommendationsService {
           );
 
           return (
-            routeStatus === 'PUBLICLY_CONFIRMED' ||
-            routeStatus === 'USER_CONFIRMED'
+            (routeStatus === 'PUBLICLY_CONFIRMED' ||
+              routeStatus === 'USER_CONFIRMED') &&
+            this.brokerExecutionEvidenceComplete(
+              review.brokerExecution?.[review.preferredBroker],
+            )
           );
         }).length,
       },
@@ -1612,9 +1680,36 @@ export class InvestmentRecommendationsService {
           parsed.map((review) => [review.isin, review]),
         );
 
-        reviews = reviews.map(
-          (review) => storedByIsin.get(review.isin) ?? review,
-        );
+        reviews = reviews.map((review) => {
+          const stored = storedByIsin.get(review.isin);
+
+          if (!stored) {
+            return review;
+          }
+
+          return {
+            ...review,
+            ...stored,
+            checks: {
+              ...review.checks,
+              ...stored.checks,
+            },
+            brokerAvailability: {
+              ...review.brokerAvailability,
+              ...stored.brokerAvailability,
+            },
+            brokerExecution: {
+              FINECO: {
+                ...review.brokerExecution.FINECO,
+                ...stored.brokerExecution?.FINECO,
+              },
+              INTERACTIVE_BROKERS: {
+                ...review.brokerExecution.INTERACTIVE_BROKERS,
+                ...stored.brokerExecution?.INTERACTIVE_BROKERS,
+              },
+            },
+          };
+        });
       } catch {
         warnings.unshift(
           'La revisione salvata non è leggibile ed è stata sostituita con la shortlist iniziale.',
@@ -2182,6 +2277,76 @@ export class InvestmentRecommendationsService {
         },
         {} as Record<BrokerCode, UserBrokerAvailability>,
       );
+      const brokerExecution = brokerCodes.reduce(
+        (result, broker) => {
+          const raw = candidate.brokerExecution?.[broker] ?? {};
+          const numericValue = (
+            value: unknown,
+            label: string,
+            allowZero = false,
+          ): number | null => {
+            if (value === null || value === undefined || value === '') {
+              return null;
+            }
+
+            const parsed = Number(value);
+
+            if (
+              !Number.isFinite(parsed) ||
+              (allowZero ? parsed < 0 : parsed <= 0)
+            ) {
+              throw new BadRequestException(
+                `${label} non valido per ${candidate.isin} (${broker}).`,
+              );
+            }
+
+            return parsed;
+          };
+          const bid = numericValue(raw.bid, 'Bid');
+          const ask = numericValue(raw.ask, 'Ask');
+
+          if (bid !== null && ask !== null && ask < bid) {
+            throw new BadRequestException(
+              `Ask inferiore al bid per ${candidate.isin} (${broker}).`,
+            );
+          }
+
+          let observedAt: string | null = null;
+
+          if (raw.observedAt) {
+            const parsedDate = new Date(raw.observedAt);
+
+            if (Number.isNaN(parsedDate.getTime())) {
+              throw new BadRequestException(
+                `Data quotazione non valida per ${candidate.isin} (${broker}).`,
+              );
+            }
+
+            observedAt = parsedDate.toISOString();
+          }
+
+          result[broker] = {
+            observedAt,
+            venue: this.normalizeOptionalText(raw.venue, 100),
+            bid,
+            ask,
+            referenceOrderAmount: numericValue(
+              raw.referenceOrderAmount,
+              'Importo ordine di riferimento',
+            ),
+            commissionAmount: numericValue(
+              raw.commissionAmount,
+              'Commissione',
+              true,
+            ),
+            regularSession: raw.regularSession === true,
+            notes: this.normalizeOptionalText(raw.notes, 500),
+          };
+
+          return result;
+        },
+        {} as Record<BrokerCode, BrokerExecutionEvidence>,
+      );
 
       if (
         preferredBroker &&
@@ -2207,6 +2372,7 @@ export class InvestmentRecommendationsService {
         preferredBroker,
         checks,
         brokerAvailability,
+        brokerExecution,
         notes: this.normalizeOptionalText(candidate.notes, 1_000),
       });
     }

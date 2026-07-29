@@ -31,6 +31,7 @@ import {
   getElToroInvestmentDueDiligence,
   updateElToroInvestmentDueDiligence,
   type InvestmentBrokerCode,
+  type InvestmentBrokerExecutionEvidence,
   type InvestmentBrokerEffectiveStatus,
   type InvestmentBrokerUserStatus,
   type InvestmentDueDiligence,
@@ -112,6 +113,118 @@ function sourceDateLabel(value: string): string {
   }).format(new Date(`${value}T00:00:00Z`));
 }
 
+function localDateTimeInput(value: string | null): string {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  const offset = date.getTimezoneOffset() * 60_000;
+
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function optionalNumber(value: string): number | null {
+  if (value.trim() === "") {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function executionMetrics(evidence: InvestmentBrokerExecutionEvidence): {
+  complete: boolean;
+  spreadPct: number | null;
+  estimatedCost: number | null;
+  estimatedCostPct: number | null;
+} {
+  const validQuote =
+    evidence.bid !== null &&
+    evidence.bid > 0 &&
+    evidence.ask !== null &&
+    evidence.ask >= evidence.bid;
+  const validOrder =
+    evidence.referenceOrderAmount !== null &&
+    evidence.referenceOrderAmount > 0;
+  const validCommission =
+    evidence.commissionAmount !== null && evidence.commissionAmount >= 0;
+
+  if (!validQuote) {
+    return {
+      complete: false,
+      spreadPct: null,
+      estimatedCost: null,
+      estimatedCostPct: null,
+    };
+  }
+
+  const mid = (evidence.bid! + evidence.ask!) / 2;
+  const spreadPct = ((evidence.ask! - evidence.bid!) / mid) * 100;
+
+  if (!validOrder || !validCommission) {
+    return {
+      complete: false,
+      spreadPct,
+      estimatedCost: null,
+      estimatedCostPct: null,
+    };
+  }
+
+  const halfSpreadCost = evidence.referenceOrderAmount! * (spreadPct / 200);
+  const estimatedCost = halfSpreadCost + evidence.commissionAmount!;
+
+  return {
+    complete: Boolean(
+      evidence.observedAt &&
+        evidence.venue &&
+        evidence.regularSession,
+    ),
+    spreadPct,
+    estimatedCost,
+    estimatedCostPct:
+      (estimatedCost / evidence.referenceOrderAmount!) * 100,
+  };
+}
+
+function executionComparison(review: InvestmentDueDiligenceReview): {
+  broker: InvestmentBrokerCode;
+  costPct: number;
+  advantagePctPoints: number;
+} | null {
+  const ranked = BROKERS.map((broker) => ({
+    broker: broker.code,
+    metrics: executionMetrics(review.brokerExecution[broker.code]),
+  }))
+    .filter(
+      (
+        item,
+      ): item is {
+        broker: InvestmentBrokerCode;
+        metrics: ReturnType<typeof executionMetrics> & {
+          estimatedCostPct: number;
+        };
+      } => item.metrics.complete && item.metrics.estimatedCostPct !== null,
+    )
+    .sort(
+      (first, second) =>
+        first.metrics.estimatedCostPct - second.metrics.estimatedCostPct,
+    );
+
+  if (ranked.length !== 2) {
+    return null;
+  }
+
+  return {
+    broker: ranked[0].broker,
+    costPct: ranked[0].metrics.estimatedCostPct,
+    advantagePctPoints:
+      ranked[1].metrics.estimatedCostPct -
+      ranked[0].metrics.estimatedCostPct,
+  };
+}
+
 function statusPresentation(status: InvestmentDueDiligence["status"]): {
   label: string;
   color: ChipProps["color"];
@@ -186,6 +299,14 @@ function cloneReviews(
     },
     brokerAvailability: {
       ...review.brokerAvailability,
+    },
+    brokerExecution: {
+      FINECO: {
+        ...review.brokerExecution.FINECO,
+      },
+      INTERACTIVE_BROKERS: {
+        ...review.brokerExecution.INTERACTIVE_BROKERS,
+      },
     },
   }));
 }
@@ -846,6 +967,27 @@ export default function InvestmentDueDiligencePanel({
                                       ? route.publicStatus
                                       : review.brokerAvailability[route.broker],
                                   );
+                                const execution =
+                                  review.brokerExecution[route.broker];
+                                const metrics = executionMetrics(execution);
+                                const updateExecution = (
+                                  patch: Partial<InvestmentBrokerExecutionEvidence>,
+                                ) =>
+                                  updateReview(
+                                    instrument.isin,
+                                    (current) => ({
+                                      ...current,
+                                      brokerExecution: {
+                                        ...current.brokerExecution,
+                                        [route.broker]: {
+                                          ...current.brokerExecution[
+                                            route.broker
+                                          ],
+                                          ...patch,
+                                        },
+                                      },
+                                    }),
+                                  );
 
                                 return (
                                   <Box
@@ -933,6 +1075,276 @@ export default function InvestmentDueDiligencePanel({
                                       </Select>
                                     </FormControl>
 
+                                    {review.brokerAvailability[route.broker] ===
+                                      "USER_CONFIRMED" && (
+                                      <Box
+                                        sx={{
+                                          mt: 1.25,
+                                          pt: 1.25,
+                                          borderTop: "1px solid",
+                                          borderColor: "divider",
+                                        }}
+                                      >
+                                        <Box
+                                          sx={{
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                            gap: 1,
+                                            flexWrap: "wrap",
+                                          }}
+                                        >
+                                          <Typography
+                                            variant="caption"
+                                            sx={{ fontWeight: 850 }}
+                                          >
+                                            Evidenza di esecuzione
+                                          </Typography>
+                                          <Chip
+                                            size="small"
+                                            color={
+                                              metrics.complete
+                                                ? "success"
+                                                : "warning"
+                                            }
+                                            label={
+                                              metrics.complete
+                                                ? "Confronto completo"
+                                                : "Dati da completare"
+                                            }
+                                          />
+                                        </Box>
+
+                                        <Box
+                                          sx={{
+                                            display: "grid",
+                                            gridTemplateColumns:
+                                              "repeat(2, minmax(0, 1fr))",
+                                            gap: 1,
+                                            mt: 1,
+                                          }}
+                                        >
+                                          <TextField
+                                            size="small"
+                                            label="Data e ora"
+                                            type="datetime-local"
+                                            value={localDateTimeInput(
+                                              execution.observedAt,
+                                            )}
+                                            onChange={(event) =>
+                                              updateExecution({
+                                                observedAt: event.target.value
+                                                  ? new Date(
+                                                      event.target.value,
+                                                    ).toISOString()
+                                                  : null,
+                                              })
+                                            }
+                                            slotProps={{
+                                              inputLabel: {
+                                                shrink: true,
+                                              },
+                                            }}
+                                          />
+                                          <TextField
+                                            size="small"
+                                            label="Mercato"
+                                            placeholder="XETRA / IBIS2"
+                                            value={execution.venue ?? ""}
+                                            onChange={(event) =>
+                                              updateExecution({
+                                                venue: event.target.value,
+                                              })
+                                            }
+                                          />
+                                          <TextField
+                                            size="small"
+                                            label="Bid (€)"
+                                            type="number"
+                                            value={execution.bid ?? ""}
+                                            onChange={(event) =>
+                                              updateExecution({
+                                                bid: optionalNumber(
+                                                  event.target.value,
+                                                ),
+                                              })
+                                            }
+                                            slotProps={{
+                                              htmlInput: {
+                                                min: 0,
+                                                step: "0.0001",
+                                              },
+                                            }}
+                                          />
+                                          <TextField
+                                            size="small"
+                                            label="Ask (€)"
+                                            type="number"
+                                            value={execution.ask ?? ""}
+                                            onChange={(event) =>
+                                              updateExecution({
+                                                ask: optionalNumber(
+                                                  event.target.value,
+                                                ),
+                                              })
+                                            }
+                                            slotProps={{
+                                              htmlInput: {
+                                                min: 0,
+                                                step: "0.0001",
+                                              },
+                                            }}
+                                          />
+                                          <TextField
+                                            size="small"
+                                            label="Ordine simulato (€)"
+                                            type="number"
+                                            value={
+                                              execution.referenceOrderAmount ??
+                                              ""
+                                            }
+                                            onChange={(event) =>
+                                              updateExecution({
+                                                referenceOrderAmount:
+                                                  optionalNumber(
+                                                    event.target.value,
+                                                  ),
+                                              })
+                                            }
+                                            slotProps={{
+                                              htmlInput: {
+                                                min: 0,
+                                                step: "0.01",
+                                              },
+                                            }}
+                                          />
+                                          <TextField
+                                            size="small"
+                                            label="Commissione (€)"
+                                            type="number"
+                                            value={
+                                              execution.commissionAmount ?? ""
+                                            }
+                                            onChange={(event) =>
+                                              updateExecution({
+                                                commissionAmount:
+                                                  optionalNumber(
+                                                    event.target.value,
+                                                  ),
+                                              })
+                                            }
+                                            slotProps={{
+                                              htmlInput: {
+                                                min: 0,
+                                                step: "0.01",
+                                              },
+                                            }}
+                                          />
+                                        </Box>
+
+                                        <FormControlLabel
+                                          sx={{ mt: 0.5, mx: 0 }}
+                                          control={
+                                            <Checkbox
+                                              size="small"
+                                              checked={
+                                                execution.regularSession
+                                              }
+                                              onChange={(event) =>
+                                                updateExecution({
+                                                  regularSession:
+                                                    event.target.checked,
+                                                })
+                                              }
+                                            />
+                                          }
+                                          label={
+                                            <Typography variant="caption">
+                                              Quotazione rilevata durante la
+                                              sessione regolare del mercato
+                                            </Typography>
+                                          }
+                                        />
+
+                                        <Box
+                                          sx={{
+                                            mt: 0.5,
+                                            p: 1,
+                                            borderRadius: 1.5,
+                                            bgcolor: "action.hover",
+                                          }}
+                                        >
+                                          <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                          >
+                                            Spread bid/ask
+                                          </Typography>
+                                          <Typography
+                                            variant="body2"
+                                            sx={{ fontWeight: 800 }}
+                                          >
+                                            {metrics.spreadPct === null
+                                              ? "Da calcolare"
+                                              : `${metrics.spreadPct.toLocaleString(
+                                                  "it-IT",
+                                                  {
+                                                    minimumFractionDigits: 3,
+                                                    maximumFractionDigits: 3,
+                                                  },
+                                                )}%`}
+                                          </Typography>
+                                          <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                            sx={{
+                                              display: "block",
+                                              mt: 0.5,
+                                            }}
+                                          >
+                                            Costo indicativo acquisto
+                                          </Typography>
+                                          <Typography
+                                            variant="body2"
+                                            sx={{ fontWeight: 800 }}
+                                          >
+                                            {metrics.estimatedCost === null ||
+                                            metrics.estimatedCostPct === null
+                                              ? "Da calcolare"
+                                              : `${euro(
+                                                  metrics.estimatedCost,
+                                                )} · ${metrics.estimatedCostPct.toLocaleString(
+                                                  "it-IT",
+                                                  {
+                                                    minimumFractionDigits: 3,
+                                                    maximumFractionDigits: 3,
+                                                  },
+                                                )}%`}
+                                          </Typography>
+                                        </Box>
+
+                                        <TextField
+                                          size="small"
+                                          label="Note quotazione"
+                                          value={execution.notes ?? ""}
+                                          onChange={(event) =>
+                                            updateExecution({
+                                              notes: event.target.value,
+                                            })
+                                          }
+                                          multiline
+                                          minRows={2}
+                                          fullWidth
+                                          slotProps={{
+                                            htmlInput: {
+                                              maxLength: 500,
+                                            },
+                                          }}
+                                          sx={{ mt: 1 }}
+                                        />
+                                      </Box>
+                                    )}
+
                                     <Link
                                       href={route.sourceUrl}
                                       target="_blank"
@@ -946,6 +1358,46 @@ export default function InvestmentDueDiligencePanel({
                                 );
                               })}
                             </Box>
+
+                            {(() => {
+                              const comparison = executionComparison(review);
+
+                              if (!comparison) {
+                                return (
+                                  <Alert severity="info" sx={{ mt: 1.25 }}>
+                                    Completa i dati di entrambi i broker per
+                                    ottenere il confronto del costo indicativo.
+                                  </Alert>
+                                );
+                              }
+
+                              const brokerLabel =
+                                BROKERS.find(
+                                  (broker) =>
+                                    broker.code === comparison.broker,
+                                )?.label ?? comparison.broker;
+
+                              return (
+                                <Alert severity="success" sx={{ mt: 1.25 }}>
+                                  <strong>{brokerLabel}</strong> presenta il
+                                  costo indicativo più basso:{" "}
+                                  {comparison.costPct.toLocaleString("it-IT", {
+                                    minimumFractionDigits: 3,
+                                    maximumFractionDigits: 3,
+                                  })}
+                                  % dell’ordine simulato, con un vantaggio di{" "}
+                                  {comparison.advantagePctPoints.toLocaleString(
+                                    "it-IT",
+                                    {
+                                      minimumFractionDigits: 3,
+                                      maximumFractionDigits: 3,
+                                    },
+                                  )}{" "}
+                                  punti percentuali. Il risultato non costituisce
+                                  un ordine né una scelta definitiva del broker.
+                                </Alert>
+                              );
+                            })()}
 
                             <FormControl
                               size="small"
