@@ -272,6 +272,19 @@ type DueDiligenceInstrument = {
   brokerRoutes: DueDiligenceBrokerRoute[];
 };
 
+type DueDiligencePortfolioOverlap = {
+  existingExposure: number;
+  positionCount: number;
+  positions: Array<{
+    code: string;
+    name: string;
+    exposureValue: number;
+    exposurePercentageOfPosition: number;
+    classificationMode: 'SINGLE_CLASS' | 'LOOK_THROUGH';
+  }>;
+  assessment: string;
+};
+
 export type UpdateElToroDueDiligenceInput = {
   recommendationId: string;
   reviews: Array<{
@@ -1658,11 +1671,95 @@ export class InvestmentRecommendationsService {
     };
   }
 
+  private async getDueDiligencePortfolioOverlap(): Promise<
+    Record<DueDiligenceInstrument['assetClass'], DueDiligencePortfolioOverlap>
+  > {
+    const overview = await this.ipsClassificationService.getOverview();
+    const assetClasses: DueDiligenceInstrument['assetClass'][] = [
+      'BONDS',
+      'MONEY_MARKET',
+      'GOLD',
+    ];
+
+    return assetClasses.reduce(
+      (result, assetClass) => {
+        const positions = overview.items
+          .flatMap<DueDiligencePortfolioOverlap['positions'][number]>(
+            (item) => {
+              if (item.ipsAssetClass === assetClass) {
+                return [
+                  {
+                    code: item.code,
+                    name: item.name,
+                    exposureValue: item.valueBase,
+                    exposurePercentageOfPosition: 100,
+                    classificationMode: 'SINGLE_CLASS' as const,
+                  },
+                ];
+              }
+
+              if (item.classificationMode !== 'LOOK_THROUGH') {
+                return [];
+              }
+
+              const component = item.lookThroughAllocation.find(
+                (allocation) => allocation.ipsAssetClass === assetClass,
+              );
+
+              if (!component || component.percentage <= 0) {
+                return [];
+              }
+
+              return [
+                {
+                  code: item.code,
+                  name: item.name,
+                  exposureValue: this.roundMoney(
+                    item.valueBase * (component.percentage / 100),
+                  ),
+                  exposurePercentageOfPosition: component.percentage,
+                  classificationMode: 'LOOK_THROUGH' as const,
+                },
+              ];
+            },
+          )
+          .filter((position) => position.exposureValue > 0)
+          .sort((first, second) => second.exposureValue - first.exposureValue);
+        const existingExposure = this.roundMoney(
+          positions.reduce(
+            (total, position) => total + position.exposureValue,
+            0,
+          ),
+        );
+
+        result[assetClass] = {
+          existingExposure,
+          positionCount: positions.length,
+          positions,
+          assessment:
+            positions.length === 0
+              ? 'Nessuna esposizione esistente classificata nella stessa classe IPS.'
+              : `${positions.length} posizioni contribuiscono già alla classe IPS per ${existingExposure.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}. La stessa classe non dimostra una sovrapposizione dei singoli titoli: verificare indice e portafoglio sottostante prima di chiudere il controllo.`,
+        };
+
+        return result;
+      },
+      {} as Record<
+        DueDiligenceInstrument['assetClass'],
+        DueDiligencePortfolioOverlap
+      >,
+    );
+  }
+
   private buildDueDiligenceResponse(
     recommendation: EntryPlanRecommendation,
     storedPlan: StoredDueDiligencePlan | null,
     entryPlan: StoredEntryPlan | null,
     staleSavedPlan: boolean,
+    portfolioOverlap: Record<
+      DueDiligenceInstrument['assetClass'],
+      DueDiligencePortfolioOverlap
+    >,
   ) {
     let reviews = this.defaultDueDiligenceReviews(recommendation);
     const warnings = [
@@ -1742,6 +1839,7 @@ export class InvestmentRecommendationsService {
       return {
         ...instrument,
         proposedAmount: amounts.get(instrument.assetClass) ?? 0,
+        portfolioOverlap: portfolioOverlap[instrument.assetClass],
         review,
         brokerRoutes: instrument.brokerRoutes.map((route) => ({
           ...route,
@@ -2153,7 +2251,7 @@ export class InvestmentRecommendationsService {
       };
     }
 
-    const [storedPlan, entryPlan] = await Promise.all([
+    const [storedPlan, entryPlan, portfolioOverlap] = await Promise.all([
       this.prisma.investmentDueDiligencePlan.findUnique({
         where: {
           sourcePropertyCode: EL_TORO_PROPERTY_CODE,
@@ -2164,6 +2262,7 @@ export class InvestmentRecommendationsService {
           sourcePropertyCode: EL_TORO_PROPERTY_CODE,
         },
       }),
+      this.getDueDiligencePortfolioOverlap(),
     ]);
     const staleSavedPlan =
       storedPlan !== null &&
@@ -2175,6 +2274,7 @@ export class InvestmentRecommendationsService {
         storedPlan,
         entryPlan,
         staleSavedPlan,
+        portfolioOverlap,
       ),
     };
   }
@@ -2429,13 +2529,14 @@ export class InvestmentRecommendationsService {
         status: validation.status,
       },
     });
-    const entryPlan = await this.prisma.investmentRecommendationPlan.findUnique(
-      {
+    const [entryPlan, portfolioOverlap] = await Promise.all([
+      this.prisma.investmentRecommendationPlan.findUnique({
         where: {
           sourcePropertyCode: EL_TORO_PROPERTY_CODE,
         },
-      },
-    );
+      }),
+      this.getDueDiligencePortfolioOverlap(),
+    ]);
 
     return {
       dueDiligence: this.buildDueDiligenceResponse(
@@ -2443,6 +2544,7 @@ export class InvestmentRecommendationsService {
         savedPlan,
         entryPlan,
         false,
+        portfolioOverlap,
       ),
     };
   }

@@ -108,8 +108,43 @@ describe('InvestmentRecommendationsService', () => {
       items: [
         {
           positionId: 1,
+          code: 'INVESTMENT_EXISTING_WORLD',
+          name: 'Existing MSCI World ETF',
           valueBase: 1_000_000,
           ipsAssetClass: complianceAvailable ? 'EQUITY_GLOBAL' : null,
+          classificationMode: complianceAvailable ? 'SINGLE_CLASS' : null,
+          lookThroughAllocation: [],
+          updatedAt: complianceAvailable ? '2026-07-28T08:00:00.000Z' : null,
+        },
+        {
+          positionId: 2,
+          code: 'INVESTMENT_EXISTING_BOND',
+          name: 'Existing Bond Fund',
+          valueBase: 70_000,
+          ipsAssetClass: complianceAvailable ? 'BONDS' : null,
+          classificationMode: complianceAvailable ? 'SINGLE_CLASS' : null,
+          lookThroughAllocation: [],
+          updatedAt: complianceAvailable ? '2026-07-28T08:00:00.000Z' : null,
+        },
+        {
+          positionId: 3,
+          code: 'INVESTMENT_MIXED_FUND',
+          name: 'Existing Mixed Fund',
+          valueBase: 100_000,
+          ipsAssetClass: null,
+          classificationMode: complianceAvailable ? 'LOOK_THROUGH' : null,
+          lookThroughAllocation: complianceAvailable
+            ? [
+                {
+                  ipsAssetClass: 'BONDS',
+                  percentage: 30,
+                },
+                {
+                  ipsAssetClass: 'EQUITY_GLOBAL',
+                  percentage: 70,
+                },
+              ]
+            : [],
           updatedAt: complianceAvailable ? '2026-07-28T08:00:00.000Z' : null,
         },
       ],
@@ -355,6 +390,9 @@ describe('InvestmentRecommendationsService', () => {
         ?.effectiveStatus,
     ).toBe('NOT_VERIFIED');
     expect(vagf?.ongoingChargePct).toBe(0.08);
+    expect(vagf?.portfolioOverlap.existingExposure).toBe(100_000);
+    expect(vagf?.portfolioOverlap.positionCount).toBe(2);
+    expect(vagf?.portfolioOverlap.positions[0].name).toBe('Existing Bond Fund');
     expect(wgld?.ucitsClassification).toBe('UCITS_ELIGIBLE_ETC_NOT_FUND');
     expect(dueDiligence?.execution.status).toBe('BLOCKED');
   });

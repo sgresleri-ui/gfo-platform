@@ -4611,6 +4611,18 @@ export type InvestmentDueDiligenceInstrument = {
     url: string;
   }>;
   proposedAmount: number;
+  portfolioOverlap: {
+    existingExposure: number;
+    positionCount: number;
+    positions: Array<{
+      code: string;
+      name: string;
+      exposureValue: number;
+      exposurePercentageOfPosition: number;
+      classificationMode: "SINGLE_CLASS" | "LOOK_THROUGH";
+    }>;
+    assessment: string;
+  };
   review: InvestmentDueDiligenceReview;
   brokerRoutes: Array<{
     broker: InvestmentBrokerCode;

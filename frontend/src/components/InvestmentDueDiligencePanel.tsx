@@ -365,6 +365,22 @@ export default function InvestmentDueDiligencePanel({
     void loadDueDiligence();
   }, [loadDueDiligence, recommendationId, refreshToken]);
 
+  useEffect(() => {
+    const warnUnsavedChanges = (event: BeforeUnloadEvent) => {
+      if (!dirty) {
+        return;
+      }
+
+      event.preventDefault();
+    };
+
+    window.addEventListener("beforeunload", warnUnsavedChanges);
+
+    return () => {
+      window.removeEventListener("beforeunload", warnUnsavedChanges);
+    };
+  }, [dirty]);
+
   const reviewsByIsin = useMemo(
     () => new Map(reviews.map((review) => [review.isin, review])),
     [reviews],
@@ -857,6 +873,113 @@ export default function InvestmentDueDiligencePanel({
                             ))}
                           </Box>
                         </Alert>
+
+                        <Box
+                          sx={{
+                            mt: 1.5,
+                            p: 1.5,
+                            borderRadius: 2,
+                            bgcolor: "action.hover",
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "flex-start",
+                              gap: 1,
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <Box>
+                              <Typography
+                                variant="subtitle2"
+                                sx={{ fontWeight: 850 }}
+                              >
+                                Esposizioni esistenti nella stessa classe IPS
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                Analisi automatica delle 46 posizioni
+                                riclassificate, incluso il look-through.
+                              </Typography>
+                            </Box>
+                            <Chip
+                              size="small"
+                              color={
+                                instrument.portfolioOverlap.positionCount > 0
+                                  ? "warning"
+                                  : "success"
+                              }
+                              label={`${instrument.portfolioOverlap.positionCount} posizioni · ${euro(
+                                instrument.portfolioOverlap.existingExposure,
+                              )}`}
+                            />
+                          </Box>
+
+                          {instrument.portfolioOverlap.positions.length > 0 && (
+                            <Box sx={{ mt: 1 }}>
+                              {instrument.portfolioOverlap.positions.map(
+                                (position) => (
+                                  <Box
+                                    key={`${instrument.isin}-${position.code}`}
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "baseline",
+                                      gap: 1,
+                                      py: 0.5,
+                                      borderBottom: "1px solid",
+                                      borderColor: "divider",
+                                      "&:last-of-type": {
+                                        borderBottom: 0,
+                                      },
+                                    }}
+                                  >
+                                    <Box>
+                                      <Typography
+                                        variant="body2"
+                                        sx={{ fontWeight: 750 }}
+                                      >
+                                        {position.name}
+                                      </Typography>
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                      >
+                                        {position.classificationMode ===
+                                        "LOOK_THROUGH"
+                                          ? `Look-through ${percentage(
+                                              position.exposurePercentageOfPosition,
+                                            )}`
+                                          : "Classificazione diretta"}
+                                      </Typography>
+                                    </Box>
+                                    <Typography
+                                      variant="body2"
+                                      sx={{
+                                        fontWeight: 800,
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      {euro(position.exposureValue)}
+                                    </Typography>
+                                  </Box>
+                                ),
+                              )}
+                            </Box>
+                          )}
+
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: "block", mt: 1 }}
+                          >
+                            {instrument.portfolioOverlap.assessment}
+                          </Typography>
+                        </Box>
 
                         <Box
                           sx={{
@@ -1582,6 +1705,55 @@ export default function InvestmentDueDiligencePanel({
           Ultimo salvataggio: {dateLabel(dueDiligence.updatedAt)} · Due
           diligence v{dueDiligence.dueDiligenceVersion}
         </Typography>
+      )}
+
+      {dirty && (
+        <Box
+          sx={{
+            position: "sticky",
+            bottom: 12,
+            zIndex: 10,
+            mt: 2,
+            p: 1.25,
+            borderRadius: 2,
+            border: "1px solid",
+            borderColor: "warning.light",
+            bgcolor: "background.paper",
+            boxShadow: 6,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 1.5,
+            flexWrap: "wrap",
+          }}
+        >
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 850 }}>
+              Modifiche alla due diligence non salvate
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Salva prima di aggiornare o chiudere la pagina.
+            </Typography>
+          </Box>
+          <Button
+            variant="contained"
+            startIcon={
+              saving ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                <SaveRoundedIcon />
+              )
+            }
+            disabled={
+              saving ||
+              !recommendationIsCurrent ||
+              dueDiligence.recommendationId !== recommendationId
+            }
+            onClick={saveDueDiligence}
+          >
+            Salva revisione
+          </Button>
+        </Box>
       )}
     </Box>
   );
