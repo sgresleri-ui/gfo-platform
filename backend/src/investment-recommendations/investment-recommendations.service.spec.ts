@@ -402,6 +402,25 @@ describe('InvestmentRecommendationsService', () => {
         (document) => document.official === true,
       ),
     ).toBe(true);
+    expect(wgld?.documentPack?.version).toBe('WGLD-2026-07-29-01');
+    expect(wgld?.documentPack?.documents).toHaveLength(5);
+    expect(wgld?.documentPack?.evidence).toHaveLength(5);
+    expect(
+      wgld?.documentPack?.documents.every(
+        (document) => document.official === true,
+      ),
+    ).toBe(true);
+    const sgln = dueDiligence?.instruments.find(
+      (instrument: { ticker: string }) => instrument.ticker === 'SGLN',
+    );
+    expect(sgln?.documentPack?.version).toBe('SGLN-2026-07-29-01');
+    expect(sgln?.documentPack?.documents).toHaveLength(5);
+    expect(sgln?.documentPack?.evidence).toHaveLength(5);
+    expect(
+      sgln?.documentPack?.documents.every(
+        (document: { official: boolean }) => document.official === true,
+      ),
+    ).toBe(true);
     expect(dueDiligence?.execution.status).toBe('BLOCKED');
   });
 

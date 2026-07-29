@@ -9,7 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 const ENGINE_VERSION = '1.0.0';
 const ENTRY_PLAN_VERSION = '1.0.0';
-const DUE_DILIGENCE_VERSION = '1.1.0';
+const DUE_DILIGENCE_VERSION = '1.2.0';
 const EL_TORO_PROPERTY_CODE = 'PROPERTY_EL_TORO';
 const MARKET_CONTEXT_MAX_AGE_DAYS = 45;
 
@@ -256,8 +256,11 @@ type DueDiligenceDocumentPack = {
     kind:
       | 'PRODUCT_PAGE'
       | 'PRIIPS_KID'
+      | 'PROSPECTUS'
       | 'RISK_EXPLAINER'
       | 'INDEX_PAGE'
+      | 'BULLION_HOLDINGS'
+      | 'MARKET_LISTING'
       | 'BROKER_TERMS';
     publisher: string;
     title: string;
@@ -486,6 +489,24 @@ const XEON_PRODUCT_SOURCE =
 const XEON_RISK_SOURCE =
   'https://etf.dws.com/en-gb/knowledge/focus-topics/overnight-etfs-an-alternative-to-easy-access-savings-accounts/';
 const XEON_INDEX_SOURCE = 'https://www.solactive.com/index/DE000SL0H431/';
+const WGLD_PRODUCT_SOURCE =
+  'https://www.wisdomtree.com/ie/products/commodities/wisdomtree-core-physical-gold';
+const WGLD_KID_SOURCE =
+  'https://dataspanapi.wisdomtree.com/pdr/documents/PRIIP_KID/MSL/ES/ES-ES/JE00BN2CJ301';
+const WGLD_PROSPECTUS_SOURCE =
+  'https://dataspanapi.wisdomtree.com/pdr/documents/PROSPECTUS/MSL/ES/EN-ES/JE00BN2CJ301';
+const WGLD_BAR_LIST_SOURCE =
+  'https://dataspanapi.wisdomtree.com/pdr/documents/METALBAR/MSL/UK/EN-GB/JE00BN2CJ301/';
+const WGLD_MARKET_SOURCE =
+  'https://www.borsaitaliana.it/borsa/etc-etn/scheda/JE00BN2CJ301-ETFP.html';
+const SGLN_PRODUCT_SOURCE =
+  'https://www.ishares.com/it/investitori-professionali/it/prodotti/258441/ishares-physical-gold-etc-fund?siteEntryPassthrough=true&switchLocale=y';
+const SGLN_KID_SOURCE =
+  'https://www.borsaitaliana.it/etp-listing/2026-00107-KID-MjAyNi0wMDEwN0tJRG51bGwzMDg3MTg3MTE2NDY2MDE5MDg4.pdf';
+const SGLN_PROSPECTUS_SOURCE =
+  'https://www.borsaitaliana.it/etp-listing/2026-00107-PROSPECTUS-MjAyNi0wMDEwN1BST1NQRUNUVVNudWxsODgyMjE5MTgxMDcxMjY3MDk0Mw%3D%3D.pdf';
+const SGLN_MARKET_SOURCE =
+  'https://www.borsaitaliana.it/borsa/etc-etn/scheda/IE00B4ND3602-ETFP.html';
 
 const XEON_DOCUMENT_PACK: DueDiligenceDocumentPack = {
   version: 'XEON-2026-07-29-01',
@@ -605,6 +626,272 @@ const XEON_DOCUMENT_PACK: DueDiligenceDocumentPack = {
     'La documentazione non sostituisce la verifica di adeguatezza e il giudizio professionale.',
     'Il trattamento fiscale dello strumento e della vendita El Toro resta NEEDS_VALIDATION.',
     'XEON non è un deposito bancario, non è coperto da garanzia sui depositi e il capitale non è garantito.',
+  ],
+};
+
+const WGLD_DOCUMENT_PACK: DueDiligenceDocumentPack = {
+  version: 'WGLD-2026-07-29-01',
+  asOfDate: '2026-07-29',
+  status: 'READY_FOR_REVIEW',
+  documents: [
+    {
+      id: 'WGLD_WISDOMTREE_PRODUCT',
+      kind: 'PRODUCT_PAGE',
+      publisher: 'WisdomTree',
+      title: 'Scheda ufficiale WisdomTree Core Physical Gold',
+      sourceDate: '2026-07-29',
+      url: WGLD_PRODUCT_SOURCE,
+      official: true,
+      purpose:
+        'Identità dell’ETC, struttura, custodia, costo corrente, quotazioni e caratteristiche dell’oro allocato.',
+    },
+    {
+      id: 'WGLD_WISDOMTREE_KID',
+      kind: 'PRIIPS_KID',
+      publisher: 'WisdomTree',
+      title: 'PRIIPs KID della classe JE00BN2CJ301',
+      sourceDate: '2025-11-07',
+      url: WGLD_KID_SOURCE,
+      official: true,
+      purpose:
+        'Natura di titolo di debito, indicatore di rischio, scenari, costi, orizzonte e assenza di garanzia.',
+    },
+    {
+      id: 'WGLD_WISDOMTREE_PROSPECTUS',
+      kind: 'PROSPECTUS',
+      publisher: 'WisdomTree',
+      title: 'Base Prospectus WisdomTree Metal Securities',
+      sourceDate: '2026-03-06',
+      url: WGLD_PROSPECTUS_SOURCE,
+      official: true,
+      purpose:
+        'Diritti dei portatori, limited recourse, ruoli delle controparti, collateral e fattori di rischio completi.',
+    },
+    {
+      id: 'WGLD_WISDOMTREE_BAR_LIST',
+      kind: 'BULLION_HOLDINGS',
+      publisher: 'WisdomTree',
+      title: 'Elenco ufficiale dei lingotti allocati',
+      sourceDate: '2026-07-29',
+      url: WGLD_BAR_LIST_SOURCE,
+      official: true,
+      purpose:
+        'Tracciabilità operativa dell’oro fisico allocato a supporto dell’ETC.',
+    },
+    {
+      id: 'WGLD_BORSA_ITALIANA',
+      kind: 'MARKET_LISTING',
+      publisher: 'Borsa Italiana',
+      title: 'Scheda di negoziazione WGLD',
+      sourceDate: '2026-07-29',
+      url: WGLD_MARKET_SOURCE,
+      official: true,
+      purpose:
+        'ISIN, ticker, mercato, lotto minimo, sottostante e documenti di quotazione.',
+    },
+  ],
+  evidence: [
+    {
+      checkCode: 'KID_AND_DOCUMENTS',
+      status: 'USER_REVIEW_REQUIRED',
+      summary:
+        'KID, prospetto, scheda prodotto e lista dei lingotti sono disponibili per lo specifico ISIN. La lettura deve essere confermata manualmente.',
+      sourceIds: [
+        'WGLD_WISDOMTREE_PRODUCT',
+        'WGLD_WISDOMTREE_KID',
+        'WGLD_WISDOMTREE_PROSPECTUS',
+        'WGLD_WISDOMTREE_BAR_LIST',
+      ],
+      limitations: [
+        'La presenza dei documenti non dimostra che rischi, diritti e priorità dei pagamenti siano stati compresi.',
+      ],
+    },
+    {
+      checkCode: 'STRUCTURE',
+      status: 'SOURCE_SUPPORTED',
+      summary:
+        'WGLD è un titolo di debito ETC, non un fondo UCITS, garantito da oro fisico allocato conforme LBMA e custodito presso HSBC Bank plc.',
+      sourceIds: [
+        'WGLD_WISDOMTREE_PRODUCT',
+        'WGLD_WISDOMTREE_KID',
+        'WGLD_WISDOMTREE_PROSPECTUS',
+        'WGLD_WISDOMTREE_BAR_LIST',
+      ],
+      limitations: [
+        'L’oro allocato mitiga ma non elimina i rischi legali, operativi, di custodia, emittente e realizzo del collateral.',
+      ],
+    },
+    {
+      checkCode: 'COSTS',
+      status: 'SOURCE_SUPPORTED',
+      summary:
+        'Il costo di gestione pubblicato è 0,12% annuo; spread, commissioni del broker e costi di negoziazione restano separati.',
+      sourceIds: [
+        'WGLD_WISDOMTREE_PRODUCT',
+        'WGLD_WISDOMTREE_KID',
+        'WGLD_BORSA_ITALIANA',
+      ],
+      limitations: [
+        'Il costo effettivo dipende anche dal mercato scelto, dallo spread e dalle condizioni del broker al momento dell’ordine.',
+      ],
+    },
+    {
+      checkCode: 'SIZE_AND_LIQUIDITY',
+      status: 'USER_REVIEW_REQUIRED',
+      summary:
+        'La scheda prodotto documenta market maker e quotazioni EUR; Borsa Italiana conferma ticker WGLD e lotto minimo uno.',
+      sourceIds: ['WGLD_WISDOMTREE_PRODUCT', 'WGLD_BORSA_ITALIANA'],
+      limitations: [
+        'Volumi, profondità del book e spread devono essere rilevati durante la seduta sull’importo effettivo della tranche.',
+      ],
+    },
+    {
+      checkCode: 'OVERLAP',
+      status: 'PROFESSIONAL_VALIDATION_REQUIRED',
+      summary:
+        'Il ruolo proposto è diversificatore in oro entro il limite IPS; concentrazione complessiva, rischio USD e coerenza familiare richiedono validazione.',
+      sourceIds: ['WGLD_WISDOMTREE_PRODUCT', 'WGLD_WISDOMTREE_KID'],
+      limitations: [
+        'La quotazione in EUR non elimina l’esposizione economica al dollaro del prezzo internazionale dell’oro.',
+      ],
+    },
+  ],
+  preliminaryOutcome: 'DOCUMENTED_WITH_LIMITATIONS',
+  limitations: [
+    'WGLD è un ETC UCITS-eligible, ma non è un fondo UCITS.',
+    'È un titolo di debito limited recourse: il capitale non è garantito e non opera una garanzia sui depositi.',
+    'La fiscalità italiana dell’ETC e la fiscalità della vendita El Toro restano NEEDS_VALIDATION.',
+    'La documentazione non sostituisce la verifica di adeguatezza e il giudizio professionale.',
+  ],
+};
+
+const SGLN_DOCUMENT_PACK: DueDiligenceDocumentPack = {
+  version: 'SGLN-2026-07-29-01',
+  asOfDate: '2026-07-29',
+  status: 'READY_FOR_REVIEW',
+  documents: [
+    {
+      id: 'SGLN_ISHARES_PRODUCT',
+      kind: 'PRODUCT_PAGE',
+      publisher: 'iShares',
+      title: 'Scheda ufficiale iShares Physical Gold ETC',
+      sourceDate: '2026-07-29',
+      url: SGLN_PRODUCT_SOURCE,
+      official: true,
+      purpose:
+        'Identità dell’ETC, patrimonio, struttura fisica, depositario, costo corrente e quotazioni.',
+    },
+    {
+      id: 'SGLN_PRIIPS_KID',
+      kind: 'PRIIPS_KID',
+      publisher: 'iShares / Borsa Italiana',
+      title: 'PRIIPs KID della classe IE00B4ND3602',
+      sourceDate: '2026-01-27',
+      url: SGLN_KID_SOURCE,
+      official: true,
+      purpose:
+        'Rischio sintetico, scenari, costi, orizzonte e assenza di garanzia per lo specifico ISIN.',
+    },
+    {
+      id: 'SGLN_ISHARES_PROSPECTUS',
+      kind: 'PROSPECTUS',
+      publisher: 'iShares / Borsa Italiana',
+      title: 'Base Prospectus iShares Physical Metals plc',
+      sourceDate: '2026-01-27',
+      url: SGLN_PROSPECTUS_SOURCE,
+      official: true,
+      purpose:
+        'Struttura giuridica, diritti dei portatori, collateral, custodia e fattori di rischio completi.',
+    },
+    {
+      id: 'SGLN_BULLION_INFORMATION',
+      kind: 'BULLION_HOLDINGS',
+      publisher: 'iShares',
+      title: 'Patrimonio in oro e metal entitlement',
+      sourceDate: '2026-07-29',
+      url: SGLN_PRODUCT_SOURCE,
+      official: true,
+      purpose:
+        'Tonnellate detenute, entitlement giornaliero e caratteristiche dell’oro fisico allocato.',
+    },
+    {
+      id: 'SGLN_BORSA_ITALIANA',
+      kind: 'MARKET_LISTING',
+      publisher: 'Borsa Italiana',
+      title: 'Scheda di negoziazione SGLN',
+      sourceDate: '2026-07-29',
+      url: SGLN_MARKET_SOURCE,
+      official: true,
+      purpose:
+        'ISIN, ticker, mercato, lotto minimo, sottostante e documenti di quotazione.',
+    },
+  ],
+  evidence: [
+    {
+      checkCode: 'KID_AND_DOCUMENTS',
+      status: 'USER_REVIEW_REQUIRED',
+      summary:
+        'Scheda ufficiale, KID e prospetto sono disponibili per lo specifico ISIN. La presa visione deve essere confermata manualmente.',
+      sourceIds: [
+        'SGLN_ISHARES_PRODUCT',
+        'SGLN_PRIIPS_KID',
+        'SGLN_ISHARES_PROSPECTUS',
+      ],
+      limitations: [
+        'La presenza dei documenti non equivale a comprensione della struttura ETC o dei rischi.',
+      ],
+    },
+    {
+      checkCode: 'STRUCTURE',
+      status: 'SOURCE_SUPPORTED',
+      summary:
+        'SGLN è un ETC fisico emesso da iShares Physical Metals plc, non un fondo UCITS, con oro allocato e depositario JPMorgan Chase Bank N.A., London Branch.',
+      sourceIds: [
+        'SGLN_ISHARES_PRODUCT',
+        'SGLN_ISHARES_PROSPECTUS',
+        'SGLN_BULLION_INFORMATION',
+      ],
+      limitations: [
+        'La collateralizzazione non elimina i rischi legali, operativi, di custodia, emittente e realizzo.',
+      ],
+    },
+    {
+      checkCode: 'COSTS',
+      status: 'SOURCE_SUPPORTED',
+      summary:
+        'Il TER pubblicato è 0,12% annuo; spread, commissioni del broker e costi di esecuzione restano separati.',
+      sourceIds: ['SGLN_ISHARES_PRODUCT', 'SGLN_PRIIPS_KID'],
+      limitations: [
+        'Il costo effettivo deve essere confrontato sul mercato e sul broker scelti per la tranche.',
+      ],
+    },
+    {
+      checkCode: 'SIZE_AND_LIQUIDITY',
+      status: 'USER_REVIEW_REQUIRED',
+      summary:
+        'La scheda iShares documenta dimensione e quotazioni; Borsa Italiana conferma ticker SGLN e lotto minimo uno.',
+      sourceIds: ['SGLN_ISHARES_PRODUCT', 'SGLN_BORSA_ITALIANA'],
+      limitations: [
+        'AUM elevato non garantisce spread o profondità adeguati per ogni ordine e momento della seduta.',
+      ],
+    },
+    {
+      checkCode: 'OVERLAP',
+      status: 'PROFESSIONAL_VALIDATION_REQUIRED',
+      summary:
+        'SGLN replica la stessa esposizione economica all’oro fisico prevista per WGLD e deve essere trattato come alternativa, non come diversificazione aggiuntiva.',
+      sourceIds: ['SGLN_ISHARES_PRODUCT', 'SGLN_PRIIPS_KID'],
+      limitations: [
+        'Selezionare contemporaneamente WGLD e SGLN richiede una motivazione esplicita e non aumenta la diversificazione per sottostante.',
+      ],
+    },
+  ],
+  preliminaryOutcome: 'DOCUMENTED_WITH_LIMITATIONS',
+  limitations: [
+    'SGLN è un ETC UCITS-eligible, ma non è un fondo UCITS.',
+    'Il capitale non è garantito e il valore dipende dall’oro, dalla valuta e dalla struttura dell’ETC.',
+    'La fiscalità italiana dell’ETC e la fiscalità della vendita El Toro restano NEEDS_VALIDATION.',
+    'La documentazione non sostituisce la verifica di adeguatezza e il giudizio professionale.',
   ],
 };
 
@@ -819,9 +1106,10 @@ const DUE_DILIGENCE_INSTRUMENTS: DueDiligenceInstrument[] = [
         publisher: 'WisdomTree',
         title: 'Scheda ufficiale WGLD',
         sourceDate: '2026-07-27',
-        url: 'https://www.wisdomtree.com/gb/products/commodities/wisdomtree-core-physical-gold',
+        url: WGLD_PRODUCT_SOURCE,
       },
     ],
+    documentPack: WGLD_DOCUMENT_PACK,
     brokerRoutes: brokerRoutes(),
   },
   {
@@ -854,9 +1142,10 @@ const DUE_DILIGENCE_INSTRUMENTS: DueDiligenceInstrument[] = [
         publisher: 'iShares',
         title: 'Scheda ufficiale iShares Physical Gold ETC',
         sourceDate: '2026-07-23',
-        url: 'https://www.ishares.com/it/investitori-professionali/it/prodotti/258441/ishares-physical-gold-etc-fund?siteEntryPassthrough=true&switchLocale=y',
+        url: SGLN_PRODUCT_SOURCE,
       },
     ],
+    documentPack: SGLN_DOCUMENT_PACK,
     brokerRoutes: brokerRoutes(),
   },
 ];

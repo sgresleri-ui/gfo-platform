@@ -4624,8 +4624,11 @@ export type InvestmentDueDiligenceInstrument = {
       kind:
         | "PRODUCT_PAGE"
         | "PRIIPS_KID"
+        | "PROSPECTUS"
         | "RISK_EXPLAINER"
         | "INDEX_PAGE"
+        | "BULLION_HOLDINGS"
+        | "MARKET_LISTING"
         | "BROKER_TERMS";
       publisher: string;
       title: string;

@@ -403,6 +403,31 @@ function documentaryEvidencePresentation(
   };
 }
 
+function documentaryKindLabel(
+  kind:
+    | "PRODUCT_PAGE"
+    | "PRIIPS_KID"
+    | "PROSPECTUS"
+    | "RISK_EXPLAINER"
+    | "INDEX_PAGE"
+    | "BULLION_HOLDINGS"
+    | "MARKET_LISTING"
+    | "BROKER_TERMS",
+): string {
+  const labels = {
+    PRODUCT_PAGE: "Scheda prodotto",
+    PRIIPS_KID: "PRIIPs KID",
+    PROSPECTUS: "Prospetto",
+    RISK_EXPLAINER: "Approfondimento rischi",
+    INDEX_PAGE: "Indice",
+    BULLION_HOLDINGS: "Oro allocato",
+    MARKET_LISTING: "Quotazione",
+    BROKER_TERMS: "Condizioni broker",
+  } satisfies Record<typeof kind, string>;
+
+  return labels[kind];
+}
+
 function cloneReviews(
   reviews: InvestmentDueDiligenceReview[],
 ): InvestmentDueDiligenceReview[] {
@@ -967,6 +992,14 @@ export default function InvestmentDueDiligencePanel({
                                   label="ETC, non fondo UCITS"
                                 />
                               )}
+                              {instrument.documentPack && (
+                                <Chip
+                                  size="small"
+                                  color="info"
+                                  variant="outlined"
+                                  label={`Fascicolo ${instrument.documentPack.version}`}
+                                />
+                              )}
                             </Box>
 
                             <Typography
@@ -1281,7 +1314,7 @@ export default function InvestmentDueDiligencePanel({
                                             variant="overline"
                                             color="primary.main"
                                           >
-                                            {document.kind.replaceAll("_", " ")}
+                                            {documentaryKindLabel(document.kind)}
                                           </Typography>
                                           <Link
                                             href={document.url}
