@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   parseFlexibleDecimal,
   parseLocaleAmount,
+  parseLocaleAmountOrNull,
 } from "../src/utils/amounts.ts";
 
 test("interpreta punto e virgola come separatori decimali equivalenti", () => {
@@ -67,6 +68,33 @@ test("interpreta anche importi con separatori internazionali", () => {
   assert.equal(
     parseLocaleAmount("1,070,000"),
     1_070_000,
+  );
+});
+
+test("distingue lo zero valido da un importo non riconosciuto", () => {
+  assert.equal(
+    parseLocaleAmountOrNull("0"),
+    0,
+  );
+  assert.equal(
+    parseLocaleAmountOrNull("70.016,43"),
+    70_016.43,
+  );
+  assert.equal(
+    parseLocaleAmountOrNull("70,016.43"),
+    70_016.43,
+  );
+  assert.equal(
+    parseLocaleAmountOrNull("70016.43"),
+    70_016.43,
+  );
+  assert.equal(
+    parseLocaleAmountOrNull("70016,43"),
+    70_016.43,
+  );
+  assert.equal(
+    parseLocaleAmountOrNull("70.016.43"),
+    null,
   );
 });
 

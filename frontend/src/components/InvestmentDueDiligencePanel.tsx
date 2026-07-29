@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   Accordion,
@@ -38,7 +44,11 @@ import {
   type InvestmentDueDiligenceCheckCode,
   type InvestmentDueDiligenceReview,
 } from "../services/api";
-import { parseFlexibleDecimal } from "../utils/amounts";
+import {
+  parseFlexibleDecimal,
+  parseLocaleAmountOrNull,
+} from "../utils/amounts";
+import { isExecutionEvidenceComplete } from "../utils/executionEvidence";
 
 type InvestmentDueDiligencePanelProps = {
   recommendationId: string;
@@ -125,8 +135,84 @@ function localDateTimeInput(value: string | null): string {
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 }
 
-function optionalNumber(value: string): number | null {
-  return parseFlexibleDecimal(value);
+type ValidatedNumericFieldProps = {
+  fieldId: string;
+  label: string;
+  value: number | null;
+  parser: (value: string) => number | null;
+  allowZero?: boolean;
+  example: string;
+  onValueChange: (value: number | null) => void;
+  onValidityChange: (fieldId: string, valid: boolean) => void;
+};
+
+function ValidatedNumericField({
+  fieldId,
+  label,
+  value,
+  parser,
+  allowZero = false,
+  example,
+  onValueChange,
+  onValidityChange,
+}: ValidatedNumericFieldProps) {
+  const [draft, setDraft] = useState(value === null ? "" : String(value));
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const lastCommittedValue = useRef<number | null>(value);
+
+  useEffect(() => {
+    if (Object.is(value, lastCommittedValue.current)) {
+      return;
+    }
+
+    lastCommittedValue.current = value;
+    // Sincronizza solo i valori arrivati da un nuovo caricamento/salvataggio.
+    setDraft(value === null ? "" : String(value));
+    setValidationError(null);
+  }, [value]);
+
+  const handleChange = (nextDraft: string) => {
+    setDraft(nextDraft);
+
+    if (nextDraft.trim().length === 0) {
+      setValidationError(null);
+      lastCommittedValue.current = null;
+      onValidityChange(fieldId, true);
+      onValueChange(null);
+      return;
+    }
+
+    const parsed = parser(nextDraft);
+    const valid =
+      parsed !== null && (allowZero ? parsed >= 0 : parsed > 0);
+
+    if (!valid) {
+      setValidationError(`Valore non valido. Esempio: ${example}`);
+      onValidityChange(fieldId, false);
+      return;
+    }
+
+    setValidationError(null);
+    lastCommittedValue.current = parsed;
+    onValidityChange(fieldId, true);
+    onValueChange(parsed);
+  };
+
+  return (
+    <TextField
+      size="small"
+      label={label}
+      value={draft}
+      onChange={(event) => handleChange(event.target.value)}
+      error={validationError !== null}
+      helperText={validationError ?? undefined}
+      slotProps={{
+        htmlInput: {
+          inputMode: "decimal",
+        },
+      }}
+    />
+  );
 }
 
 function executionMetrics(evidence: InvestmentBrokerExecutionEvidence): {
@@ -171,11 +257,7 @@ function executionMetrics(evidence: InvestmentBrokerExecutionEvidence): {
   const estimatedCost = halfSpreadCost + evidence.commissionAmount!;
 
   return {
-    complete: Boolean(
-      evidence.observedAt &&
-        evidence.venue &&
-        evidence.regularSession,
-    ),
+    complete: isExecutionEvidenceComplete(evidence),
     spreadPct,
     estimatedCost,
     estimatedCostPct:
@@ -320,6 +402,9 @@ export default function InvestmentDueDiligencePanel({
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [invalidNumericFields, setInvalidNumericFields] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const hydrate = useCallback((next: InvestmentDueDiligence) => {
     setDueDiligence(next);
@@ -328,6 +413,7 @@ export default function InvestmentDueDiligencePanel({
     );
     setNotes(next.notes ?? "");
     setDirty(false);
+    setInvalidNumericFields(new Set());
   }, []);
 
   const loadDueDiligence = useCallback(async () => {
@@ -412,6 +498,29 @@ export default function InvestmentDueDiligencePanel({
     setSuccess(null);
   };
 
+  const setNumericFieldValidity = useCallback(
+    (fieldId: string, valid: boolean) => {
+      setInvalidNumericFields((current) => {
+        const alreadyInvalid = current.has(fieldId);
+
+        if ((valid && !alreadyInvalid) || (!valid && alreadyInvalid)) {
+          return current;
+        }
+
+        const next = new Set(current);
+
+        if (valid) {
+          next.delete(fieldId);
+        } else {
+          next.add(fieldId);
+        }
+
+        return next;
+      });
+    },
+    [],
+  );
+
   const selectInstrument = (assetClass: string, isin: string) => {
     if (!dueDiligence) {
       return;
@@ -453,6 +562,13 @@ export default function InvestmentDueDiligencePanel({
 
   const saveDueDiligence = async () => {
     if (!dueDiligence) {
+      return;
+    }
+
+    if (invalidNumericFields.size > 0) {
+      setError(
+        "Correggi i valori numerici evidenziati prima di salvare la revisione.",
+      );
       return;
     }
 
@@ -573,6 +689,7 @@ export default function InvestmentDueDiligencePanel({
             disabled={
               saving ||
               !dirty ||
+              invalidNumericFields.size > 0 ||
               !recommendationIsCurrent ||
               dueDiligence.recommendationId !== recommendationId
             }
@@ -592,6 +709,14 @@ export default function InvestmentDueDiligencePanel({
       {success && (
         <Alert severity="success" sx={{ mt: 2 }}>
           {success}
+        </Alert>
+      )}
+
+      {invalidNumericFields.size > 0 && (
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          Correggi i valori numerici evidenziati. Il testo inserito resta
+          disponibile e il salvataggio è sospeso finché gli errori non sono
+          risolti.
         </Alert>
       )}
 
@@ -1275,84 +1400,68 @@ export default function InvestmentDueDiligencePanel({
                                               })
                                             }
                                           />
-                                          <TextField
-                                            key={`${instrument.isin}-${route.broker}-bid-${execution.bid ?? "empty"}`}
-                                            size="small"
+                                          <ValidatedNumericField
+                                            fieldId={`${instrument.isin}-${route.broker}-bid`}
                                             label="Bid (€)"
-                                            defaultValue={execution.bid ?? ""}
-                                            onBlur={(event) =>
+                                            value={execution.bid}
+                                            parser={parseFlexibleDecimal}
+                                            example="149,7703 oppure 149.7703"
+                                            onValueChange={(value) =>
                                               updateExecution({
-                                                bid: optionalNumber(
-                                                  event.target.value,
-                                                ),
+                                                bid: value,
                                               })
                                             }
-                                            slotProps={{
-                                              htmlInput: {
-                                                inputMode: "decimal",
-                                              },
-                                            }}
+                                            onValidityChange={
+                                              setNumericFieldValidity
+                                            }
                                           />
-                                          <TextField
-                                            key={`${instrument.isin}-${route.broker}-ask-${execution.ask ?? "empty"}`}
-                                            size="small"
+                                          <ValidatedNumericField
+                                            fieldId={`${instrument.isin}-${route.broker}-ask`}
                                             label="Ask (€)"
-                                            defaultValue={execution.ask ?? ""}
-                                            onBlur={(event) =>
+                                            value={execution.ask}
+                                            parser={parseFlexibleDecimal}
+                                            example="149,7703 oppure 149.7703"
+                                            onValueChange={(value) =>
                                               updateExecution({
-                                                ask: optionalNumber(
-                                                  event.target.value,
-                                                ),
+                                                ask: value,
                                               })
                                             }
-                                            slotProps={{
-                                              htmlInput: {
-                                                inputMode: "decimal",
-                                              },
-                                            }}
+                                            onValidityChange={
+                                              setNumericFieldValidity
+                                            }
                                           />
-                                          <TextField
-                                            key={`${instrument.isin}-${route.broker}-order-${execution.referenceOrderAmount ?? "empty"}`}
-                                            size="small"
+                                          <ValidatedNumericField
+                                            fieldId={`${instrument.isin}-${route.broker}-order`}
                                             label="Ordine simulato (€)"
-                                            defaultValue={
-                                              execution.referenceOrderAmount ??
-                                              ""
+                                            value={
+                                              execution.referenceOrderAmount
                                             }
-                                            onBlur={(event) =>
+                                            parser={parseLocaleAmountOrNull}
+                                            example="70.016,43 oppure 70016.43"
+                                            onValueChange={(value) =>
                                               updateExecution({
-                                                referenceOrderAmount:
-                                                  optionalNumber(
-                                                    event.target.value,
-                                                  ),
+                                                referenceOrderAmount: value,
                                               })
                                             }
-                                            slotProps={{
-                                              htmlInput: {
-                                                inputMode: "decimal",
-                                              },
-                                            }}
+                                            onValidityChange={
+                                              setNumericFieldValidity
+                                            }
                                           />
-                                          <TextField
-                                            key={`${instrument.isin}-${route.broker}-commission-${execution.commissionAmount ?? "empty"}`}
-                                            size="small"
+                                          <ValidatedNumericField
+                                            fieldId={`${instrument.isin}-${route.broker}-commission`}
                                             label="Commissione (€)"
-                                            defaultValue={
-                                              execution.commissionAmount ?? ""
-                                            }
-                                            onBlur={(event) =>
+                                            value={execution.commissionAmount}
+                                            parser={parseLocaleAmountOrNull}
+                                            allowZero
+                                            example="0 oppure 35,01"
+                                            onValueChange={(value) =>
                                               updateExecution({
-                                                commissionAmount:
-                                                  optionalNumber(
-                                                    event.target.value,
-                                                  ),
+                                                commissionAmount: value,
                                               })
                                             }
-                                            slotProps={{
-                                              htmlInput: {
-                                                inputMode: "decimal",
-                                              },
-                                            }}
+                                            onValidityChange={
+                                              setNumericFieldValidity
+                                            }
                                           />
                                         </Box>
 
@@ -1737,6 +1846,7 @@ export default function InvestmentDueDiligencePanel({
             }
             disabled={
               saving ||
+              invalidNumericFields.size > 0 ||
               !recommendationIsCurrent ||
               dueDiligence.recommendationId !== recommendationId
             }

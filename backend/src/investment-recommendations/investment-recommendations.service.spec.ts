@@ -512,7 +512,7 @@ describe('InvestmentRecommendationsService', () => {
     expect(result.dueDiligence.status).toBe('DRAFT_BROKER_VERIFICATION');
   });
 
-  it('normalizes comma decimals in broker execution evidence', async () => {
+  it('normalizes comma decimals and preserves zero broker commissions', async () => {
     const service = createService(true);
     const generated = await service.generateElToroRecommendation();
     const initial = await service.getElToroDueDiligence();
@@ -531,6 +531,16 @@ describe('InvestmentRecommendationsService', () => {
                 FINECO: {
                   observedAt: '2026-07-29T10:00:00.000Z',
                   venue: 'XETRA',
+                  bid: '23,58',
+                  ask: '23,60',
+                  referenceOrderAmount: '100000,50',
+                  commissionAmount: '0',
+                  regularSession: true,
+                  notes: null,
+                },
+                INTERACTIVE_BROKERS: {
+                  observedAt: '2026-07-29T10:01:00.000Z',
+                  venue: 'SMART',
                   bid: '23,58',
                   ask: '23,60',
                   referenceOrderAmount: '100000,50',
@@ -554,7 +564,12 @@ describe('InvestmentRecommendationsService', () => {
     expect(saved?.bid).toBe(23.58);
     expect(saved?.ask).toBe(23.6);
     expect(saved?.referenceOrderAmount).toBe(100_000.5);
-    expect(saved?.commissionAmount).toBe(7.5);
+    expect(saved?.commissionAmount).toBe(0);
+    expect(
+      result.dueDiligence.instruments.find(
+        (instrument) => instrument.isin === targetIsin,
+      )?.review.brokerExecution.INTERACTIVE_BROKERS.commissionAmount,
+    ).toBe(7.5);
   });
 
   it('rejects two selected instruments in the same IPS class', async () => {

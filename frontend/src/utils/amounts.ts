@@ -35,6 +35,12 @@ export function parseFlexibleDecimal(
 export function parseLocaleAmount(
   value: string,
 ): number {
+  return parseLocaleAmountOrNull(value) ?? 0;
+}
+
+export function parseLocaleAmountOrNull(
+  value: string,
+): number | null {
   const compact = value
     .trim()
     .replace(/[\s\u00a0€]/g, "");
@@ -43,7 +49,7 @@ export function parseLocaleAmount(
     compact.length === 0 ||
     !/^\d+(?:[.,]\d+)*$/.test(compact)
   ) {
-    return 0;
+    return null;
   }
 
   const lastComma =
@@ -96,7 +102,7 @@ export function parseLocaleAmount(
         separator,
       );
     } else {
-      return 0;
+      return null;
     }
   }
 
@@ -105,5 +111,5 @@ export function parseLocaleAmount(
   return Number.isFinite(amount) &&
     amount >= 0
     ? amount
-    : 0;
+    : null;
 }
