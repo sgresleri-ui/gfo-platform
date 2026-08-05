@@ -4,6 +4,37 @@ set -u
 
 PROJECT="/Users/sgresleri/Documents/gfo-platform"
 LOG_DIR="$PROJECT/.gfo-logs"
+REQUESTED_MODE="${1:-local}"
+
+case "$REQUESTED_MODE" in
+  local)
+    NETWORK_MODE="local"
+    FRONTEND_HOST="127.0.0.1"
+    ACCESS_URL="http://localhost:5173"
+    ;;
+  lan|iphone)
+    NETWORK_MODE="lan"
+    FRONTEND_HOST="0.0.0.0"
+
+    DEFAULT_INTERFACE="$(
+      route -n get default 2>/dev/null |
+        awk '/interface:/{print $2; exit}'
+    )"
+    LAN_IP="$(ipconfig getifaddr "$DEFAULT_INTERFACE" 2>/dev/null || true)"
+
+    if [[ -z "$LAN_IP" ]]; then
+      osascript -e \
+        'display alert "GFO Platform" message "Impossibile rilevare l’indirizzo della rete locale. Verifica che il Mac sia collegato al Wi-Fi." as warning'
+      exit 1
+    fi
+
+    ACCESS_URL="http://$LAN_IP:5173"
+    ;;
+  *)
+    echo "Uso: ./scripts/start-gfo.sh [local|lan]"
+    exit 2
+    ;;
+esac
 
 mkdir -p "$LOG_DIR"
 
@@ -38,14 +69,14 @@ if ! (
 fi
 
 nohup /bin/zsh -lc \
-  "cd '$PROJECT/backend' && exec npm run start:dev" \
+  "cd '$PROJECT/backend' && export GFO_NETWORK_MODE='$NETWORK_MODE' && exec npm run start:dev" \
   > "$LOG_DIR/backend.log" \
   2>&1 &
 
 echo $! > "$LOG_DIR/backend.pid"
 
 nohup /bin/zsh -lc \
-  "cd '$PROJECT/frontend' && exec npm run dev -- --host 127.0.0.1" \
+  "cd '$PROJECT/frontend' && exec npm run dev -- --host '$FRONTEND_HOST'" \
   > "$LOG_DIR/frontend.log" \
   2>&1 &
 
@@ -67,10 +98,17 @@ for ATTEMPT in {1..45}; do
 
   if [[ "$BACKEND_READY" == true &&
         "$FRONTEND_READY" == true ]]; then
-    open "http://localhost:5173"
+    print -r -- "$ACCESS_URL" > "$LOG_DIR/access-url.txt"
+    open "$ACCESS_URL"
 
-    osascript -e \
-      'display notification "Backend e frontend avviati correttamente." with title "GFO Platform"'
+    if [[ "$NETWORK_MODE" == "lan" ]]; then
+      print -rn -- "$ACCESS_URL" | pbcopy
+      osascript -e \
+        "display notification \"Indirizzo iPhone copiato: $ACCESS_URL\" with title \"GFO Platform\""
+    else
+      osascript -e \
+        'display notification "Backend e frontend avviati correttamente." with title "GFO Platform"'
+    fi
 
     exit 0
   fi

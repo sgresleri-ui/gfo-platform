@@ -23,6 +23,8 @@ import {
   Link,
 } from "react-router-dom";
 
+import { API_URL } from "../config/runtime";
+
 type JsonRecord =
   Record<string, unknown>;
 
@@ -30,11 +32,6 @@ type ExecutiveData = {
   risk: unknown;
   quality: unknown;
 };
-
-const API_URL = String(
-  import.meta.env.VITE_API_URL ??
-    "http://localhost:3000",
-).replace(/\/$/, "");
 
 function isRecord(
   value: unknown,

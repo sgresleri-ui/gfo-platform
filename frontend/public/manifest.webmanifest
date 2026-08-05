@@ -1,0 +1,21 @@
+{
+  "name": "GFO Platform",
+  "short_name": "GFO",
+  "description": "Family Office Operating System",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#F4F7FB",
+  "theme_color": "#071A36",
+  "icons": [
+    {
+      "src": "/gfo-app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/gfo-app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

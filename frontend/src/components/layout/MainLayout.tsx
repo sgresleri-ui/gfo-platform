@@ -5,6 +5,8 @@ import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
+import PhoneIphoneRoundedIcon from "@mui/icons-material/PhoneIphoneRounded";
 import {
   Fragment,
   Suspense,
@@ -17,6 +19,7 @@ import {
   AppBar,
   Avatar,
   Box,
+  Button,
   CircularProgress,
   Dialog,
   DialogContent,
@@ -33,6 +36,7 @@ import {
   Toolbar,
   Typography,
 } from "@mui/material";
+import { QRCodeSVG } from "qrcode.react";
 
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import AccountBalanceWalletRoundedIcon from "@mui/icons-material/AccountBalanceWalletRounded";
@@ -59,6 +63,7 @@ import {
 
 import RouteErrorBoundary from "../RouteErrorBoundary";
 import { pageLoaders } from "../../routes/pageLoaders";
+import { isLanHostname } from "../../utils/runtimeNetwork";
 
 const drawerWidth = 264;
 
@@ -251,6 +256,19 @@ export default function MainLayout() {
   const [mobileSearchOpen, setMobileSearchOpen] =
     useState(false);
   const [activeSearchIndex, setActiveSearchIndex] = useState(0);
+  const [lanAccessOpen, setLanAccessOpen] = useState(false);
+  const [lanUrlCopied, setLanUrlCopied] = useState(false);
+
+  const lanAccessUrl = useMemo(() => {
+    if (
+      typeof window === "undefined" ||
+      !isLanHostname(window.location.hostname)
+    ) {
+      return null;
+    }
+
+    return `${window.location.origin}/dashboard`;
+  }, []);
 
   const searchShortcutLabel = useMemo(() => {
     return /Mac|iPhone|iPad|iPod/.test(navigator.platform)
@@ -717,6 +735,7 @@ export default function MainLayout() {
           zIndex: (theme) => theme.zIndex.drawer + 1,
           ml: { md: `${drawerWidth}px` },
           width: { md: `calc(100% - ${drawerWidth}px)` },
+          pt: "env(safe-area-inset-top)",
           backgroundColor: "rgba(255,255,255,0.94)",
           backdropFilter: "blur(16px)",
           color: "text.primary",
@@ -1046,6 +1065,20 @@ export default function MainLayout() {
             <SearchRoundedIcon />
           </IconButton>
 
+          {lanAccessUrl && (
+            <IconButton
+              aria-label="Collega un iPhone"
+              title="Collega un iPhone"
+              onClick={() => {
+                setLanUrlCopied(false);
+                setLanAccessOpen(true);
+              }}
+              sx={{ display: { xs: "none", md: "inline-flex" } }}
+            >
+              <PhoneIphoneRoundedIcon />
+            </IconButton>
+          )}
+
           <Box
             component={RouterLink}
             to="/settings"
@@ -1099,6 +1132,87 @@ export default function MainLayout() {
           </Box>
         </Toolbar>
       </AppBar>
+
+      <Dialog
+        open={lanAccessOpen}
+        onClose={() => setLanAccessOpen(false)}
+        fullWidth
+        maxWidth="xs"
+        aria-labelledby="iphone-access-title"
+      >
+        <DialogTitle
+          id="iphone-access-title"
+          sx={{ pb: 1, fontWeight: 750 }}
+        >
+          Apri GFO su iPhone
+        </DialogTitle>
+
+        <DialogContent>
+          {lanAccessUrl && (
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 2,
+                py: 1,
+                textAlign: "center",
+              }}
+            >
+              <Box
+                sx={{
+                  display: "grid",
+                  placeItems: "center",
+                  p: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 3,
+                  bgcolor: "common.white",
+                }}
+              >
+                <QRCodeSVG
+                  value={lanAccessUrl}
+                  size={220}
+                  level="M"
+                  marginSize={1}
+                  title="QR code per aprire GFO Platform su iPhone"
+                />
+              </Box>
+
+              <Box>
+                <Typography sx={{ fontWeight: 700 }}>
+                  Inquadra il codice con la fotocamera
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 0.5, overflowWrap: "anywhere" }}
+                >
+                  {lanAccessUrl}
+                </Typography>
+              </Box>
+
+              <Button
+                variant="outlined"
+                startIcon={<ContentCopyRoundedIcon />}
+                onClick={() => {
+                  void navigator.clipboard
+                    .writeText(lanAccessUrl)
+                    .then(() => setLanUrlCopied(true))
+                    .catch(() => setLanUrlCopied(false));
+                }}
+              >
+                {lanUrlCopied ? "Indirizzo copiato" : "Copia indirizzo"}
+              </Button>
+
+              <Typography variant="caption" color="text.secondary">
+                Mac e iPhone devono essere sulla stessa rete Wi-Fi. In Safari
+                usa Condividi → Aggiungi alla schermata Home per installare GFO.
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={mobileSearchOpen}
@@ -1386,7 +1500,7 @@ export default function MainLayout() {
           flexGrow: 1,
           width: { md: `calc(100% - ${drawerWidth}px)` },
           minWidth: 0,
-          pt: "76px",
+          pt: "calc(76px + env(safe-area-inset-top))",
         }}
       >
         <Box

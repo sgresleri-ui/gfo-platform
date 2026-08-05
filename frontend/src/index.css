@@ -23,6 +23,7 @@ html {
   min-width: 320px;
   min-height: 100%;
   background: #f4f7fb;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -30,6 +31,19 @@ body {
   min-height: 100vh;
   margin: 0;
   background: #f4f7fb;
+  overscroll-behavior-y: none;
+}
+
+@media (max-width: 599.95px) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
 }
 
 button,
